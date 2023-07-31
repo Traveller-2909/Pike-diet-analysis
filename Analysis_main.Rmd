@@ -32,7 +32,7 @@ library(plyr)
 ```{r pike data, include=FALSE, eval=FALSE}
 rm(list = ls())
 
-#read in pike data
+#read in pike data from source
 Pike1 <- read.delim("C:/Users/timor/Nextcloud2/Boddenhecht/Data/Pike Data/1.pike_data_base_FOR_USERS/1Pike_Latest_Version.txt", 
                     sep = ";", dec = ".", header = T, stringsAsFactors = F)
 
