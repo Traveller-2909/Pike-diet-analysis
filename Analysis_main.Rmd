@@ -1,0 +1,512 @@
+---
+title: "Analysis_main"
+author: "TR"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Packages
+```{r packages, include=FALSE}
+library(ggplot2)
+library(tidyverse)
+library(data.table)
+library(foreign)
+library(lubridate)
+library(ggpubr)
+library(rjags)
+library(jagsUI)
+library(simmr)
+library(ggmap)
+library(assignR)
+library(tRophicPosition)
+library(MixSIAR)
+library(reshape2)
+library(plyr)
+```
+
+# Cleanup
+```{r pike data, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+#read in pike data
+Pike1 <- read.delim("C:/Users/timor/Nextcloud2/Boddenhecht/Data/Pike Data/1.pike_data_base_FOR_USERS/1Pike_Latest_Version.txt", 
+                    sep = ";", dec = ".", header = T, stringsAsFactors = F)
+
+Pike2 <- Pike1%>%
+  transmute(ID=case_when(Fish_ID=="BH-91050.2"~"BH-91050",
+                         Fish_ID=="BH-51614"&Waterbody=="BAT"~"NA",
+                         Fish_ID=="BH-90307"&MarkorRecap=="Mark"~"NA",
+                         TRUE~Fish_ID),
+            capt_date=Date,
+            TL_mm = Total_Length_mm,
+            weight=Weight,
+            sex=Sex,
+            area=Waterbody,
+            Long=case_when(is.na(Capture_Longitude)==T~Release_Longitude,
+                           TRUE~Capture_Longitude),
+            Lat=case_when(is.na(Capture_Latitude)==T~Release_Latitude,
+                          TRUE~Capture_Latitude))
+
+#Read pike SI data
+pike_NCS1 <- read.csv2("Data/Pike/2022-09-08_NCS_Pike.CSV", header = T, stringsAsFactors = F)
+
+pike_NCS2 <- pike_NCS1%>%
+  transmute(ID=substr(Identifier.1, 1,8),
+            ID2=substr(Identifier.1,9,10),
+            Sample="Muscle",
+            d15N=as.numeric(d.15N.14N.Calculated),
+            d13C=as.numeric(d.13C.12C.Calculated),
+            d34S=as.numeric(d.34S.32S.Calculated),
+            CN_ratio=as.numeric(C..)/as.numeric(N..),
+            comment=paste(Comment.1,"|",Comment.2))%>%
+  filter(!grepl("Measurement repeated", comment)|ID=="BH-00380"|ID=="BH-00829")
+
+Mixed <- read.delim("Data/Mixed/2021-02 Boddenhecht Timo Rittweg TG.txt")
+
+Mixed2 <- Mixed%>%
+  transmute(ID=ID2,
+            ID2=NA,
+            Sample=ID1,
+            d15N=as.numeric(d15N..permil.N2.atm.),
+            d13C=as.numeric(d13C..permil.VPDB.),
+            d34S=as.numeric(d34S..permil.CDT.),
+            CN_ratio=as.numeric(weight.C)/as.numeric(weight.N),
+            comment=NA)%>%
+  filter(Sample!="Eyelens")
+
+pike_NCS2 <- rbind(pike_NCS2, Mixed2)
+
+pike_NCS3 <- fread("Data/Pike/2023-04-21_NCS_Pike.CSV")
+
+pike_NCS4 <- pike_NCS3%>%
+  transmute(ID=Identifier.1,
+            ID2=NA,
+            Sample=Identifier.2,
+            d15N=as.numeric(d15N),
+            d13C=as.numeric(d13C),
+            d34S=as.numeric(d34S),
+            CN_ratio=(Amount.ug*(Cperc/100))/(Amount.ug*(Nperc/100)),
+            comment=Comment)%>%
+  filter(Sample!="eye lens")
+
+pike_NCSall <- rbind(pike_NCS2, pike_NCS4)
+
+#Join pike data
+length(unique(pike_NCSall$ID))
+
+Pikedata <- Pike2%>%
+  inner_join(pike_NCSall,by="ID")
+
+length(unique(Pikedata$ID))
+
+#check missing fish
+pikeSIall <- data.frame(ID = unique(pike_NCSall$ID))
+pikeSIDall <- data.frame(ID = unique(Pikedata$ID), Sample = "TRUE")
+
+Pikecheck <- pikeSIall%>%
+  left_join(pikeSIDall, by = "ID")
+
+
+#average SI values
+pikedata2 <- Pikedata%>%
+  group_by(ID)%>%
+  dplyr::summarise(ID=ID,
+            ID2=ID2,
+            capt_date=capt_date,
+            TL_mm=TL_mm,
+            weight_g=weight,
+            sex=sex,
+            area=area,
+            Long=Long,
+            Lat=Lat,
+            Sample_type=Sample,
+            d15N=mean(d15N, na.rm = T),
+            d13C=mean(d13C, na.rm = T),
+            d34S=mean(d34S, na.rm = T),
+            CN_ratio=mean(CN_ratio, na.rm = T),
+            comment=comment)%>%
+  distinct()
+
+#Join ecotype pike with SI data
+Otopike <- read.delim("Data/Pike/Pikedata_ecotypes.txt", header = T, stringsAsFactors = F, sep = "\t", dec = ".")
+
+Otopike.SI <- Otopike%>%left_join(pikedata2, by="ID")%>%
+  transmute(ID=ID,
+            ID2=ID2,
+            capt_date=capt_date,
+            TL_mm=TL_mm.x,
+            weight_g=weight_g,
+            sex=sex.x,
+            study_area=waterbody,
+            waterbody=area,
+            Long=Long,
+            Lat=Lat,
+            lifeyear=lifeyear,
+            inc_um=inc_um,
+            res_mean=res_mean,
+            Sr_mean=Sr_mean,
+            SI_sample=Sample_type,
+            ecotype=ecotype,
+            d15N=d15N,
+            d13C=d13C,
+            d34S=d34S,
+            CN_ratio=CN_ratio,
+            comment=comment)
+
+length(unique(Otopike.SI[is.na(Otopike.SI$d13C)==F,]$ID))
+length(unique(Otopike.SI$ID))
+
+fwrite(pikedata2, "Data/Pike/Pike_SI_all_clean_average.csv")
+fwrite(Otopike.SI, "Data/Pike/Otopike_SI_clean_average.csv")
+```
+
+```{r prey fish data, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+#read in preyfish data
+Prey1 <- read.csv2("Data/Prey/Preyfish_samples.CSV", header = T, stringsAsFactors = F)
+
+Prey2 <- Prey1%>%
+  transmute(ID=Number,
+            Species=Species,
+            capt_date=Date,
+            SL_mm=SL.exact..mm.,
+            SL_size_class=SL.size.class,
+            weight_g=Weight..g.,
+            height_mm=Heigth..mm.,
+            sample_type=Sample.type,
+            area=Waterbody,
+            Long=Long,
+            Lat=Lat,
+            comment=comment)
+
+#Read prey SI data
+prey_NCS1 <- read.csv2("Data/Prey/2022-09-08_NCS_Prey.CSV", header = T, stringsAsFactors = F)
+
+prey_NCS2 <- prey_NCS1%>%
+  transmute(ID=Identifier.1,
+            Sample=Identifier.2,
+            d15N=as.numeric(d.15N.14N.Calculated),
+            d13C=as.numeric(d.13C.12C.Calculated),
+            d34S=as.numeric(d.34S.32S.Calculated),
+            CN_ratio=as.numeric(C..)/as.numeric(N..),
+            comment=paste(Comment.1,"|",Comment.2))%>%
+  filter(!grepl("Measurement repeated", comment)|ID=="BF-160"|ID=="BF-165")
+
+Mixed <- read.delim("Data/Mixed/2021-02 Boddenhecht Timo Rittweg TG.txt")
+
+Mixed2 <- Mixed%>%
+  transmute(ID=ID2,
+            Sample=ID1,
+            d15N=as.numeric(d15N..permil.N2.atm.),
+            d13C=as.numeric(d13C..permil.VPDB.),
+            d34S=as.numeric(d34S..permil.CDT.),
+            CN_ratio=as.numeric(weight.C)/as.numeric(weight.N),
+            comment=NA)
+
+prey_NCS2 <- rbind(prey_NCS2, Mixed2)
+
+prey_NCS3 <- fread("Data/Prey/2023-04-21_NCS_Prey.CSV")
+
+prey_NCS4 <- prey_NCS3%>%
+  transmute(ID=Identifier.1,
+            Sample=Identifier.2,
+            d15N=as.numeric(d15N),
+            d13C=as.numeric(d13C),
+            d34S=as.numeric(d34S),
+            CN_ratio=Cperc/Nperc,
+            comment=Comment)
+
+prey_NCSall <- rbind(prey_NCS2, prey_NCS4)
+
+#check missing fish
+preySID <- data.frame(ID=prey_NCS2[grepl("Measurement repeated", prey_NCS2$comment),]$ID)
+
+preySID2 <- data.frame(ID=prey_NCS2[!grepl("Measurement repeated", prey_NCS2$comment),]$ID,
+                       ID2=prey_NCS2[!grepl("Measurement repeated", prey_NCS2$comment),]$ID)
+
+IDcheck <- preySID%>%left_join(preySID2, by="ID")
+
+#Average SI values
+prey_NCSall <- prey_NCSall%>%
+  group_by(ID)%>%
+  dplyr::summarise(ID=ID,
+            Sample=Sample,
+            d15N=mean(d15N, na.rm = T),
+            d13C=mean(d13C, na.rm = T),
+            d34S=mean(d34S, na.rm = T),
+            CN_ratio=mean(CN_ratio, na.rm = T),
+            comment=comment)%>%
+  distinct()
+
+#join with preyfish data
+
+preyfish.SI <- Prey2%>%inner_join(prey_NCSall, by="ID")%>%
+  transmute(ID=ID,
+            Species=case_when(Species=="Herring"~"C.harengus",
+                              Species=="C. harengus"~"C.harengus",
+                              Species=="Roach"~"R.rutilus",
+                              Species=="R.rutilus"~"R.rutilus",
+                              Species=="R. rutilus"~"R.rutilus",
+                              Species=="Round goby"~"N.melanostomus",
+                              Species=="N. melanostomus"~"N.melanostomus",
+                              Species=="Tench"~"T.tinca",
+                              Species=="T. tinca"~"T.tinca",
+                              Species=="Bleak"~"A.alburnus",
+                              Species=="A. alburnus"~"A.alburnus",
+                              Species=="Perch"~"P.fluviatilis",
+                              Species=="P. fluviatilis"~"P.fluviatilis",
+                              Species=="Pikeperch"~"S.lucioperca",
+                              Species=="Silver bream"~"B.bjoerkna",
+                              Species=="B. bjoerkna"~"B.bjoerkna",
+                              Species=="White bream"~"B.bjoerkna",
+                              Species=="Vimba bream"~"V.vimba",
+                              Species=="P. spec"~"P.spec",
+                              Species=="P.microps"~"P.spec",
+                              Species=="G. aculeatus"~"G.aculeatus",
+                              Species=="Three-spined stickleback"~"G.aculeatus",
+                              Species=="S. erythrophthalmus"~"S.erythrophthalmus",
+                              Species=="Rudd"~"S.erythrophthalmus",
+                              Species=="G. cernua"~"G.cernua",
+                              Species=="Flounder"~"P.flesus",
+                              Species=="P. flesus"~"P.flesus",
+                              Species=="Plaice"~"P.platessa",
+                              Species=="Eel"~"A.anguilla",
+                              Species=="A. anguilla"~"A.anguilla",
+                              Species=="Pike"~"NA",
+                              Species=="Nine-spined stickleback"~"P.pungitius",
+                              Species=="Cod"~"G.morhua",
+                              Species=="A.tobianus"~"A.tobianus",
+                              Species=="S. spratus"~"S.sprattus",
+                              Species=="Salmo trutta  t."~"S.trutta"),
+            capt_date=capt_date,
+            SL_mm=SL_mm,
+            SL_size_class=SL_size_class,
+            weight_g=weight_g,
+            height_mm=height_mm,
+            sample_type=sample_type,
+            area=area,
+            Long=Long,
+            Lat=Lat,
+            d15N=d15N,
+            d13C=d13C,
+            d34S=d34S,
+            CN_ratio=CN_ratio,
+            comment1=comment.x,
+            comment2=comment.y)
+
+
+#check missing fish
+preySID <- data.frame(ID=unique(prey_NCSall$ID))
+
+preyID <- data.frame(ID=unique(preyfish.SI$ID),
+                     ID2=unique(preyfish.SI$ID))
+
+IDcheck <- preySID%>%left_join(preyID, by="ID")
+
+fwrite(preyfish.SI, "Data/Prey/Preyfish_SI_clean_average.csv")
+```
+
+```{r Day 1 tricks Prey, include=FALSE, eval=FALSE}
+Prey <- fread("Data/Prey/Preyfish_SI_clean_average.csv")
+
+#Calculate mean of N and C for each species
+m_by_sp<-aggregate(cbind(d15N, d13C, d34S)~Species, data=Prey, FUN=mean)
+# Now the standard deviation
+sd_by_sp<-aggregate(cbind(d15N, d13C, d34S)~Species, data=Prey, FUN=sd)
+# Merging df
+descriptive<-cbind(m_by_sp, sd_by_sp)
+descriptive<-descriptive[-5]
+colnames(descriptive)<-c("Sp", "d15N", "d13C", "sdd15N", "sdd13C")
+descriptive
+## Now lets look at the range and n
+range_by_sp<-aggregate(cbind(d15N, d13C, d34S)~Species, data=Prey, FUN=range)
+range_by_sp
+# N (How many observations)
+length_by_sp<-aggregate(cbind(d15N, d13C, d34S)~Species, data=Prey, FUN=length)
+length_by_sp
+
+##### Using tydivers
+data_res<-ddply(Prey, c("Species"), summarize, 
+                count=length(Species),
+                mC=mean(d13C), sdC=sd(d13C),
+                mN=mean(d15N), sdN=sd(d15N),
+                mS=mean(d34S), sdS=sd(d34S))
+data_res
+#####----- 4.0 Lets take a look at the data #####
+# Carbon
+ggplot(data=Prey, aes(x=Species, y=d13C, group=Species, colour=Species))+geom_boxplot()+geom_point(position="jitter")+
+  theme_bw()
+# Nitrogen
+ggplot(data=Prey, aes(x=Species, y=d15N, group=Species, colour=Species))+geom_boxplot()+geom_point(position="jitter")+
+  theme_bw()
+#Sulphur
+ggplot(data=Prey, aes(x=Species, y=d34S, group=Species, colour=Species))+geom_boxplot()+geom_point(position="jitter")+
+  theme_bw()
+
+### Lets plot d13C, d15N and CN 
+melt_data<-melt(Prey, id.vars=c(1:11, 16,17))
+
+### With this plot we can observe both isotopes in one plot and we can observe the difference between both of them
+ggplot(data=melt_data, aes(x=Species, y=value, group=Species, colour=Species))+
+  geom_boxplot()+geom_point(position="jitter")+facet_grid(variable~., scales="free_y")+
+  theme_bw()
+# Fish lipid content seems to be fine so no correction should be applied. However, in the following sections we have the code to perform
+# lipid correction using a model approach. The other approach is the chemical extraction which has to be done before analyzing samples for SIA
+
+### Lets explore our fish data in more detail to see if we have a problem with the lipids
+### First we subset the fish
+ggplot(data=Prey[Prey$Species=="C.harengus"|Prey$Species=="G.aculeatus",], aes(x=CN_ratio, y=d13C))+
+  geom_smooth(method="lm")+geom_point()+
+  facet_grid(Species~., scales="free_y")+
+  theme_bw()
+
+#-----------------------------------------------------------------------------------------------------------------
+##### 5.0  Lipid correction for d13C depending on the C:N,  for values >3.5 (as recommended by Skinner et al 2016) #####
+#-----------------------------------------------------------------------------------------------------------------
+## Lipids are depleted in d13C relative to protein (muscle). 
+#It can bias our interpretation of their position in the food web or get wrong proportion on mixing models
+# For Anchovy
+dep = subset(Prey, Species=="G.aculeatus")
+dep$rcn=with(dep, CN_ratio)
+dep$L<-with(dep,-20.54+7.24*rcn)
+ 
+mean(dep$d13C);sd(dep$d13C)
+mean(dep$rcn);sd(dep$rcn)
+
+# Fishes Kiljunen et al.(2006) # Carefull, this correction is not adequate for invertebrates!!!
+dep$d13Cc<-with(dep,ifelse(rcn>3.5, d13C+7.018*(0.048+3.9/(1+287/L)),d13C))
+
+dep2 = subset(Prey, Species=="C.harengus")
+dep2$rcn=with(dep2, CN_ratio)
+dep2$L<-with(dep2,-20.54+7.24*rcn)
+ 
+mean(dep2$d13C);sd(dep2$d13C)
+mean(dep2$rcn);sd(dep2$rcn)
+
+# Fishes Kiljunen et al.(2006) # Carefull, this correction is not adequate for invertebrates!!!
+dep2$d13Cc<-with(dep2,ifelse(rcn>3.5, d13C+7.018*(0.048+3.9/(1+287/L)),d13C))
+
+depdep <- rbind(dep, dep2)
+
+depdep2 <- depdep%>%
+  transmute(ID=ID,
+            Species=Species,
+            capt_date=capt_date,
+            SL_mm=SL_mm,
+            SL_size_class=SL_size_class,
+            weight_g=weight_g,
+            height_mm=height_mm,
+            sample_type=sample_type,
+            area=area,
+            Long=Long,
+            Lat=Lat,
+            d15N=d15N,
+            d13C=d13Cc,
+            d34S=d34S,
+            CN_ratio=CN_ratio,
+            comment1=comment1,
+            comment2=comment2)
+
+C.corrected <- rbind(Prey[Prey$Species!="C.harengus"&Prey$Species!="G.aculeatus",],depdep2)
+
+fwrite(C.corrected, "Data/Prey/Preyfish_SI_clean_average_lipid-corrected.csv")
+```
+
+```{r Day 1 tricks Pike, include=FALSE, eval=FALSE}
+rm(list = ls())
+Pike <- fread("Data/Pike/Pike_SI_all_clean_average.csv")
+
+Pike$Species <- "E.lucius"
+
+#Calculate mean of N and C for each species
+m_by_sp<-aggregate(cbind(d15N, d13C, d34S)~Species, data=Pike, FUN=mean)
+# Now the standard deviation
+sd_by_sp<-aggregate(cbind(d15N, d13C, d34S)~Species, data=Pike, FUN=sd)
+# Merging df
+descriptive<-cbind(m_by_sp, sd_by_sp)
+descriptive<-descriptive[-5]
+colnames(descriptive)<-c("Sp", "d15N", "d13C", "sdd15N", "sdd13C")
+descriptive
+## Now lets look at the range and n
+range_by_sp<-aggregate(cbind(d15N, d13C, d34S)~Species, data=Pike, FUN=range)
+range_by_sp
+# N (How many observations)
+length_by_sp<-aggregate(cbind(d15N, d13C, d34S)~Species, data=Pike, FUN=length)
+length_by_sp
+
+##### Using tydivers
+data_res<-ddply(Pike, c("Species"), summarize, 
+                count=length(Species),
+                mC=mean(d13C), sdC=sd(d13C),
+                mN=mean(d15N), sdN=sd(d15N),
+                mS=mean(d34S), sdS=sd(d34S))
+data_res
+#####----- 4.0 Lets take a look at the data #####
+# Carbon
+ggplot(data=Prey, aes(x=Species, y=d13C, group=Species, colour=Species))+geom_boxplot()+geom_point(position="jitter")+
+  theme_bw()
+# Nitrogen
+ggplot(data=Prey, aes(x=Species, y=d15N, group=Species, colour=Species))+geom_boxplot()+geom_point(position="jitter")+
+  theme_bw()
+#Sulphur
+ggplot(data=Prey, aes(x=Species, y=d34S, group=Species, colour=Species))+geom_boxplot()+geom_point(position="jitter")+
+  theme_bw()
+
+### Lets plot d13C, d15N and CN 
+melt_data<-melt(Prey, id.vars=c(1:11, 16,17))
+
+### With this plot we can observe both isotopes in one plot and we can observe the difference between both of them
+ggplot(data=melt_data, aes(x=Species, y=value, group=Species, colour=Species))+
+  geom_boxplot()+geom_point(position="jitter")+facet_grid(variable~., scales="free_y")+
+  theme_bw()
+# Fish lipid content seems to be fine so no correction should be applied. However, in the following sections we have the code to perform
+# lipid correction using a model approach. The other approach is the chemical extraction which has to be done before analyzing samples for SIA
+
+### Lets explore our fish data in more detail to see if we have a problem with the lipids
+### First we subset the fish
+ggplot(data=Pike, aes(x=CN_ratio, y=d13C))+
+  geom_smooth(method="lm")+geom_point()+
+  facet_grid(Species~., scales="free_y")+
+  theme_bw()
+
+#-----------------------------------------------------------------------------------------------------------------
+##### 5.0  Lipid correction for d13C depending on the C:N,  for values >3.5 (as recommended by Skinner et al 2016) #####
+#-----------------------------------------------------------------------------------------------------------------
+## Lipids are depleted in d13C relative to protein (muscle). 
+#It can bias our interpretation of their position in the food web or get wrong proportion on mixing models
+# For Anchovy
+dep <-  Pike
+dep$rcn <- with(dep, CN_ratio)
+dep$L <- with(dep,-20.54+7.24*rcn)
+ 
+mean(dep$d13C, na.rm = T);sd(dep$d13C, na.rm = T)
+mean(dep$rcn);sd(dep$rcn)
+
+# Fishes Kiljunen et al.(2006) # Carefull, this correction is not adequate for invertebrates!!!
+dep$d13Cc<-with(dep,ifelse(rcn>3.5, d13C+7.018*(0.048+3.9/(1+287/L)),d13C))
+
+dep2 <- dep%>%
+  transmute(ID=ID,
+            ID2=ID2,
+            Species=Species,
+            capt_date=capt_date,
+            TL_mm=TL_mm,
+            weight_g=weight_g,
+            sex=sex,
+            sample_type=Sample_type,
+            area=area,
+            Long=Long,
+            Lat=Lat,
+            d15N=d15N,
+            d13C=d13Cc,
+            d34S=d34S,
+            CN_ratio=CN_ratio,
+            comment=comment)
+
+fwrite(dep2, "Data/Pike/Pike_SI_all_clean_average_lipid-corrected.csv")
+```
