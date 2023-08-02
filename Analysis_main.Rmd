@@ -26,10 +26,11 @@ library(tRophicPosition)
 library(MixSIAR)
 library(reshape2)
 library(plyr)
+library(RColorBrewer)
 ```
 
 # Cleanup
-```{r pike data, include=FALSE, eval=FALSE}
+```{r pike muscle data cleanup, include=FALSE, eval=FALSE}
 rm(list = ls())
 
 #read in pike data from source
@@ -65,7 +66,7 @@ pike_NCS2 <- pike_NCS1%>%
             comment=paste(Comment.1,"|",Comment.2))%>%
   filter(!grepl("Measurement repeated", comment)|ID=="BH-00380"|ID=="BH-00829")
 
-Mixed <- read.delim("Data/Mixed/2021-02 Boddenhecht Timo Rittweg TG.txt")
+Mixed <- read.delim("Data/Pike/2021-02 Boddenhecht Timo Rittweg TG.txt")
 
 Mixed2 <- Mixed%>%
   transmute(ID=ID2,
@@ -164,6 +165,83 @@ fwrite(pikedata2, "Data/Pike/Pike_SI_all_clean_average.csv")
 fwrite(Otopike.SI, "Data/Pike/Otopike_SI_clean_average.csv")
 ```
 
+```{r pike eye lens data cleanup, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+#read in pike data from source
+Pike1 <- read.delim("C:/Users/timor/Nextcloud2/Boddenhecht/Data/Pike Data/1.pike_data_base_FOR_USERS/1Pike_Latest_Version.txt", 
+                    sep = ";", dec = ".", header = T, stringsAsFactors = F)
+
+Pike2 <- Pike1%>%
+  transmute(ID=case_when(Fish_ID=="BH-91050.2"~"BH-91050",
+                         Fish_ID=="BH-51614"&Waterbody=="BAT"~"NA",
+                         Fish_ID=="BH-90307"&MarkorRecap=="Mark"~"NA",
+                         TRUE~Fish_ID),
+            capt_date=Date,
+            TL_mm = Total_Length_mm,
+            weight=Weight,
+            sex=Sex,
+            area=Waterbody,
+            Long=case_when(is.na(Capture_Longitude)==T~Release_Longitude,
+                           TRUE~Capture_Longitude),
+            Lat=case_when(is.na(Capture_Latitude)==T~Release_Latitude,
+                          TRUE~Capture_Latitude))
+
+#Read pike SI data
+
+Mixed <- fread("Data/Mixed/2021-02 Boddenhecht Timo Rittweg TG.csv")
+
+Pike_NCS1 <- Mixed%>%
+  transmute(ID=ID2,
+            ID2=NA,
+            Sample=ID1,
+            Layer=as.numeric(`Lens layer`),
+            Diameter=as.numeric(`Eye lens diameter (mm)`),
+            amount=NA,
+            d15N=as.numeric(`d15N (permil N2 atm)`),
+            d13C=as.numeric(`d13C (permil VPDB)`),
+            d34S=as.numeric(`d34S (permil CDT)`),
+            CN_ratio=as.numeric(`weight%C`)/as.numeric(`weight%N`),
+            comment=NA)%>%
+  filter(Sample=="Eyelens")
+
+pike_NCS2 <- fread("Data/Pike/2023-04-21_NCS_Pike.CSV")
+
+pike_NCS3 <- pike_NCS2%>%
+  transmute(ID=Identifier.1,
+            ID2=NA,
+            Sample=Identifier.2,
+            Layer=as.numeric(Lens.layer),
+            Diameter=NA,
+            amount=Amount.ug,
+            d15N=as.numeric(d15N),
+            d13C=as.numeric(d13C),
+            d34S=as.numeric(d34S),
+            CN_ratio=(Amount.ug*(Cperc/100))/(Amount.ug*(Nperc/100)),
+            comment=Comment)%>%
+  filter(Sample=="eye lens")
+
+Pike_NCS_eyelens_all <- rbind(Pike_NCS1, pike_NCS3)
+
+Pike_NCS_eyelens_mean <- Pike_NCS_eyelens_all%>%
+  group_by(ID, Layer)%>%
+  dplyr::summarise(ID=ID,
+            ID2=ID2,
+            Sample=Sample,
+            Layer=Layer,
+            Diameter=Diameter,
+            amount=mean(amount),
+            d15N=mean(d15N, na.rm = T),
+            d13C=mean(d13C, na.rm = T),
+            d34S=mean(d34S, na.rm = T),
+            CN_ratio=mean(CN_ratio, na.rm = T),
+            comment=comment)%>%
+  ungroup()%>%
+  distinct()
+
+fwrite(Pike_NCS_eyelens_mean, "Data/pike/Eye-lens-all_clean.csv")
+```
+
 ```{r prey fish data, include=FALSE, eval=FALSE}
 rm(list = ls())
 
@@ -197,7 +275,7 @@ prey_NCS2 <- prey_NCS1%>%
             comment=paste(Comment.1,"|",Comment.2))%>%
   filter(!grepl("Measurement repeated", comment)|ID=="BF-160"|ID=="BF-165")
 
-Mixed <- read.delim("Data/Mixed/2021-02 Boddenhecht Timo Rittweg TG.txt")
+Mixed <- read.delim("Data/Prey/2021-02 Boddenhecht Timo Rittweg TG.txt")
 
 Mixed2 <- Mixed%>%
   transmute(ID=ID2,
@@ -510,3 +588,405 @@ dep2 <- dep%>%
 
 fwrite(dep2, "Data/Pike/Pike_SI_all_clean_average_lipid-corrected.csv")
 ```
+
+```{r pike and prey muscle exploration, include=FALSE, eval=FALSE}
+rm(list = ls())
+Prey <- fread("Data/Prey/Preyfish_SI_clean_average_lipid-corrected.csv")
+Pike <- fread("Data/Pike/Pike_SI_all_clean_average_lipid-corrected.csv")
+Ecotypes <- fread("Data/Pike/Otopike_SI_clean_average.csv")
+
+Prey$SL_mm <- as.numeric(Prey$SL_mm)
+
+Prey <- Prey%>%
+  filter(area!="Barthe"&area!="Ziese")%>%
+  mutate(sex="NA")
+
+Pike2 <- Pike%>%
+  transmute(ID=ID,
+            Species="E.lucius",
+            capt_date=as.character(capt_date),
+            SL_mm=TL_mm,
+            SL_size_class=NA,
+            sex=case_when(sex=="f"~"f",
+                          sex=="m"~"m",
+                          TRUE~"NA"),
+            weight_g=weight_g,
+            height_mm=NA,
+            sample_type="Muscle",
+            area=case_when(area=="BEZ"~"NRB",
+                           area=="Peene"~"Freshwater",
+                           area=="Barthe/Peene"~"Freshwater",
+                           area=="Barthe"~"Freshwater",
+                           area=="P"~"P",
+                           area=="WB"~"NRB",
+                           area=="KJB"~"KJB",
+                           area=="BAT"~"DZB",
+                           area=="GJB"~"NRB",
+                           area=="BEG"~"NRB",
+                           area=="KB"~"WRB",
+                           area=="SB"~"WRB",
+                           area=="KD"~"NA",
+                           area=="U"~"NA",
+                           area=="GB"~"GB",
+                           area=="S"~"S",
+                           area=="Sehrowbach"~"Freshwater",
+                           area=="VB"~"WRB",
+                           area=="Beek"~"Freshwater",
+                           area=="Duwenbeek"~"Freshwater",
+                           area=="NHG"~"Freshwater",
+                           area=="Ziese"~"Freshwater"),
+            Long=Long,
+            Lat=Lat,
+            d15N=d15N,
+            d13C=d13C,
+            d34S=d34S,
+            CN_ratio=CN_ratio,
+            comment1=comment,
+            comment2 =NA)%>%
+  filter(sex!="NA", area!="NA")%>%
+  distinct()
+
+fwrite(Pike2, file = "Data/Pike/whole-sample-muscle-SI.csv")
+
+Pikeprey <- rbind(Pike2, Prey)
+
+m_by_sp<-aggregate(cbind(d15N, d13C, d34S)~Species, data=Pikeprey, FUN=mean)
+
+sd_by_sp<-aggregate(cbind(d15N, d13C, d34S)~Species, data=Pikeprey, FUN=sd)
+
+descriptive<-cbind(m_by_sp, sd_by_sp)
+descriptive<-descriptive[-5]
+colnames(descriptive)<-c("Sp", "d15N", "d13C", "d34S", "sdd15N", "sdd13C", "sdd34S")
+descriptive
+
+fwrite(descriptive, file = "Data/Pike/Descriptive-whole-sample.csv")
+
+range_by_sp<-aggregate(cbind(d15N, d13C, d34S)~Species, data=Pikeprey, FUN=range)
+range_by_sp
+
+length_by_sp<-aggregate(cbind(d15N, d13C, d34S)~Species, data=Pikeprey, FUN=length)
+length_by_sp
+
+N_by_area <- as.data.frame(table(Prey$Species, Prey$area))
+N_by_area_wide <- pivot_wider(N_by_area, names_from = Var1, values_from = Freq)
+
+# Carbon boxplots
+ggplot(data=Pikeprey, aes(x=Species, y=d13C, group=Species, colour=Species))+geom_boxplot()+geom_point(position="jitter")+
+  theme_bw()
+# Nitrogen boxplots
+ggplot(data=Pikeprey, aes(x=Species, y=d15N, group=Species, colour=Species))+geom_boxplot()+geom_point(position="jitter")+
+  theme_bw()
+#Sulphur boxplots
+ggplot(data=Pikeprey, aes(x=Species, y=d34S, group=Species, colour=Species))+geom_boxplot()+geom_point(position="jitter")+
+  theme_bw()
+```
+
+```{r biplots whole sample}
+rm(list = ls())
+descriptive <- fread("Data/Pike/Descriptive-whole-sample.csv")
+
+descriptive2 <- descriptive%>%
+  filter(Sp=="C.harengus"|Sp=="R.rutilus"|Sp=="N.melanostomus"|Sp=="G.aculeatus"|Sp=="P.fluviatilis"|Sp=="E.lucius")%>%
+  drop_na()
+
+#Biplot by species
+brewer.pal(n = 14, name = "Dark2")
+colorBlindBlack8  <- c("#1B9E77", "#D95F02", "#7570B3", "#E7298A", "#66A61E", "#E6AB02", "#A6761D", "#666666","darkblue","darkred","cyan","red","beige", "yellow")
+
+
+Binorm <- ggplot()+ geom_errorbar(data=descriptive2, aes(x=d13C, y=d15N, ymin = d15N-sdd15N,ymax = d15N+sdd15N, col=Sp),
+                        width=.5, size=.5) + 
+  geom_errorbarh(data=descriptive2, aes(x=d13C, y=d15N, xmin = d13C+sdd13C,xmax = d13C-sdd13C, col=Sp),
+                 height=.5, size=.5)+
+  scale_colour_manual("", values=colorBlindBlack8)+ #1:nlevels(sources$prey))+
+  scale_fill_manual("", values=1:nlevels(descriptive2$sp))+
+  xlim(-24,-12)+ylim(8,18)+
+  theme_bw()+xlab(delta^"13"~"C(\u2030)")+ylab(delta^"15"~"N(\u2030)")+
+  theme(text = element_text(size = 10, color = "black"),
+        legend.position="bottom",
+        legend.text = element_text(color = "black", size=7, face="italic"),
+        legend.key.size = unit(.6, 'cm'),
+        strip.background = element_rect(colour="black", fill="white"))
+
+BiNS <- ggplot()+ geom_errorbar(data=descriptive2, aes(x=d34S, y=d15N, ymin = d15N-sdd15N,ymax = d15N+sdd15N, col=Sp),
+                        width=.5, size=.5) + 
+  geom_errorbarh(data=descriptive2, aes(x=d34S, y=d15N, xmin = d34S+sdd34S,xmax = d34S-sdd34S, col=Sp),
+                 height=.5, size=.5)+
+  scale_colour_manual("", values=colorBlindBlack8)+ #1:nlevels(sources$prey))+
+  scale_fill_manual("", values=1:nlevels(descriptive2$sp))+
+  xlim(5,22)+ylim(8,18)+
+  theme_bw()+xlab(delta^"34"~"S(\u2030)")+ylab(delta^"15"~"N(\u2030)")+
+  theme(text = element_text(size = 10, color = "black"),
+        legend.position="none",
+        legend.text = element_text(color = "black", size=7, face="italic"),
+        legend.key.size = unit(1, 'cm'),
+        strip.background = element_rect(colour="black", fill="white"))
+
+BiCS <- ggplot()+ geom_errorbar(data=descriptive2, aes(x=d13C, y=d34S, ymin = d34S+sdd34S,ymax = d34S-sdd34S, col=Sp),
+                        width=.5, size=.5) + 
+  geom_errorbarh(data=descriptive2, aes(x=d13C, y=d34S, xmin = d13C+sdd13C,xmax = d13C-sdd13C, col=Sp),
+                 height=.5, size=.5)+
+  scale_colour_manual("", values=colorBlindBlack8)+ #1:nlevels(sources$prey))+
+  scale_fill_manual("", values=1:nlevels(descriptive2$sp))+
+  xlim(-24,-12)+ylim(5,22)+
+  theme_bw()+xlab(delta^"13"~"C(\u2030)")+ylab(delta^"34"~"S(\u2030)")+
+  theme(text = element_text(size = 10, color = "black"),
+        legend.position="none",
+        legend.text = element_text(color = "black", size=7, face="italic"),
+        legend.key.size = unit(1, 'cm'),
+        strip.background = element_rect(colour="black", fill="white"))
+
+
+Allpike <- ggarrange(Binorm, BiNS, BiCS, ncol = 3, nrow = 1, common.legend = T)
+
+ggsave("Figures/Biplots-muscle-whole-sample.png", width = 16, height = 6, units = "cm", dpi = 600, bg = "white")
+```
+
+```{r biplots for ecotypes, include=FALSE, eval=FALSE}
+rm(list = ls())
+Prey <- fread("Data/Prey/Preyfish_SI_clean_average_lipid-corrected.csv")
+Ecotypes <- fread("Data/Pike/Otopike_SI_clean_average.csv")
+
+Prey$SL_mm <- as.numeric(Prey$SL_mm)
+
+Prey <- Prey%>%
+  filter(area!="Barthe"&area!="Ziese")%>%
+  mutate(sex="NA")
+
+Ecotypes2 <- Ecotypes%>%
+  transmute(ID=ID,
+            Species=case_when(ecotype=="BW-resident"~"brackish resident",
+                              ecotype=="FW_resident"~"freshwater resident",
+                              ecotype=="Anadromous"~"anadromous",
+                              ecotype=="Trans-habitat"~"cross-habitat"),
+            capt_date=as.character(capt_date),
+            SL_mm=TL_mm,
+            SL_size_class=NA,
+            sex=case_when(sex=="f"~"f",
+                          sex=="m"~"m",
+                          TRUE~"NA"),
+            weight_g=weight_g,
+            height_mm=NA,
+            sample_type="Muscle",
+            area=study_area,
+            Long=Long,
+            Lat=Lat,
+            d15N=d15N,
+            d13C=d13C,
+            d34S=d34S,
+            CN_ratio=CN_ratio,
+            comment1=comment,
+            comment2 =NA)%>%
+  filter(sex!="NA", area!="NA")%>%
+  distinct()
+
+fwrite(Ecotypes2, file = "Data/Pike/Ecotypes-muscle-SI.csv")
+
+Pikeprey <- rbind(Ecotypes2, Prey)
+
+length_by_sp<-aggregate(cbind(d15N, d13C, d34S)~Species, data=Pikeprey, FUN=length)
+length_by_sp
+
+m_by_sp<-aggregate(cbind(d15N, d13C, d34S)~Species, data=Pikeprey, FUN=mean)
+
+sd_by_sp<-aggregate(cbind(d15N, d13C, d34S)~Species, data=Pikeprey, FUN=sd)
+
+descriptive<-cbind(m_by_sp, sd_by_sp)
+descriptive<-descriptive[-5]
+colnames(descriptive)<-c("Sp", "d15N", "d13C", "d34S", "sdd15N", "sdd13C", "sdd34S")
+descriptive
+
+descriptive2 <- descriptive%>%
+  filter(Sp=="C.harengus"|Sp=="R.rutilus"|Sp=="N.melanostomus"|Sp=="G.aculeatus"|Sp=="P.fluviatilis"|
+           Sp=="brackish resident"|Sp=="freshwater resident"|Sp=="anadromous"|Sp=="cross-habitat")%>%
+  drop_na()
+
+#Biplot by species
+brewer.pal(n = 14, name = "Dark2")
+colorBlindBlack8  <- c("#1B9E77", "#D95F02", "#7570B3", "#E7298A", "#66A61E", "#E6AB02", "#A6761D", "#666666","darkblue","darkred","cyan","red","beige", "yellow")
+
+
+Binorm <- ggplot()+ geom_errorbar(data=descriptive2, aes(x=d13C, y=d15N, ymin = d15N-sdd15N,ymax = d15N+sdd15N, col=Sp),
+                        width=.5, size=.5) + 
+  geom_errorbarh(data=descriptive2, aes(x=d13C, y=d15N, xmin = d13C+sdd13C,xmax = d13C-sdd13C, col=Sp),
+                 height=.5, size=.5)+
+  scale_colour_manual("", values=colorBlindBlack8)+ #1:nlevels(sources$prey))+
+  scale_fill_manual("", values=1:nlevels(descriptive2$sp))+
+  #xlim(-24,-12)+ylim(8,18)+
+  theme_bw()+xlab(delta^"13"~"C(\u2030)")+ylab(delta^"15"~"N(\u2030)")+
+  theme(text = element_text(size = 10, color = "black"),
+        legend.position="bottom",
+        legend.text = element_text(color = "black", size=7, face="italic"),
+        legend.key.size = unit(.6, 'cm'),
+        strip.background = element_rect(colour="black", fill="white"))
+
+BiNS <- ggplot()+ geom_errorbar(data=descriptive2, aes(x=d34S, y=d15N, ymin = d15N-sdd15N,ymax = d15N+sdd15N, col=Sp),
+                        width=.5, size=.5) + 
+  geom_errorbarh(data=descriptive2, aes(x=d34S, y=d15N, xmin = d34S+sdd34S,xmax = d34S-sdd34S, col=Sp),
+                 height=.5, size=.5)+
+  scale_colour_manual("", values=colorBlindBlack8)+ #1:nlevels(sources$prey))+
+  scale_fill_manual("", values=1:nlevels(descriptive2$sp))+
+  #xlim(5,22)+ylim(8,18)+
+  theme_bw()+xlab(delta^"34"~"S(\u2030)")+ylab(delta^"15"~"N(\u2030)")+
+  theme(text = element_text(size = 10, color = "black"),
+        legend.position="none",
+        legend.text = element_text(color = "black", size=7, face="italic"),
+        legend.key.size = unit(1, 'cm'),
+        strip.background = element_rect(colour="black", fill="white"))
+
+BiCS <- ggplot()+ geom_errorbar(data=descriptive2, aes(x=d13C, y=d34S, ymin = d34S+sdd34S,ymax = d34S-sdd34S, col=Sp),
+                        width=.5, size=.5) + 
+  geom_errorbarh(data=descriptive2, aes(x=d13C, y=d34S, xmin = d13C+sdd13C,xmax = d13C-sdd13C, col=Sp),
+                 height=.5, size=.5)+
+  scale_colour_manual("", values=colorBlindBlack8)+ #1:nlevels(sources$prey))+
+  scale_fill_manual("", values=1:nlevels(descriptive2$sp))+
+  #xlim(-24,-12)+ylim(5,22)+
+  theme_bw()+xlab(delta^"13"~"C(\u2030)")+ylab(delta^"34"~"S(\u2030)")+
+  theme(text = element_text(size = 10, color = "black"),
+        legend.position="none",
+        legend.text = element_text(color = "black", size=7, face="italic"),
+        legend.key.size = unit(1, 'cm'),
+        strip.background = element_rect(colour="black", fill="white"))
+
+
+Ecopike <- ggarrange(Binorm, BiNS, BiCS, ncol = 3, nrow = 1, common.legend = T)
+
+ggsave("Figures/Biplots-muscle-ecotypes.png", Ecopike, width = 16, height = 6, units = "cm", dpi = 600, bg = "white")
+```
+
+```{r size and sex effects whole sample, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+Pike2 <- fread("Data/Pike/whole-sample-muscle-SI.csv")
+
+carb<-ggplot()+geom_point(data=Pike2[Pike2$area!="Freshwater",], aes(y=d13C, x=SL_mm, color=area))+
+  geom_smooth(data=Pike2, aes(y=d13C, x=SL_mm), method="lm")+theme_bw()+
+  theme( strip.text = element_text(face = "italic"))+
+  xlab("")+ylab(expression(delta^"13"~C*"(‰)"))
+
+nitro<-ggplot()+geom_point(data=Pike2[Pike2$area!="Freshwater",], aes(y=d15N, x=SL_mm, color=area))+
+  geom_smooth(data=Pike2, aes(y=d15N, x=SL_mm), method="lm")+theme_bw()+
+  theme( strip.text = element_text(face = "italic"))+
+  xlab("Total length (cm)")+ylab(expression(delta^"15"~N*"(‰)"))
+
+sulf <- ggplot()+geom_point(data=Pike2[Pike2$area!="Freshwater",], aes(y=d34S, x=SL_mm, color=area))+
+  geom_smooth(data=Pike2, aes(y=d34S, x=SL_mm), method="lm")+theme_bw()+
+  theme( strip.text = element_text(face = "italic"))+
+  xlab("")+ylab(expression(delta^"34"~S*"(‰)"))
+
+png(filename = "Figures/Sizeplot.png", width = 9000, height = 3000, res = 600)
+ggarrange(carb, nitro, sulf, ncol = 3, nrow = 1, common.legend = T)
+dev.off()
+
+sexC <- ggplot()+geom_boxplot(data=Pike2, aes(y=d13C, x=sex, fill=sex))+
+  theme_bw()+
+  theme( strip.text = element_text(face = "italic"))+
+  xlab("")+ylab(expression(delta^"13"~C*"(‰)"))
+
+sexN <- ggplot()+geom_boxplot(data=Pike2, aes(y=d15N, x=sex, fill=sex))+
+  theme_bw()+
+  theme( strip.text = element_text(face = "italic"))+
+  xlab("Sex")+ylab(expression(delta^"15"~N*"(‰)"))+
+  theme(legend.position = "bottom")
+
+sexS <- ggplot()+geom_boxplot(data=Pike2, aes(y=d34S, x=sex, fill=sex))+
+  theme_bw()+
+  theme( strip.text = element_text(face = "italic"))+
+  xlab("")+ylab(expression(delta^"34"~S*"(‰)"))
+
+png(filename = "Figures/Sexplot.png", width = 9000, height = 3000, res = 600)
+ggarrange(sexC, sexN, sexS, ncol = 3, nrow = 1, common.legend = T, legend = "bottom")
+dev.off()
+
+EcoC <- ggplot()+geom_boxplot(data=Ecotypes, aes(y=d13C, x=ecotype, fill=ecotype))+
+  theme_bw()+geom_point(data=Ecotypes, aes(y=d13C, x=ecotype, fill=ecotype))+
+  theme( strip.text = element_text(face = "italic"))+
+  xlab("")+ylab(expression(delta^"13"~C*"(‰)"))+
+  theme(axis.text.x = element_blank())
+
+EcoN <- ggplot()+geom_boxplot(data=Ecotypes, aes(y=d15N, x=ecotype, fill=ecotype))+
+  theme_bw()+geom_point(data=Ecotypes, aes(y=d15N, x=ecotype, fill=ecotype))+
+  theme( strip.text = element_text(face = "italic"))+
+  xlab("")+ylab(expression(delta^"15"~N*"(‰)"))+
+  theme(axis.text.x = element_blank())
+
+EcoS <- ggplot()+geom_boxplot(data=Ecotypes, aes(y=d34S, x=ecotype, fill=ecotype))+
+  theme_bw()+geom_point(data=Ecotypes, aes(y=d34S, x=ecotype, fill=ecotype))+
+  theme( strip.text = element_text(face = "italic"))+
+  xlab("")+ylab(expression(delta^"34"~S*"(‰)"))+
+  theme(axis.text.x = element_blank())
+
+png(filename = "Figures/Ecoplot.png", width = 9000, height = 3000, res = 600)
+ggarrange(EcoC, EcoN, EcoS, nrow = 1, ncol = 3, common.legend = T)
+dev.off()
+
+```
+
+```{r exploration eye lenses, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+Lensdata <- fread("Data/pike/Eye-lens-all_clean.csv")
+
+pikedata <- fread("Data/pike/Pikedata_ecotypes.txt")
+
+pike2 <- pikedata%>%
+  transmute(ID=ID,
+            waterbody=waterbody,
+            TL_mm=TL_mm,
+            clust=clust,
+            ecotype=case_when(clust=="FW int saline|const"~"FW_resident",
+                              TRUE~ecotype),
+            sex=sex)
+
+Lensdata$ID <- as.factor(Lensdata$ID)
+Lensdata$Layer <- as.numeric(Lensdata$Layer)
+
+# Function to reverse layers within each ID group
+reverse_layers <- function(layer_vector) {
+  max_layer <- max(layer_vector)
+  return(max_layer - (layer_vector - min(layer_vector)))
+}
+
+# Create a new column "Layer_rev" by reversing the "Layer" values within each "ID" group
+Lensdata2 <- Lensdata%>%
+  group_by(ID)%>%
+  dplyr::summarise(ID=ID,
+                   ID2=ID2,
+                   Sample=Sample,
+                   Layer=Layer,
+                   Layer_rev = reverse_layers(Layer),
+                   Diameter=Diameter,
+                   amount=amount,
+                   d15N=d15N,
+                   d13C=d13C,
+                   d34S=d34S,
+                   CN_ratio=CN_ratio,
+                   comment=comment)
+
+Pikelens <- pike2%>%
+  inner_join(Lensdata2, by = "ID")
+
+#Plot mean lifelong signal
+
+d34S <- ggplot(Pikelens, aes(Layer_rev, d15N))+
+  geom_point(size=0.5, aes(color=waterbody))+
+  geom_smooth(aes(color = waterbody), method = "loess")+
+  theme_classic()+
+  ggtitle("d34S")+
+  theme()
+
+d15N <- ggplot(Pikelens, aes(Layer_rev, d15N))+
+  geom_point(size=0.5, aes(color=ecotype))+
+  geom_smooth(aes(color = ecotype), method = "loess")+
+  theme_classic()+
+  ggtitle("d15N")
+
+d13C <- ggplot(Pikelens, aes(Layer_rev, d13C))+
+  geom_point(size=0.5, aes(color=ecotype))+
+  geom_smooth(aes(color = ecotype), method = "loess")+
+  theme_classic()+
+  ggtitle("d13C")
+
+ggarrange(d34S, d15N, d13C, nrow = 1, common.legend = T)
+```
+

@@ -1,0 +1,201 @@
+Analysis;Identifier 2;Identifier 1;d 15N/14N Calculated;N %;d 13C/12C Calculated;C %;d 34S/32S Calculated;S %;Comment 1;Comment 2
+12742;Muscle;BF-192;10.55;8.84;;45.44;17.54;1.32;;Measurement repeated (missing NC jump calib)
+12743;Muscle;BF-192;10.18;8.88;;45.63;;1.4;;Measurement repeated (missing NC jump calib)
+12744;Muscle;BF-192;10.23;8.9;;45.6;16.92;1.37;;Measurement repeated (missing NC jump calib)
+12745;Muscle;BF-191;10.23;8.8;;44.94;17.32;1.31;;Measurement repeated (missing NC jump calib)
+12746;Muscle;BF-191;10.3;8.95;;45.51;17.51;1.25;;Measurement repeated (missing NC jump calib)
+12747;Muscle;BF-191;10.13;8.96;;44.94;;1.41;;Measurement repeated (missing NC jump calib)
+12748;Muscle;BF-189;10.38;8.76;;45.2;17.72;1.26;;Measurement repeated (missing NC jump calib)
+12749;Muscle;BF-189;10.37;8.65;;46.23;;1.38;;Measurement repeated (missing NC jump calib)
+12750;Muscle;BF-189;10.21;8.85;;47.27;17.64;1.33;;Measurement repeated (missing NC jump calib)
+12751;Muscle;BF-195;10.71;10.58;;46.38;;1.35;;Measurement repeated (missing NC jump calib)
+12752;Muscle;BF-195;10.56;10.53;;45.71;18.26;1.45;;Measurement repeated (missing NC jump calib)
+12753;Muscle;BF-195;10.6;10.51;;45.53;18.02;1.43;;Measurement repeated (missing NC jump calib)
+12757;Muscle;BF-193;9.69;8.02;;45.32;17.43;1.25;;Measurement repeated (missing NC jump calib)
+12758;Muscle;BF-193;9.63;8.01;;45.89;17.51;1.23;;Measurement repeated (missing NC jump calib)
+12759;Muscle;BF-193;9.41;8.05;;45.96;;1.39;;Measurement repeated (missing NC jump calib)
+12760;Muscle;BF-198;11.13;10.24;;45.85;17.36;1.47;;Measurement repeated (missing NC jump calib)
+12761;Muscle;BF-198;10.84;10.38;;45.55;17.44;1.34;;Measurement repeated (missing NC jump calib)
+12762;Muscle;BF-198;10.61;10.3;;44.97;17.52;1.62;;Measurement repeated (missing NC jump calib)
+12763;Muscle;BF-194;10.7;9.76;;47.65;16.86;1.41;;Measurement repeated (missing NC jump calib)
+12764;Muscle;BF-194;10.74;9.71;;47.08;16.28;1.42;;Measurement repeated (missing NC jump calib)
+12765;Muscle;BF-194;11.13;9.77;;47.4;16.97;1.32;;Measurement repeated (missing NC jump calib)
+12766;Muscle;BF-197;10.73;9.88;;43.1;17.41;1.36;;Measurement repeated (missing NC jump calib)
+12767;Muscle;BF-197;10.72;10;;43.39;16.87;1.29;;Measurement repeated (missing NC jump calib)
+12768;Muscle;BF-197;10.56;10.06;;43.16;18.14;1.59;;Measurement repeated (missing NC jump calib)
+12772;Muscle;BF-156;10.26;8.86;;50.65;;1.5;;Measurement repeated (missing NC jump calib)
+12773;Muscle;BF-156;10.43;8.85;;50.72;17.7;1.44;;Measurement repeated (missing NC jump calib)
+12774;Muscle;BF-156;10.65;8.85;;50.55;17.59;1.24;;Measurement repeated (missing NC jump calib)
+12775;Muscle;BF-190;9.99;8.42;;49.43;18.03;1.46;;Measurement repeated (missing NC jump calib)
+12776;Muscle;BF-190;;8.4;;51.67;17.8;1.18;;Measurement repeated (missing NC jump calib)
+12777;Muscle;BF-190;9.97;8.19;;48.83;;1.37;;Measurement repeated (missing NC jump calib)
+12778;Muscle;BF-228;13.59;14.66;;47.96;9.49;1.97;;Measurement repeated (missing NC jump calib)
+12779;Muscle;BF-228;13.7;14.53;;48.12;;1.89;;Measurement repeated (missing NC jump calib)
+12780;Muscle;BF-228;13.69;14.58;;48.22;9.27;1.9;;Measurement repeated (missing NC jump calib)
+12781;Muscle;BF-211;13.39;14.4;;48.08;6.22;1.98;;Measurement repeated (missing NC jump calib)
+12782;Muscle;BF-211;13.33;14.65;;48.74;5.44;1.77;;Measurement repeated (missing NC jump calib)
+12783;Muscle;BF-211;13.3;14.59;;48.84;5.85;1.76;;Measurement repeated (missing NC jump calib)
+12787;Muscle;BF-178;12.72;14.91;;50.23;7.89;1.75;;Measurement repeated (missing NC jump calib)
+12788;Muscle;BF-178;12.65;14.79;;49.33;8.73;1.8;;Measurement repeated (missing NC jump calib)
+12789;Muscle;BF-178;12.76;14.76;;49.41;8.66;1.79;;Measurement repeated (missing NC jump calib)
+12790;Muscle;BF-188;14.16;13.89;;48.01;9.12;1.85;;Measurement repeated (missing NC jump calib)
+12791;Muscle;BF-188;14.48;13.92;;48.01;9.63;1.86;;Measurement repeated (missing NC jump calib)
+12792;Muscle;BF-188;14.49;13.99;;48.49;8.89;1.8;;Measurement repeated (missing NC jump calib)
+12793;Muscle;BF-184;14.74;14.22;;48.63;8.98;1.79;;Measurement repeated (missing NC jump calib)
+12794;Muscle;BF-184;14.4;14.31;;47.98;9.71;1.79;;Measurement repeated (missing NC jump calib)
+12795;Muscle;BF-184;14.73;14.29;;48.85;9.37;1.78;;Measurement repeated (missing NC jump calib)
+12796;Muscle;BF-169;12.12;14.6;;48.23;9.64;1.74;;Measurement repeated (missing NC jump calib)
+12797;Muscle;BF-169;12.08;14.88;;49.17;9.87;1.69;;Measurement repeated (missing NC jump calib)
+12798;Muscle;BF-169;11.94;14.56;;48.02;;1.88;;Measurement repeated (missing NC jump calib)
+12827;Muscle;BF-171;12.36;14.37;;47.82;11.74;1.59;;Measurement repeated (missing NC jump calib)
+12828;Muscle;BF-171;12.38;14.14;;47.68;11.41;1.65;;Measurement repeated (missing NC jump calib)
+12829;Muscle;BF-171;12.04;14.07;;47.12;;1.75;;Measurement repeated (missing NC jump calib)
+12830;Muscle;BF-146;14.15;15.36;;50.58;12.82;1.79;;Measurement repeated (missing NC jump calib)
+12831;Muscle;BF-146;;15.21;;50.44;12.57;1.82;;Measurement repeated (missing NC jump calib)
+12832;Muscle;BF-146;14.34;15.24;;49.96;13.76;1.74;;Measurement repeated (missing NC jump calib)
+12833;Muscle;BF-177;;14.74;;48.99;12.87;1.82;;Measurement repeated (missing NC jump calib)
+12834;Muscle;BF-177;12.82;14.92;;49.52;10.44;1.71;;Measurement repeated (missing NC jump calib)
+12835;Muscle;BF-177;12.81;14.89;;49.59;11.56;1.75;;Measurement repeated (missing NC jump calib)
+12836;Muscle;BF-201;16.12;15.1;;49.16;10.49;1.83;;Measurement repeated (missing NC jump calib)
+12837;Muscle;BF-201;14.82;15.12;;49.01;9.75;1.86;;Measurement repeated (missing NC jump calib)
+12838;Muscle;BF-201;;0.25;;0.48;;0.79;Sample didnt fall into reactor;Measurement repeated (missing NC jump calib)
+12842;Muscle;BF-220;15.1;15.03;;48.69;9.08;1.96;;Measurement repeated (missing NC jump calib)
+12843;Muscle;BF-220;15.18;14.82;;48.04;9.3;1.94;;Measurement repeated (missing NC jump calib)
+12844;Muscle;BF-220;;14.77;;48.64;9.59;1.94;;Measurement repeated (missing NC jump calib)
+12845;Muscle;BF-160;14.12;14.39;;49.58;8.57;1.77;;Measurement repeated (missing NC jump calib)
+12846;Muscle;BF-160;;14.23;;49.12;9.02;1.82;;Measurement repeated (missing NC jump calib)
+12847;Muscle;BF-160;14.31;14.23;;49.11;9.64;1.72;;Measurement repeated (missing NC jump calib)
+12848;Muscle;BF-216;15.92;14.32;;49.59;;1.51;;Measurement repeated (missing NC jump calib)
+12849;Muscle;BF-216;15.94;14.4;;49.2;4.99;1.57;;Measurement repeated (missing NC jump calib)
+12850;Muscle;BF-216;16.1;14.49;;49.66;5.09;1.47;;Measurement repeated (missing NC jump calib)
+12851;Muscle;BF-176;12.66;14.86;;49.36;6.82;1.72;;Measurement repeated (missing NC jump calib)
+12852;Muscle;BF-176;12.66;15.01;;49.82;6.9;1.77;;Measurement repeated (missing NC jump calib)
+12853;Muscle;BF-176;12.84;15;;50.11;6.94;1.65;;Measurement repeated (missing NC jump calib)
+12857;Muscle;BF-200;12.59;14.16;;51.89;7.55;1.64;;Measurement repeated (missing NC jump calib)
+12858;Muscle;BF-200;12.57;14.34;;52.16;;1.65;;Measurement repeated (missing NC jump calib)
+12859;Muscle;BF-200;12.57;14.38;;52.53;7.73;1.61;;Measurement repeated (missing NC jump calib)
+12860;Muscle;BF-156;;15.2;;50.87;9.38;1.86;;Measurement repeated (missing NC jump calib)
+12861;Muscle;BF-156;13.39;15.33;;49.81;9.23;1.72;;Measurement repeated (missing NC jump calib)
+12862;Muscle;BF-156;13.28;15.18;;49.17;;1.8;;Measurement repeated (missing NC jump calib)
+12863;Muscle;BF-165;13.56;14.9;;49.58;7.17;1.71;;Measurement repeated (missing NC jump calib)
+12864;Muscle;BF-165;13.53;14.94;;50.24;7.8;1.77;;Measurement repeated (missing NC jump calib)
+12865;Muscle;BF-165;13.77;14.96;;50.18;8.57;1.77;;Measurement repeated (missing NC jump calib)
+12866;Muscle;BF-185;11.48;14.14;;48.56;6.38;1.91;;Measurement repeated (missing NC jump calib)
+12867;Muscle;BF-185;11.66;14.3;;49.27;5.44;1.79;;Measurement repeated (missing NC jump calib)
+12868;Muscle;BF-185;11.8;14.37;;49.8;4.83;1.66;;Measurement repeated (missing NC jump calib)
+12873;Muscle;BF-157;13.02;15.16;;48.89;4.91;1.79;;Measurement repeated (missing NC jump calib)
+12874;Muscle;BF-157;13.04;15.13;;48.53;4.73;1.81;;Measurement repeated (missing NC jump calib)
+12875;Muscle;BF-164;15.64;15.27;;49.5;11.74;1.85;;Measurement repeated (missing NC jump calib)
+12876;Muscle;BF-164;15.3;15.15;;49.65;11.81;1.87;;Measurement repeated (missing NC jump calib)
+12877;Muscle;BF-164;15.38;15.15;;49.56;;1.78;;Measurement repeated (missing NC jump calib)
+12878;Muscle;BF-155;13.31;15.52;;50.33;7.89;1.75;;Measurement repeated (missing NC jump calib)
+12879;Muscle;BF-155;13.11;15.07;;49.28;7.3;1.87;;Measurement repeated (missing NC jump calib)
+12880;Muscle;BF-155;13.36;15.29;;49.97;7.74;1.72;;Measurement repeated (missing NC jump calib)
+12881;Muscle;BF-229;14.67;14.91;;48.82;;1.7;;Measurement repeated (missing NC jump calib)
+12882;Muscle;BF-229;14.68;14.99;;49.47;7.78;1.75;;Measurement repeated (missing NC jump calib)
+12883;Muscle;BF-229;;14.99;;49.45;7.92;1.73;;Measurement repeated (missing NC jump calib)
+15393;Muscle;BF-220;14.76;14.48;-20.67;49.07;6.64;1.99;;
+15394;Muscle;BF-220;14.9;14.39;-20.74;49.15;6.84;1.83;;
+15395;Muscle;BF-220;14.8;14.45;-20.75;49.78;6.94;1.86;;
+15396;Muscle;BF-168;12.84;14.54;-16.55;50.88;6.89;1.8;;
+15397;Muscle;BF-168;12.86;14.43;-16.44;49.76;6.88;1.84;;
+15398;Muscle;BF-168;12.75;14.47;-16.56;50.02;6.75;1.87;;
+15399;Muscle;BF-185;11.02;14.04;-14.99;49.89;3.78;1.82;;
+15400;Muscle;BF-185;11;14.09;-15.16;49.88;3.57;1.95;;
+15401;Muscle;BF-185;11.04;14.22;-14.94;50.76;3.51;1.84;;
+15402;Muscle;BF-171;12.14;14.08;-17.16;47.94;5.9;1.74;;
+15403;Muscle;BF-171;12.17;13.97;-17.05;47.38;5.95;1.78;;
+15404;Muscle;BF-171;12.11;13.98;-17.24;47.89;6.1;1.72;;
+15408;Muscle;BF-180;13.56;13.85;-17.46;49.34;8.08;1.93;;
+15409;Muscle;BF-180;13.68;14;-17.36;50.26;8.19;1.81;;
+15410;Muscle;BF-180;13.61;13.98;-17.36;49.76;7.79;1.78;;
+15411;Muscle;BF-216;15.33;14.11;-29.85;50.36;1.98;1.58;;
+15412;Muscle;BF-216;15.38;14.07;-29.86;50.69;2.11;1.61;;
+15413;Muscle;BF-216;15.25;13.99;-29.83;49.46;2.16;1.74;;
+15414;Muscle;BF-188;13.96;13.7;-19.55;49.36;7.7;1.88;;
+15415;Muscle;BF-188;13.94;13.9;-19.62;49.42;7.56;1.88;;
+15416;Muscle;BF-188;14.03;13.88;-19.54;49.89;7.91;1.8;;
+15417;Muscle;BF-184;14.21;14.34;-19.15;49.74;8.27;1.9;;
+15418;Muscle;BF-184;14.22;14.13;-19.07;49.52;8.17;1.79;;
+15419;Muscle;BF-184;14.31;13.91;-19.15;49.34;8.5;1.75;;
+15423;Muscle;BF-201;14.54;14.87;-21.67;49.75;7.18;1.85;;
+15424;Muscle;BF-201;14.47;14.96;-21.72;50.43;7.32;1.86;;
+15425;Muscle;BF-201;14.46;14.81;-21.79;49.92;7.44;1.9;;
+15426;Muscle;BF-178;12.6;14.96;-16.37;51.97;7.65;1.78;;
+15427;Muscle;BF-178;12.62;14.82;-16.45;51.02;7.45;1.75;;
+15428;Muscle;BF-178;12.58;14.67;-16.48;50.87;7.55;1.79;;
+15429;Muscle;BF-190;10.04;8.43;-23.81;51.69;13.99;1.48;;
+15430;Muscle;BF-190;10.17;8.43;-23.49;51.55;14.78;1.27;;
+15431;Muscle;BF-190;10.17;8.69;-23.64;52.08;14.85;1.38;;
+15432;Muscle;BF-193;9.79;7.75;-23.71;46.04;14.8;1.25;;
+15433;Muscle;BF-193;9.72;7.92;-23.86;46.89;15.01;1.3;;
+15434;Muscle;BF-193;9.72;8.05;-23.77;47.77;14.99;1.16;;
+15438;Muscle;BF-191;10.29;9.2;-23.53;48.89;15.07;1.34;;
+15439;Muscle;BF-191;10.21;8.95;-23.6;47.53;15.65;1.42;;
+15440;Muscle;BF-191;10.19;8.91;-23.57;48.23;15.61;1.27;;
+15441;Muscle;BF-177;12.49;14.94;-22.59;51;9.17;1.79;;
+15442;Muscle;BF-177;12.82;14.93;-22.72;51.42;9.21;1.87;;
+15443;Muscle;BF-177;12.6;14.26;-22.64;49.52;8.73;1.75;;
+15444;Muscle;BF-197;10.73;9.88;-22.09;45.02;14.79;1.42;;
+15445;Muscle;BF-197;10.69;9.91;-22.03;45;15.07;1.37;;
+15446;Muscle;BF-197;10.96;9.94;-22.1;44.99;15.34;1.5;;
+15447;Muscle;BF-195;10.87;10.67;-22.31;48.11;15.47;1.47;;
+15448;Muscle;BF-195;10.46;10.68;-22.32;47.76;15.67;1.43;;
+15449;Muscle;BF-195;10.88;10.78;-22.25;47.74;15.73;1.51;;
+15485;Muscle;BF-189;10.89;9.22;-22.84;48.44;14.74;1.19;;
+15486;Muscle;BF-189;10.63;9.1;-22.74;46.12;14.86;1.22;;
+15487;Muscle;BF-189;10.73;8.71;-23.17;48.97;15.28;1.09;;
+15488;Muscle;BF-198;11.19;11.16;-21.78;47.66;15.2;1.19;;
+15489;Muscle;BF-198;11.4;10.82;-21.82;46.88;14.97;1.19;;
+15490;Muscle;BF-198;11.18;11;-21.85;46.76;15.06;1.19;;
+15491;Muscle;BF-192;10.81;9.45;-23.26;47.48;15.16;1.04;;
+15492;Muscle;BF-192;10.82;9.23;-23.22;46.52;15.06;1.1;;
+15493;Muscle;BF-192;10.76;9.42;-23.24;47.78;15.14;1.09;;
+15494;Muscle;BF-146;14.78;15.72;-17.19;50.6;10.1;1.7;;
+15495;Muscle;BF-146;14.68;15.96;-17.2;50.03;10.11;1.7;;
+15496;Muscle;BF-146;14.7;16.17;-17.12;50.72;9.95;1.61;;
+15500;Muscle;BF-176;12.62;15.79;-16.57;50.32;4.66;1.58;;
+15501;Muscle;BF-176;12.61;15.8;-16.61;50.7;4.83;1.57;;
+15502;Muscle;BF-176;12.53;15.72;-16.64;50.37;4.95;1.66;;
+15503;Muscle;BF-164;15.27;15.8;-20.36;50.28;12.19;1.62;;
+15504;Muscle;BF-164;15.26;16.21;-20.34;50.58;12.45;1.63;;
+15505;Muscle;BF-164;15.06;16.06;-20.32;50.51;12.59;1.7;;
+15506;Muscle;BF-169;12.31;15.63;-17.88;49.57;8.91;1.61;;
+15507;Muscle;BF-169;12.42;15.67;-17.79;49.52;9.04;1.61;;
+15508;Muscle;BF-169;12.38;15.69;-17.8;49.68;8.93;1.55;;
+15509;Muscle;BF-155;12.96;15.86;-17.91;49.78;7.34;1.75;;
+15510;Muscle;BF-155;13.14;15.83;-17.95;49.87;7.52;1.7;;
+15511;Muscle;BF-155;13.06;15.91;-17.88;50.69;7.44;1.65;;
+15515;Muscle;BF-200;12.45;14.55;-17.77;52.53;7.45;1.6;;
+15516;Muscle;BF-200;12.57;14.53;-17.69;52.45;7.39;1.49;;
+15517;Muscle;BF-200;12.36;14.82;-17.71;52.13;7.33;1.51;;
+15518;Muscle;BF-229;14.48;15.47;-22.86;48.62;7.77;1.65;;
+15519;Muscle;BF-229;14.62;15.15;-22.95;48.28;8.11;1.68;;
+15520;Muscle;BF-229;14.63;15.31;-22.9;49.1;7.9;1.64;;
+15521;Muscle;BF-228;14.09;15.57;-21.71;49.75;7.86;1.66;;
+15522;Muscle;BF-228;14.16;15.5;-21.65;49.31;7.78;1.63;;
+15523;Muscle;BF-228;14.36;14.86;-21.72;48.55;7.59;1.61;;
+15524;Muscle;BF-211;13.61;15.38;-20.12;49.83;4.75;1.66;;
+15525;Muscle;BF-211;13.59;15.28;-20.18;49.71;4.84;1.62;;
+15526;Muscle;BF-211;13.65;15.16;-20.22;49.52;4.83;1.68;;
+15530;Muscle;BF-194;11.33;9.97;-22.71;47.76;15.08;1.11;;
+15531;Muscle;BF-194;11.36;10.09;-22.76;48.56;15.51;1.15;;
+15532;Muscle;BF-194;11.46;10;-22.75;48.5;15.64;1.13;;
+15533;Muscle;BF-157;12.94;15.57;-15.58;49.27;4.06;1.65;;
+15534;Muscle;BF-157;12.89;15.72;-15.56;49.2;3.89;1.65;;
+15535;Muscle;BF-157;12.91;15.8;-15.59;49.03;3.83;1.75;;
+17746;Muscle;BF-113;15.9;13.46;-21.14;41.98;14.99;1.53;;
+17747;Muscle;BF-113;15.88;12.71;-21.23;41.92;14.63;1.51;;
+17748;Muscle;BF-113;15.75;13.36;-21.19;42.95;14.7;1.57;;
+17749;Muscle;BF-115;16.29;13.15;-20.69;42.98;14;1.4;;
+17750;Muscle;BF-115;16.35;12.95;-20.68;42.91;13.88;1.4;;
+17751;Muscle;BF-115;16.45;10.34;-20.76;34.66;14.49;1.12;;
+17752;Muscle;BF-116;16;12.82;-21.01;42.98;14.46;1.57;;
+17753;Muscle;BF-116;15.98;12.86;-20.99;42.72;14.65;1.44;;
+17754;Muscle;BF-116;15.9;11.6;-21.03;38.76;14.95;1.3;;
+17755;Muscle;BF-118;16.04;12.9;-20.9;43.29;15.08;1.58;;
+17756;Muscle;BF-118;16.09;12.28;-20.92;41.85;15.12;1.52;;
+17757;Muscle;BF-118;16.16;12.69;-20.92;43.21;15.39;1.49;;
+15536;Muscle;BF-156;11.23;9.05;-23.2;51;14.98;1.09;;
+15537;Muscle;BF-156;11.41;8.9;-23.19;51.06;15.53;1.1;;
+15538;Muscle;BF-156;11.36;8.93;-23.2;50.19;15.92;1.1;;

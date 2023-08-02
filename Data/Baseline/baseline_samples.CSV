@@ -1,0 +1,260 @@
+Number;Species;Genus;Functional group;Sample wwt [g];Sample dry wt [g];Homogenized sample wt [mg];Sample type (gill net/grab/dredge/opportunistic);Date;Long;Lat;depth (m);Processed;comment;;;;Criteria;Total Ind;Functional Group
+BS-001;R. harrisii;;;;;;Gill net;30.03.2021;;;;;;;;;;;
+BS-002;R. harrisii;;;;;;Gill net;30.03.2021;;;;;;;;;;;
+BS-003;R. harrisii;;;;;;Gill net;30.03.2021;;;;;;;;;;;
+BS-004;R. harrisii;;;;;;Gill net;30.03.2021;;;;;;;;;;;
+BS-005;R. harrisii;;;;;;Gill net;30.03.2021;;;;;;;;;;;
+BS-006;R. harrisii;;;;;;Gill net;30.03.2021;;;;;;;;;;;
+BS-007.2;R. harrisii;;;;;;Gill net;30.03.2021;;;;;;;;;;;
+BS-008.2;R. harrisii;;;;;;Gill net;30.03.2021;;;;;;;;;;;
+BS-007;;Idotea + Gammarus;Grazer;0.79;;;Receiver St. 129;11.05.2021;;;;;12;;;;;;
+BS-008;M. edulis;Mytilus;Filter Feeder;0.95;;;Receiver St. 129;11.05.2021;;;;;30;;;;;;
+BS-009;R. harrisii;;;;;;Gill net;30.03.2021;;;;;;;;;;;
+BS-010;R. harrisii;;;;;;Gill net;30.03.2021;;;;;;;;;;;
+BS-011;;Idotea;Grazer;0.32;;;Grab;14.04.2021;54.554246;13.15301;25;;12 individuals;;;;Selected;12;Grazer
+BS-012;;Crangon;Omnivore/Predator;0.43;;;Dredge;14.04.2021;54.554381;13.150872;2;;4 individuals;;;;;;
+BS-013;;Idotea;Grazer;0.04;;;Dredge;14.04.2021;54.554381;13.150872;2;;2 individuals;;;;;;
+BS-014;;Neomysis;Detritivore/Predator;0.73;;;Dredge;14.04.2021;54.554381;13.150872;2;;10 individuals;;;;;;
+BS-015;;Neomysis;Detritivore/Predator;0.72;;;Dredge;14.04.2021;54.554381;13.150872;2;;10 individuals;;;;;;
+BS-016;;Neomysis;Detritivore/Predator;0.61;;;Dredge;14.04.2021;54.554381;13.150872;2;;10 individuals;;;;;;
+BS-017;M. balthica;Macoma;Sand Licker;0.2;;;Grab;14.04.2021;54.554246;13.15301;25;;2 individuals;;M. arenaria;Mya;Filter Feeder;Present at this site (only 1 ind.);
+BS-018;H. diversicolor;Hediste;Predator;0.04;;;Grab;14.04.2021;54.554246;13.15301;25;;1 individual;;;;;;
+BS-019;M. edulis;Mytilus;Filter Feeder;0.09;;;Grab;14.04.2021;54.554246;13.15301;25;;13 individuals;;;;Selected;13;Filter Feeder
+BS-020;;Idotea;Grazer;0.12;;;Grab;10.04.2021;54.427081;13.133549;25;;10 individuals;;;;;;
+BS-021;;Idotea;Grazer;0.35;;;Grab;10.04.2021;54.427081;13.133549;25;;14 individuals;;;;Selected;14;Grazer
+BS-022;;Idotea;Grazer;0.31;;;Grab;10.04.2021;54.425937;12.952471;3;;13 individuals;;;;Selected;13;Grazer
+BS-023;;Gammarus;Grazer;0.03;;;Grab;10.04.2021;54.425937;12.952471;3;;1 individual;;;;;;
+BS-024;;Gammarus;Grazer;0.19;;;Grab;10.04.2021;54.427081;13.133549;2.5;;4 individuals;;;;;;
+BS-025;;Crangon;Omnivore/Predator;1.38;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 1 ind;;;;;;
+BS-026;;Crangon;Omnivore/Predator;0.96;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 3 ind;;;;;;
+BS-027;;Crangon;Omnivore/Predator;1.13;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 3 ind;;;;;;
+BS-028;;Crangon;Omnivore/Predator;1.36;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 3 ind;;;;;;
+BS-029;;Palaemon;Omnivore - Predator;0.37;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 1 ind;;;;Selected;1;Predator
+BS-030;;Idotea;Grazer;0;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 1 ind;;;;;;
+BS-031;;Gammarus;Grazer;0;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 1 ind;;;;;;
+BS-032;H. diversicolor;Hediste;Predator;0.06;;;Grab;10.04.2021;54.427081;13.133549;2.5;;1 individual;;;;;;
+BS-033;;Idotea;Grazer;0;;;Grab;10.04.2021;54.427081;13.133549;2.5;;1 individual;;;;;;
+BS-034;H. diversicolor;Hediste;Predator;0.51;;;Grab;14.04.2021;54.554246;13.15301;25;;7 individuals;;;;;;
+BS-035;M. arenaria;Mya;Filter Feeder;0.02;;;Grab;10.04.2021;54.427081;13.133549;25;;4 individuals;;;;Selected;7;Filter Feeder
+BS-036;M. edulis;Mytilus;Filter Feeder;0.1;;;Grab;10.04.2021;54.427081;13.133549;25;;1 individual;;;;Selected;;Filter Feeder
+BS-037;C. lamarcki;Cerastodema;Sand Licker;0;;;Grab;10.04.2021;54.427081;13.133549;25;;2 individuals;;;;Not yet;;Sand Licker
+BS-038;;Mystery Gastropoda;Grazer;0;;;Grab;10.04.2021;54.427081;13.133549;25;;4 individuals;;;;;;
+BS-039;H. diversicolor;Hediste;Predator;0.16;;;Grab;10.04.2021;54.425937;12.952471;3;;9 individuals;;;;;;
+BS-040;;Mystery Polichaete;???;0;;;Grab;10.04.2021;54.425937;12.952471;3;;1 individual;;;;;;
+BS-041;Neogobius melanostomus;Neogobius;Meso-predator;0.16;;;Receiver St. 021;02.03.2021;;;;;1 individual;;;;;;
+BS-042;H. diversicolor;Hediste;Predator;0.14;;;Receiver St. 021;02.03.2021;;;;;2 individuals;;;;;;
+BS-043;;Gammarus;Grazer;0;;;Receiver St. 021;02.03.2021;;;;;9 individuals;;;;Selected;12;Grazer
+BS-044;;Idotea;Grazer;0.1;;;Receiver St. 021;02.03.2021;;;;;3 individuals;;;;Selected;;
+BS-045;;Gammarus;Grazer;0.73;;;Receiver St. 129;11.05.2021;;;;;11 individuals;;;;Selected;11;
+BS-046;;Gammarus;Grazer;0.2;;;Receiver St. 129;11.05.2021;;;;;8 individuals;;;;;;
+BS-047;;Idotea;Grazer;0.06;;;Receiver St. 129;11.05.2021;;;;;1 individual;;;;Selected;1;Grazer
+BS-048;;Carcinus;Predator;0.35;;;Receiver St. 129;11.05.2021;;;;;4 individuals;;;;;;
+BS-049;M. edulis;Mytilus;Filter Feeder;0.95;;;Receiver St. 129;11.05.2021;;;;;30 individuals;;;;Selected;30;Filter Feeder
+BS-050;;Balanidae;Filter Feeder;1.65;;;Receiver St. 129;11.05.2021;;;;;20 individuals;;;;Selected;20;Filter Feeder
+BS-051;Neogobius melanostomus;Neogobius;Meso-predator;0.27;;;Receiver St. 013;02.03.2021;;;;;4 individuals;;;;;;
+BS-052;H. diversicolor;Hediste;Predator;0.08;;;Receiver St. 013;02.03.2021;;;;;6 individuals;;;;;;
+BS-053;;;Primary Producer;1.88;;;Receiver St. 013;02.03.2021;;;;;-;;;;;;
+BS-054;;Carcinus;Predator;0.4;;;Receiver St. 013;02.03.2021;;;;;1 individual;;;;;;
+BS-055;;Gammarus;Grazer;0;;;Receiver St. 013;02.03.2021;;;;;2 individuals;;;;Selected;2;Grazer
+BS-056;;Balanidae;Filter Feeder;1.91;;;Receiver St. 013;02.03.2021;;;;;20 individuals;;;;Selected;20;Filter Feeder
+BS-057;;Carcinus;Predator;0.12;;;Receiver St. 069;10.06.2021;;;;;5 individuals;;;;;;
+BS-058;H. diversicolor;Hediste;Predator;0.03;;;Receiver St. 069;10.06.2021;;;;;4 individuals;;;;;;
+BS-059;M. edulis;Mytilus;Filter Feeder;1.3;;;Receiver St. 128;03.05.2021;;;;;10;-;;;;;
+BS-059.1;;Gammarus;Grazer;0.05;;;Receiver St. 069;10.06.2021;;;;;2 individuals;;;;Selected;2;Grazer
+BS-060;M. edulis;Mytilus;Filter Feeder;1.63;;;Receiver St. 128;03.05.2021;;;;;20;-;;;;;
+BS-060.1;M. edulis;Mytilus;Filter Feeder;1.41;;;Receiver St. 069;10.06.2021;;;;;27 individuals;;;;Selected;25;Filter Feeder
+BS-061;;Corophium;Grazer & Filter Feeder;0;;;Receiver St. 125;10.03.2021;;;;;1 individual;;;;;;
+BS-062;;Bathyporeia;Sand Licker & Grazer;0.03;;;Receiver St. 125;10.03.2021;;;;;1 individual;;;;;;
+BS-063;;Carcinus;Predator;0.11;;;Receiver St. 125;10.03.2021;;;;;2 individuals;;;;;2;Predator
+BS-064;;Gammarus;Grazer;0.1;;;Receiver St. 125;10.03.2021;;;;;4 individuals;;;;Selected;4;Grazer
+BS-065;;Balanidae;Filter Feeder;1.56;;;Receiver St. 047;18.03.2021;;;;;20;-;;;;;
+BS-065.1;;Idotea;Grazer;0;;;Receiver St. 125;10.03.2021;;;;;2 individuals;;;;;;
+BS-066;H. diversicolor;Hediste;Predator;0.31;;;Receiver St. 125;10.03.2021;;;;;7 individuals;;;;;;
+BS-067;;Balanidae;Filter Feeder;1.21;;;Receiver St. 125;10.03.2021;;;;;20 individuals;;;;Selected;20;Filter Feeder
+BS-068;;;Primary Producer;2.38;;;Receiver St. 126;10.03.2021;;;;;-;;;;;;
+BS-069;;Idotea;Grazer;0.04;Receiver St. 135;;Receiver St. 135;18.03.2021;;;;;1;-;;;;1;
+BS-070;;Balanidae;Filter Feeder;2.36;Receiver St. 135;;Receiver St. 135;18.03.2021;;;;;30;-;;;;30;
+BS-069.1;;;Primary Producer;0.78;;;Receiver St. 014;02.03.2021;;;;;-;;;;;;
+BS-070.1;;Carcinus;Predator;0.1;;;Receiver St. 014;02.03.2021;;;;;1 individual;;;;;;
+BS-071;;Idotea;Grazer;0.06;;;Receiver St. 049;18.03.2021;;;;;5;-;;;;;
+BS-071.1;;Gammarus;Grazer;0;;;Receiver St. 014;02.03.2021;;;;;3 individuals;;;;Selected;5;Grazer
+BS-072;;Balanidae;Filter Feeder;1.39;;;Receiver St. 049;18.03.2021;;;;;21;-;;;;;
+BS-072.1;;Idotea;Grazer;0.2;;;Receiver St. 014;02.03.2021;;;;;2 individuals;;;;Selected;;
+BS-073;;Balanidae;Filter Feeder;0.63;;;Receiver St. 014;02.03.2021;;;;;9 individuals;;;;Selected;9;Filter Feeder
+BS-074;;;Primary Producer;1.28;;;Receiver St. 005;01.06.2021;;;;;-;;;;;;
+BS-075;;Carcinus;Predator;0.09;;;Receiver St. 005;01.06.2021;;;;;3 individuals;;;;;;
+BS-076;;Idotea;Grazer;0.14;;;Receiver St. 005;01.06.2021;;;;;6 individuals;;;;Selected;14;Grazer
+BS-077;;Gammarus;Grazer;0.51;;;Receiver St. 005;01.06.2021;;;;;8 individuals;;;;Selected;;
+BS-078;M. edulis;Mytilus;Filter Feeder;1.95;;;Receiver St. 005;01.06.2021;;;;;18 individuals;;;;Selected;18;Filter Feeder
+BS-079;;Carcinus;Predator;5.06;;;Receiver St. 005;01.06.2021;;;;;1 individual;Inside separate bag because it´s too big!;;;;;
+BS-080;M. arenaria;Mya;Filter Feeder;0.03;;;Receiver St. 005;01.06.2021;;;;;18 individuals;;;;;;
+BS-081;;Idotea;Grazer;0.4;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 10 ind;;;;;;
+BS-082;;Idotea;Grazer;0.36;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 10 ind;;;;Selected;10;Grazer
+BS-083;;Idotea;Grazer;0.42;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 10 ind;;;;Selected;10;Grazer
+BS-084;H. diversicolor;Hediste;Predator;0.8;;;-;10.03.2021;Jörg (BAT);Jörg (BAT);;;1 individual;;;;;;
+BS-085;;Gammarus;Grazer;0.14;;;-;29.03.2021;Duvenbeek;Duvenbeek;;;3 individuals;;;;Selected;3;Grazer
+BS-086;;Idotea;Grazer;0.44;;;Dredge;14.04.2021;54.554381;13.150872;2;;10 individuals;;;;Selected;10;Grazer
+BS-087;;Idotea;Grazer;0.29;;;Dredge;14.04.2021;54.554381;13.150872;2;;10 individuals;;;;Selected;10;Grazer
+BS-088;;Idotea;Grazer;0.13;;;Dredge;14.04.2021;54.554381;13.150872;2;;9 individuals;;;;;;
+BS-089;;Neomysis;Detritivore/Predator;0.04;;;Dredge;14.04.2021;54.554381;13.150872;2;;1 individual;;;;;;
+BS-090;;Gammarus;Grazer;1.19;;;Dredge;14.04.2021;54.554381;13.150872;2;;10 individuals;;;;;;
+BS-091;;Gammarus;Grazer;1.47;;;Dredge;14.04.2021;54.554381;13.150872;2;;10 individuals;;;;;;
+BS-092;;Gammarus;Grazer;1.15;;;Dredge;14.04.2021;54.554381;13.150872;2;;4 individuals;;;;;;
+BS-093;;Gammarus;Grazer;1.12;;;Dredge;14.04.2021;54.554381;13.150872;2;;6 individuals;;;;;;
+BS-094;;Carcinus;Predator;0.03;;;Dredge;14.04.2021;54.554381;13.150872;2;;1 individual;;;;;;
+BS-095;;Palaemon;Omnivore - Predator;0.32;;;Dredge;14.04.2021;54.554381;13.150872;2;;1 individual;;;;Selected;1;Predator
+BS-096;;Crangon;Omnivore/Predator;1.59;;;Dredge;14.04.2021;54.554381;13.150872;2;;6 individuals;;;;;;
+BS-097;;Crangon;Omnivore/Predator;1.55;;;Dredge;14.04.2021;54.554381;13.150872;2;;4 individuals;;;;;;
+BS-098;;Crangon;Omnivore/Predator;1.56;;;Dredge;14.04.2021;54.554381;13.150872;2;;6 individuals;;;;;;
+BS-099;;Crangon;Omnivore/Predator;1.37;;;Dredge;14.04.2021;54.554381;13.150872;2;;2 individuals;;;;;;
+BS-100;;Crangon;Omnivore/Predator;1.51;;;Dredge;14.04.2021;54.554381;13.150872;2;;3 individuals;;;;;;
+BS-101;;Neomysis;Detritivore/Predator;0.2;;;Dredge;14.04.2021;54.554381;13.150872;2;;5 individuals;;;;;;
+BS-102;;Crangon;Omnivore/Predator;1.15;;;Dredge;14.04.2021;54.554381;13.150872;2;;7 individuals;;;;;;
+BS-103;G. aculeatus;Gasterosteus;Fish;1.21;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 1 ind, whole fish;;;;;;
+BS-104;G. aculeatus;Gasterosteus;Fish;0.61;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 1 ind, whole fish;;;;;;
+BS-105;G. aculeatus;Gasterosteus;Fish;0.97;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 1 ind, whole fish;;;;;;
+BS-106;G. aculeatus;Gasterosteus;Fish;0.87;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 1 ind, whole fish;;;;;;
+BS-107;G. aculeatus;Gasterosteus;Fish;0.56;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 1 ind, whole fish;;;;;;
+BS-108;N. melastomus;Neogobius;Meso-predator;0.15;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 1 ind, Muscle;;;;;;
+BS-109;N. melastomus;Neogobius;Meso-predator;0.14;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 1 ind, Muscle;;;;;;
+BS-110;N. spp;Neogobius;Fish;0.59;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 1 ind, whole fish;;;;;;
+BS-111;S. typhle;Syngnathus;Planktivore;0.77;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 1 ind, whole fish;;;;;;
+BS-112;M. edulis;Mytilus;Filter Feeder;2.31;;;Dredge;14.04.2021;54.554381;13.150872;2;;6 individuals;;;;Selected;19;Filter Feeder
+BS-113;M. edulis;Mytilus;Filter Feeder;1.12;;;Dredge;14.04.2021;54.554381;13.150872;2;;5 individuals;;;;Selected;;
+BS-114;M. edulis;Mytilus;Filter Feeder;0.66;;;Dredge;14.04.2021;54.554381;13.150872;2;;8 individuals;;;;Selected;;
+BS-115;M. arenaria;Mya;Filter Feeder;0.08;;;Dredge;14.04.2021;54.554381;13.150872;2;;10 individuals;;;;;;
+BS-116;;Balanidae;Filter Feeder;0.02;;;Dredge;14.04.2021;54.554381;13.150872;2;;2 individuals;;;;;;
+BS-117;C. lamarcki;Cerastodema;Sand licker;0.56;;;Dredge;14.04.2021;54.554381;13.150872;2;;1 individual;;;;;;
+BS-118;;Littorina;Grazer;0.04;;;Dredge;14.04.2021;54.554381;13.150872;2;;1 individual;;;;;;
+BS-119;;Idotea;Grazer;0.05;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 1 ind;;;;;;
+BS-120;;Gammarus;Grazer;0;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 1 ind;;;;;;
+BS-121;M. arenaria;Mya;Filter Feeder;0.17;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 9 ind;;;;;;
+BS-122;C. lamarcki;Cerastodema;Sand licker;0.4;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 2 ind;;;;;;
+BS-123;M. edulis;Mytilus;Filter Feeder;0.7;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 5 ind;;;;Selected;15;Filter Feeder
+BS-124;M. edulis;Mytilus;Filter Feeder;0.42;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 10 ind;;;;Selected;10;Filter Feeder
+BS-125;Mystery Snail;;;0.05;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 5 ind;;;;;;
+BS-126;;Gammarus;Grazer;0.65;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 10 ind;;;;;;
+BS-127;;Gammarus;Grazer;0.57;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 10 ind;;;;;;
+BS-128;;Idotea;Grazer;0.05;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 1 ind;;;;;;
+BS-129;;Neomysis;Detritivore/Predator;0.54;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 10 ind;;;;;;
+BS-130;;Neomysis;Detritivore/Predator;0.58;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 10 ind;;;;;;
+BS-131;;Coryxidae;Predator;0.05;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 4 ind;;;;;;
+BS-132;Mystery Isopod;;;0;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 1 ind;;;;;;
+BS-133;Mystery Larvae;;;0;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 1 ind;;;;;;
+BS-134;;Idotea;Grazer;0.08;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 5 ind;;;;;;
+BS-135;;Neomysis;Detritivore/Predator;0.07;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 4 ind;;;;;;
+BS-136;;Gammarus;Grazer;0.2;;;Dredge;10.04.2021;BAT 1-2;BAT 1-2;;;GPS Location (BAT 1-2), no sampling depth, 10 ind;;;;;;
+BS-137;;Gammarus;Grazer;0.31;;;-;24.03.2021;54.478328;13.2793;-;;Duvenbeek, no sampling type nor depth, 5 ind;;;;Selected;8;Grazer
+BS-138;;Littorina;Grazer;0.89;;;-;24.03.2021;54.478328;13.2793;;;Duvenbeek, no sampling type nor depth, 3 ind;;;;Selected;;
+BS-139;;Idotea;Grazer;0.03;;;Grab;10.04.2021;54;12.952471;3;;1 individual;;;;;;
+BS-140;;Gammarus;Grazer;0.09;;;Grab;10.04.2021;54;12.952471;3;;6 individuals;;;;;;
+BS-141;H. diversicolor;Hediste;Predator;0;;;Dredge;14.04.2021;54.554381;13.150872;2;;3 individuals;;;;;;
+BS-142;Mystery Larvae;;;0;;;Dredge;14.04.2021;54.554381;13.150872;2;;2 individuals;;;;;;
+BS-143;;Idotea;Grazer;0;;;Dredge;14.04.2021;54.554381;13.150872;2;;1 individual;;;;;;
+BS-144;;Gammarus;Grazer;0;;;Dredge;14.04.2021;54.554381;13.150872;2;;1 individual;;;;;;
+BS-145;;Gammarus;Grazer;0.23;;;Grab;14.04.2021;54.554246;13.15301;2.5;;10 individuals;;;;;;
+BS-146;;Idotea;Grazer;0;;;Grab;14.04.2021;54.554246;13.15301;2.5;;1 individual;;;;;;
+BS-147;Mystery Snail;;;0.2;;;Grab;10.04.2021;54.425937;12.952471;3;;4 individuals;;;;;;
+BS-148;;Corophium;Grazer & Filter Feeder;0.04;;;Receiver St. 140;18.03.2021;;;;;10 individuals;;;;;;
+BS-149;;Corophium;Grazer & Filter Feeder;0.03;;;Receiver St. 140;18.03.2021;;;;;10 individuals;;;;;;
+BS-150;;Gammarus;Grazer;0.09;;;Receiver St. 140;18.03.2021;;;;;12 individuals;;;;;;
+BS-151;;Idotea;Grazer;0.03;;;Receiver St. 099;05.03.2021;;;;;1 individual;;;;;;
+BS-152;M. edulis;Mytilus;Filter Feeder;0.8;;;Receiver St. 099;05.03.2021;;;;;10 individuals;;;;;;
+BS-153;M. edulis;Mytilus;Filter Feeder;0.44;;;Receiver St. 099;05.03.2021;;;;;10 individuals;;;;;;
+BS-154;M. edulis;Mytilus;Filter Feeder;0.48;;;Receiver St. 099;05.03.2021;;;;;10 individuals;;;;;;
+BS-155;;Balanidae;Filter Feeder;0.86;;;Receiver St. 100;05.03.2022;;;;;10 individuals;;;;;;
+BS-156;;Balanidae;Filter Feeder;0.81;;;Receiver St. 101;05.03.2023;;;;;10 individuals;;;;;;
+BS-157;H. diversicolor;Hediste;Predator;0.13;;;Receiver St. 120;08.03.2021;;;;;1 individual;;;;;;
+BS-158;;Balanidae;Filter Feeder;;;;Receiver St. 112;10.12.2020;;;;;10 individuals;;;;;;
+BS-159;M. edulis;Mytilus;Filter Feeder;;;;Receiver St. 112;10.12.2020;;;;;2 individuals;;;;;;
+BS-160;Epiphyton;;littoral;;;;Receiver St. 112;10.12.2020;;;;;1 individual;;;;;;
+BS-161;P. elegans;Caridae;Omnivore;;;;Receiver St. 112;10.12.2020;;;;;1 individual;;;;;;
+BS-162;P. elegans;Caridae;Omnivore;;;;Receiver St. 112;10.12.2020;;;;;;;;;;;
+BS-163;M. edulis;Mytilus;Filter Feeder;;;;Receiver St. 043;02.06.2021;;;;;1 indivual;;;;;;
+BS-164;;Balanidae;Filter Feeder;;;;Receiver St. 043;02.06.2021;;;;;10 individuals;;;;;;
+BS-165;G. locusta;Gammarus;Grazer;;;;Receiver St. 043;02.06.2021;;;;;10 individuals;;;;;;
+BS-166;Idotea sp.;Isopoda;Grazer/omnivore;;;;Receiver St. 043;02.06.2021;;;;;4 individuals;;;;;;
+BS-167;Epiphyton;;littoral;;;;Receiver St. 043;02.06.2021;;;;;;;;;;;
+BS-168;;Balanidae;Filter Feeder;;;;Receiver St. 002;03.02.2021;;;;;10 individuals;;;;;;
+BS-169;G. locusta;Gammarus;Grazer;;;;Receiver St. 002;03.02.2021;;;;;7;;;;;;
+BS-170;Idotea sp.;Isopoda;Grazer/omnivore;;;;Receiver St. 002;03.02.2021;;;;;3;;;;;;
+BS-171;M. edulis;Mytilus;Filter Feeder;;;;Receiver St. 080;26.01.2021;;;;;10 Individuals;;;;;;
+BS-172;Idotea sp.;Isopoda;Grazer/omnivore;;;;Receiver St. 080;26.01.2021;;;;;5;;;;;;
+BS-173;Epiphyton;;littoral;;;;Receiver St. 080;26.01.2021;;;;;;;;;;;
+BS-174;G. locusta;Gammarus;Grazer;;;;Receiver St. 080;26.01.2021;;;;;5;;;;;;
+BS-175;;Balanidae;Filter Feeder;;;;Receiver St. 009;05.02.2021;;;;;2;;;;;;
+BS-176;G. locusta;Gammarus;Grazer;;;;Receiver St. 009;05.02.2021;;;;;7;;;;;;
+BS-177;Idotea sp.;Isopoda;Grazer/omnivore;;;;Receiver St. 009;05.02.2021;;;;;3;;;;;;
+BS-178;N. melastomus;Neogobius;Fish;;;;Receiver St. 009;05.02.2021;;;;;1;;;;;;
+BS-179;;Balanidae;Filter Feeder;;;;Receiver St. 041;03.02.2021;;;;;10;;;;;;
+BS-180;G. locusta;Gammarus;Grazer;;;;Receiver St. 041;03.02.2021;;;;;3;;;;;;
+BS-181;Epiphyton;;littoral;;;;Receiver St. 041;03.02.2021;;;;;8;;;;;;
+BS-182;G. locusta;Gammarus;Grazer;;;;Receiver St. 040;20.11.2020;;;;;10;;;;;;
+BS-183;N. melastomus;Neogobius;Fish;;;;Receiver St. 078;04.03.2021;;;;;1;;;;;;
+BS-184;G. locusta;Gammarus;Grazer;;;;Receiver St. 078;04.03.2021;;;;;10;;;;;;
+BS-185;;Balanidae;Filter Feeder;;;;Receiver St. 078;04.03.2021;;;;;10;;;;;;
+BS-186;Epiphyton;;littoral;;;;Receiver St. 078;04.03.2021;;;;;;;;;;;
+BS-187;;Balanidae;Filter Feeder;;;;Receiver St. 057;04.03.2021;;;;;10;;;;;;
+BS-189;Epiphyton;;littoral;;;;Receiver St. 057;04.03.2021;;;;;;;;;;;
+BS-188;Epiphyton;;littoral;;;;Receiver St. 042;14.01.2021;;;;;;;;;;;
+BS-190;G. locusta;Gammarus;Grazer;;;;Receiver St. 042;14.01.2021;;;;;4;;;;;;
+BS-191;L. obtusata;Gastropoda;Grazer;;;;Receiver St. 039;20.11.2020;;;;;10;;;;;;
+BS-192;;Balanidae;Filter Feeder;;;;Receiver St. 039;20.11.2020;;;;;10;;;;;;
+BS-193;Idotea sp.;Isopoda;Grazer/omnivore;;;;Receiver St. 036;10.12.2020;;;;;3;;;;;;
+BS-194;;Balanidae;Filter Feeder;;;;Receiver St. 036;10.12.2020;;;;;10;;;;;;
+BS-195;Epiphyton;;littoral;;;;Receiver St. 036;10.12.2020;;;;;;;;;;;
+BS-196;;Balanidae;Filter Feeder;;;;Receiver St. 046;04.03.2021;;;;;10;;;;;;
+BS-197;Epiphyton;;littoral;;;;Receiver St. 046;04.03.2021;;;;;;;;;;;
+BS-198;G. locusta;Gammarus;Grazer;;;;Receiver St. 110;10.12.2020;;;;;10;;;;;;
+BS-199;;Balanidae;Filter Feeder;;;;Receiver St. 110;10.12.2020;;;;;10;;;;;;
+BS-200;Epiphyton;;littoral;;;;Receiver St. 110;10.12.2020;;;;;;;;;;;
+BS-201;G. locusta;Gammarus;Grazer;;;;Dredge 1;01.04.2021;WRB;;;;>10;;;;;;
+BS-202;Idotea sp.;Isopoda;Grazer/omnivore;;;;Dredge 1;01.04.2021;WRB;;;;>11;;;;;;
+BS-203;Mysis sp.;Mysidae;Grazer/omnivore;;;;Dredge 1;01.04.2021;WRB;;;;>12;;;;;;
+BS-204;P. elegans;Caridae;Omnivore;;;;Dredge 1;01.04.2021;WRB;;;;1;;;;;;
+BS-205;P. elegans;Caridae;Omnivore;;;;Dredge 1;01.04.2021;WRB;;;;1;;;;;;
+BS-206;P. elegans;Caridae;Omnivore;;;;Dredge 1;01.04.2021;WRB;;;;1;;;;;;
+BS-207;P. elegans;Caridae;Omnivore;;;;Dredge 1;01.04.2021;WRB;;;;1;;;;;;
+BS-208;P. elegans;Caridae;Omnivore;;;;Dredge 1;01.04.2021;WRB;;;;1;;;;;;
+BS-209;C. crangon;Caridae;Predator;;;;Dredge 1;01.04.2021;WRB;;;;1;;;;;;
+BS-210;C. crangon;Caridae;Predator;;;;Dredge 1;01.04.2021;WRB;;;;1;;;;;;
+BS-211;C. crangon;Caridae;Predator;;;;Dredge 1;01.04.2021;WRB;;;;1;;;;;;
+BS-212;M. mytilus;Mytilus;Filter Feeder;;;;Dredge 1;01.04.2021;WRB;;;;2;;;;;;
+BS-213;M. arenaria;Mya;Filter Feeder;;;;Dredge 1;01.04.2021;WRB;;;;1;;;;;;
+BS-214;Mysis sp.;Mysidae;Grazer/omnivore;;;;opportunistic;;Sehrowbach;Sehrowbach;;;>10;;;;;;
+BS-215;Trichoptera sp.;Trichoptera;Scraper;;;;Duwenbeek1;10.08.2021;Duvenbeek 1;Duvenbeek 1;;;>10;;;;;;
+BS-216;;Balanidae;Filter Feeder;;;;Receiver St. 016;02.03.2021;;;;;10;;;;;;
+BS-217;M. edulis;Mytilus;Filter Feeder;;;;Receiver St. 016;02.03.2021;;;;;10;;;;;;
+BS-218;;Balanidae;Filter Feeder;;;;Receiver St. 020;02.03.2021;;;;;10;;;;;;
+BS-219;Idotea sp.;Isopoda;Grazer;;;;Receiver St. 019;02.03.2021;;;;;1;;;;;;
+BS-220;;Balanidae;Filter Feeder;;;;Receiver St. 019;02.03.2021;;;;;10;;;;;;
+BS-221;Idotea sp.;Isopoda;Grazer;;;;Receiver St. 074;11.05.2021;;;;;2;;;;;;
+BS-222;M. edulis;Mytilus;Filter Feeder;;;;Receiver St. 074;11.05.2021;;;;;10;;;;;;
+BS-223;;Balanidae;Filter Feeder;;;;Receiver St. 074;11.05.2021;;;;;10;;;;;;
+BS-224;L. obtusata;Littorina;Grazer;;;;Receiver St. 097;04.05.2021;;;;;1;;;;;;
+BS-225;M. edulis;Mytilus;Filter Feeder;;;;Receiver St. 101;19.05.2021;;;;;10;;;;;;
+BS-226;;Balanidae;Filter Feeder;;;;Receiver St. 101;19.05.2021;;;;;10;;;;;;
+BS-227;G. locusta;Gammarus;Grazer;;;;Receiver St. 106;10.03.2021;;;;;4;;;;;;
+BS-228;Idotea sp.;Isopoda;Grazer;;;;Receiver St. 106;10.03.2021;;;;;>10;;;;;;
+BS-229;;Balanidae;Filter Feeder;;;;Receiver St. 106;10.03.2021;;;;;3;;;;;;
+BS-230;;Balanidae;Filter Feeder;;;;Receiver St. 063;10.03.2021;;;;;10;;;;;;
+BS-231;;Balanidae;Filter Feeder;;;;Receiver St. 021;02.03.2021;;;;;10;;;;;;
+BS-232;Idotea sp.;Isopoda;Grazer;;;;Receiver St. 052;10.03.2021;;;;;1;;;;;;
+BS-233;;Balanidae;Filter Feeder;;;;Receiver St. 052;10.03.2021;;;;;10;;;;;;
+BS-234;Idotea sp.;Isopoda;Grazer;;;;Receiver St. 105;10.03.2021;;;;;4;;;;;;
+BS-235;G. locusta;Gammarus;Grazer;;;;Receiver St. 105;10.03.2021;;;;;9;;;;;;
+BS-236;;Balanidae;Filter Feeder;;;;Receiver St. 105;10.03.2021;;;;;3;;;;;;
+BS-237;G. locusta;Gammarus;Grazer;;;;Sehrowbach 1;10.08.2021;;;;;1;;;;;;
+BS-238;;Balanidae;Filter Feeder;;;;Sehrowbach 1;10.08.2021;;;;;1;;;;;;
+BS-239;L. obtusata;Littorina;Grazer;;;;Sehrowbach 1;10.08.2021;;;;;2;;;;;;
+BS-240;;Balanidae;Filter Feeder;;;;Receiver St. 010;16.03.2021;;;;;10;;;;;;
+BS-241;;;;;;;;;;;;;;;;;;;
+BS-242;;;;;;;;;;;;;;;;;;;
+BS-243;;;;;;;;;;;;;;;;;;;
+BS-244;;;;;;;;;;;;;;;;;;;
+BS-245;;;;;;;;;;;;;;;;;;;
+BS-246;;;;;;;;;;;;;;;;;;;
+BS-247;;;;;;;;;;;;;;;;;;;
+BS-248;;;;;;;;;;;;;;;;;;;
+BS-249;;;;;;;;;;;;;;;;;;;
+BS-250;;;;;;;;;;;;;;;;;;;
