@@ -5,6 +5,8 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
+brackish resident --> "#004643", anadromous --> "#00BFB2", cross-habitat --> "#F1C40F", freshwater resident --> "#C5D86D"
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -801,9 +803,14 @@ descriptive2 <- descriptive%>%
            Sp=="brackish resident"|Sp=="freshwater resident"|Sp=="anadromous"|Sp=="cross-habitat")%>%
   drop_na()
 
+descriptive2$Sp <- as.factor(descriptive2$Sp)
+descriptive2$Sp <- fct_relevel(descriptive2$Sp, "freshwater resident", "anadromous", "cross-habitat", "brackish resident",
+                               "C.harengus", "G.aculeatus", "N.melanostmus", "P.fluviatilis", "R.rutilus")
+
+brackish resident --> "#004643", anadromous --> "#00BFB2", cross-habitat --> "#F1C40F", freshwater resident --> "#C5D86D"
+
 #Biplot by species
-brewer.pal(n = 14, name = "Dark2")
-colorBlindBlack8  <- c("#1B9E77", "#D95F02", "#7570B3", "#E7298A", "#66A61E", "#E6AB02", "#A6761D", "#666666","darkblue","darkred","cyan","red","beige", "yellow")
+colorBlindBlack8  <- c("#C5D86D", "#00BFB2", "#F1C40F", "#004643", "cyan", "#E6AB02", "#A6761D", "#66A61E","darkblue","darkred","cyan","red","beige", "yellow")
 
 
 Binorm <- ggplot()+ geom_errorbar(data=descriptive2, aes(x=d13C, y=d15N, ymin = d15N-sdd15N,ymax = d15N+sdd15N, col=Sp),
@@ -858,25 +865,32 @@ ggsave("Figures/Biplots-muscle-ecotypes.png", Ecopike, width = 16, height = 6, u
 rm(list = ls())
 
 Pike2 <- fread("Data/Pike/whole-sample-muscle-SI.csv")
+Ecotypes <- fread("Data/Pike/Otopike_SI_clean_average.csv")
 
-carb<-ggplot()+geom_point(data=Pike2[Pike2$area!="Freshwater",], aes(y=d13C, x=SL_mm, color=area))+
-  geom_smooth(data=Pike2, aes(y=d13C, x=SL_mm), method="lm")+theme_bw()+
-  theme( strip.text = element_text(face = "italic"))+
-  xlab("")+ylab(expression(delta^"13"~C*"(‰)"))
+BWC <- ggplot()+
+  geom_point(data=Pike2[Pike2$area!="Freshwater"&Pike2$area!="P",], aes(y=d13C, x=weight_g, color=area), size = 0.1)+
+  geom_smooth(data=Pike2, aes(y=d13C, x=weight_g, color = area), method="lm", lwd = 0.2, se = F)+
+  theme_bw()+
+  theme(text = element_text(color = "black", size = 7))+
+  xlab("Total length (mm)")+ylab(expression(delta^"13"~C*"(‰)"))
 
-nitro<-ggplot()+geom_point(data=Pike2[Pike2$area!="Freshwater",], aes(y=d15N, x=SL_mm, color=area))+
-  geom_smooth(data=Pike2, aes(y=d15N, x=SL_mm), method="lm")+theme_bw()+
-  theme( strip.text = element_text(face = "italic"))+
-  xlab("Total length (cm)")+ylab(expression(delta^"15"~N*"(‰)"))
+BWN <- ggplot()+
+  geom_point(data=Pike2[Pike2$area!="Freshwater"&Pike2$area!="P",], aes(y=d15N, x=weight_g, color=area), size = 0.1)+
+  geom_smooth(data=Pike2, aes(y=d15N, x=weight_g, color = area), method="lm", lwd = 0.2, se = F)+
+  theme_bw()+
+  theme(text = element_text(color = "black", size = 7))+
+  xlab("Total length (mm)")+ylab(expression(delta^"15"~N*"(‰)"))
 
-sulf <- ggplot()+geom_point(data=Pike2[Pike2$area!="Freshwater",], aes(y=d34S, x=SL_mm, color=area))+
-  geom_smooth(data=Pike2, aes(y=d34S, x=SL_mm), method="lm")+theme_bw()+
-  theme( strip.text = element_text(face = "italic"))+
-  xlab("")+ylab(expression(delta^"34"~S*"(‰)"))
+BWS <- ggplot()+
+  geom_point(data=Pike2[Pike2$area!="Freshwater"&Pike2$area!="P",], aes(y=d34S, x=weight_g, color=area), size = 0.1)+
+  geom_smooth(data=Pike2, aes(y=d34S, x=weight_g, color = area), method="lm", lwd = 0.2, se = F)+
+  theme_bw()+
+  theme(text = element_text(color = "black", size = 7))+
+  xlab("Total length (mm)")+ylab(expression(delta^"34"~S*"(‰)"))
 
-png(filename = "Figures/Sizeplot.png", width = 9000, height = 3000, res = 600)
-ggarrange(carb, nitro, sulf, ncol = 3, nrow = 1, common.legend = T)
-dev.off()
+Sizeplots_BW <- ggarrange(BWC, BWN, BWS, ncol = 3, nrow = 1, common.legend = T)
+
+ggsave("Figures/Sizeplots-whole-sample_brackish.png", Sizeplots_BW, width = 15, height = 5, units = "cm", dpi = 600, bg = "white")
 
 sexC <- ggplot()+geom_boxplot(data=Pike2, aes(y=d13C, x=sex, fill=sex))+
   theme_bw()+
@@ -934,7 +948,11 @@ pike2 <- pikedata%>%
             waterbody=waterbody,
             TL_mm=TL_mm,
             clust=clust,
-            ecotype=case_when(clust=="FW int saline|const"~"FW_resident",
+            ecotype=case_when(clust=="FW int saline|const"~"freshwater resident",
+                              ecotype=="FW_resident"~"freshwater resident",
+                              ecotype=="Anadromous"~"anadromous",
+                              ecotype=="BW-resident"~"brackish resident",
+                              ecotype=="Trans-habitat"~"cross-habitat",
                               TRUE~ecotype),
             sex=sex)
 
@@ -968,25 +986,47 @@ Pikelens <- pike2%>%
 
 #Plot mean lifelong signal
 
-d34S <- ggplot(Pikelens, aes(Layer_rev, d15N))+
-  geom_point(size=0.5, aes(color=waterbody))+
-  geom_smooth(aes(color = waterbody), method = "loess")+
-  theme_classic()+
+pl_theme <- theme(axis.title.x = element_blank(),
+                  axis.title.y = element_text(size = 10, color = "black"),
+                  axis.text = element_text(size = 10, color = "black"),
+                  legend.position = "none",
+                  legend.text = element_text(size = 10, color = "black"),
+                  legend.title = element_text(size = 10, color = "black"),
+                  plot.title = element_text(size = 10, color = "black"))
+
+d34S <- ggplot(Pikelens, aes(Layer_rev, d34S))+
+  geom_point(size=.2, aes(color=ecotype), position = position_dodge(width = 1), alpha = 0.3)+
+  geom_smooth(aes(color = ecotype), method = "loess", lwd = 0.7)+
+  scale_color_manual(breaks = c("freshwater resident", "brackish resident", "cross-habitat", "anadromous"),
+                     values = c("#C5D86D", "#004643", "#F1C40F", "#00BFB2"))+
+  theme_bw()+
+  labs(y = expression(delta^34~"S"~("\u2030 VPDB")),
+       color = "Ecotype:")+
   ggtitle("d34S")+
-  theme()
+  pl_theme
 
 d15N <- ggplot(Pikelens, aes(Layer_rev, d15N))+
-  geom_point(size=0.5, aes(color=ecotype))+
-  geom_smooth(aes(color = ecotype), method = "loess")+
-  theme_classic()+
-  ggtitle("d15N")
+  geom_point(size=.2, aes(color=ecotype), position = position_dodge(width = 1), alpha = 0.3)+
+  geom_smooth(aes(color = ecotype), method = "loess", lwd = 0.7)+
+  scale_color_manual(breaks = c("freshwater resident", "brackish resident", "cross-habitat", "anadromous"),
+                     values = c("#C5D86D", "#004643", "#F1C40F", "#00BFB2"))+
+  theme_bw()+
+  ggtitle("d15N")+
+  pl_theme
 
 d13C <- ggplot(Pikelens, aes(Layer_rev, d13C))+
-  geom_point(size=0.5, aes(color=ecotype))+
-  geom_smooth(aes(color = ecotype), method = "loess")+
-  theme_classic()+
-  ggtitle("d13C")
+  geom_point(size=.2, aes(color=ecotype), position = position_dodge(width = 1), alpha = 0.3)+
+  geom_smooth(aes(color = ecotype), method = "loess", lwd = 0.7)+
+  scale_color_manual(breaks = c("freshwater resident", "brackish resident", "cross-habitat", "anadromous"),
+                     values = c("#C5D86D", "#004643", "#F1C40F", "#00BFB2"))+
+  theme_bw()+
+  ggtitle("d13C")+
+  pl_theme
 
-ggarrange(d34S, d15N, d13C, nrow = 1, common.legend = T)
+Eyeplot <- ggarrange(d34S, d15N, d13C, nrow = 1, common.legend = T)
+
+Eyeplot1 <- annotate_figure(Eyeplot, bottom = text_grob("Eye lens layer # (inner to outer)", size = 10, color = "black"))
+
+ggsave("Figures/Eyelens-data-ecotypes.png", Eyeplot1, width = 15, height = 7, units = "cm", bg = "white")
 ```
 
