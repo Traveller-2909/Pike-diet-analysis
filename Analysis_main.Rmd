@@ -683,7 +683,7 @@ ggplot(data=Pikeprey, aes(x=Species, y=d34S, group=Species, colour=Species))+geo
   theme_bw()
 ```
 
-```{r biplots whole sample}
+```{r biplots whole sample, include=FALSE, eval=FALSE}
 rm(list = ls())
 descriptive <- fread("Data/Pike/Descriptive-whole-sample.csv")
 
@@ -936,7 +936,7 @@ dev.off()
 
 ```
 
-```{r exploration eye lenses, include=FALSE, eval=FALSE}
+```{r exploration eye lens layers, include=FALSE, eval=FALSE}
 rm(list = ls())
 
 Lensdata <- fread("Data/pike/Eye-lens-all_clean.csv")
@@ -982,7 +982,15 @@ Lensdata2 <- Lensdata%>%
                    comment=comment)
 
 Pikelens <- pike2%>%
-  inner_join(Lensdata2, by = "ID")
+  inner_join(Lensdata2, by = "ID")%>%
+  distinct()
+
+Pikelens2 <- Pikelens%>%
+  transmute(ID=ID,
+            ecotype=ecotype)%>%
+  distinct()
+
+table(Pikelens2$ecotype)
 
 #Plot mean lifelong signal
 
@@ -1029,4 +1037,115 @@ Eyeplot1 <- annotate_figure(Eyeplot, bottom = text_grob("Eye lens layer # (inner
 
 ggsave("Figures/Eyelens-data-ecotypes.png", Eyeplot1, width = 15, height = 7, units = "cm", bg = "white")
 ```
+
+```{r eye lens inner diameters}
+rm(list = ls())
+
+#read in raw eye lens measurement data
+Eyecarlos <- fread("Data/pike/Results_Carlos-lenses.txt")
+Eyenico <- fread("Data/pike/Results_Nico-lenses.txt")
+Eyerep <- fread("Data/pike/Results_lens-repeat.txt")
+
+substrRight <- function(x, n){
+  substr(x, nchar(x)-n+1, nchar(x))
+}
+
+#cleanup eye lens measurements
+Eyecarlos2 <- Eyecarlos%>%
+  transmute(fish_ID=substr(substrRight(ID, 21),1,8),
+            lens_layer=as.numeric(substr(substrRight(ID, 21),10,12)),
+            diameter_mm=Diameter)
+
+Eyenico2 <- Eyenico%>%
+  transmute(fish_ID=substr(substrRight(ID, 21),1,8),
+            lens_layer=as.numeric(substr(substrRight(ID, 21),10,12)),
+            diameter_mm=Lens_diameter)
+
+Eyerep2 <- Eyerep%>%
+  transmute(fish_ID=substr(substrRight(ID, 23),1,8),
+            lens_layer=as.numeric(substr(substrRight(ID, 21),10,12)),
+            diameter_mm=Lens_diameter)
+
+Eyeliminate <- Eyerep2%>%
+  transmute(fish_ID=fish_ID,
+            double=1)
+
+Eyenico_clean <- Eyenico2%>%
+  left_join(Eyeliminate, by = "fish_ID")%>%
+  filter(is.na(double)==TRUE)%>%
+  transmute(fish_ID=fish_ID,
+            lens_layer=lens_layer,
+            diameter_mm=diameter_mm)
+
+Lenses <- rbind(Eyecarlos2, Eyenico_clean, Eyerep2)
+
+# Function to reverse eye lens layers within each ID group
+reverse_layers <- function(layer_vector) {
+  max_layer <- max(layer_vector)
+  return(max_layer - (layer_vector - min(layer_vector)))
+}
+
+# Create a new column "Layer_rev" by reversing the "Layer" values within each "ID" group
+Lenses2 <- Lenses%>%
+  group_by(fish_ID)%>%
+  dplyr::summarise(fish_ID=fish_ID,
+                   lens_layer=reverse_layers(lens_layer),
+                   diameter_mm=diameter_mm)
+
+
+fwrite(Lenses2, file = "Data/Pike/Lens-data-clean-reversed.csv")
+```
+
+```{r eye lens outer diameters}
+rm(list = ls())
+
+#read in additional lenses
+Eyedition <- fread("Data/pike/Results_additonal-lenses.txt")
+
+Pike1 <- fread("C:/Users/timor/Nextcloud2/Boddenhecht/Data/Pike Data/1.pike_data_base_FOR_USERS/1Pike_Latest_Version.txt")
+
+#read in pike data (Floy 71000 is BH-51614)
+
+
+substrRight <- function(x, n){
+  substr(x, nchar(x)-n+1, nchar(x))
+}
+
+Eyedition2 <- Eyedition%>%
+  transmute(Fish_ID=substr(substrRight(ID, 21),1,8),
+            lens_layer=as.numeric(substr(substrRight(ID, 21),10,12)),
+            diameter_mm=Lens_diameter)
+
+Pikeyes <- Pike1%>%
+  inner_join(Eyedition2, by = "Fish_ID")%>%
+  transmute(fish_ID=Fish_ID,
+            capt_date=Date,
+            TL_mm=Total_Length_mm,
+            gape_mm=Gape,
+            weight_g=Weight,
+            sex=Sex,
+            waterbody=Waterbody,
+            Lat=Capture_Latitude,
+            Long=Capture_Longitude,
+            lens_layer=lens_layer,
+            diameter_mm=diameter_mm)
+
+Pikeyes2 <- Pikeyes%>%
+  filter(lens_layer==1 &
+           fish_ID!="BH-93015" &
+           fish_ID!="BH-93002"&
+           fish_ID!="BH-93178"&
+           fish_ID!="BH-93005"&
+           fish_ID!="BH-93116"&
+           fish_ID!="BH-93109")
+
+ggplot(Pikeyes2, aes(TL_mm, diameter_mm))+
+  geom_point(aes(color=fish_ID))+
+  geom_smooth(method = "lm")+
+  theme_minimal()
+
+summary(lm(TL_mm~diameter_mm, data = Pikeyes2))
+```
+
+
 
