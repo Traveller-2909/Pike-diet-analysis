@@ -1,0 +1,5 @@
+n	Lens_diameter	ID
+1	5.66	Additional_lenses_BH-01722_001_ch00.tif
+2	4.50	Additional_lenses_BH-01722_002_ch00.tif
+3	3.82	Additional_lenses_BH-01722_003_ch00.tif
+4	3.05	Additional_lenses_BH-01722_004_ch00.tif

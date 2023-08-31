@@ -192,4 +192,7 @@ n	Lens_diameter	ID
 191	2.5932	Additional_lenses_BH-51614_005_ch00.tif
 192	2.2014	Additional_lenses_BH-51614_006_ch00.tif
 193	1.5044	Additional_lenses_BH-51614_007_ch00.tif
-
+1	5.66	Additional_lenses_BH-01722_001_ch00.tif
+2	4.50	Additional_lenses_BH-01722_002_ch00.tif
+3	3.82	Additional_lenses_BH-01722_003_ch00.tif
+4	3.05	Additional_lenses_BH-01722_004_ch00.tif
