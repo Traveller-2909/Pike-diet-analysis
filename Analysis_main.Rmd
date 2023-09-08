@@ -1133,7 +1133,8 @@ Pikeyes2 <- Pikeyes%>%
            fish_ID!="BH-93178"&
            fish_ID!="BH-93005"&
            fish_ID!="BH-93116"&
-           fish_ID!="BH-93109")
+           fish_ID!="BH-93109"&
+           fish_ID!="BH-01722")
 
 ggplot(Pikeyes2, aes(TL_mm, diameter_mm))+
   geom_point(aes(color=fish_ID))+
@@ -1218,26 +1219,295 @@ Pikeyes.clean <- Pikeyes.back%>%
   inner_join(Isolens2, by = c("fish_ID", "lens_layer"))
 
 # join ecotypes
-Ecotypes <- fread("Data/pike/Pikedata_ecotypes.txt")
+Ecotypes <- fread("Data/pike/Pikedata_model.csv")
 
 Ecotypes2 <- Ecotypes%>%
   transmute(fish_ID=ID,
             area=waterbody,
-            ecotype=ecotype)%>%
+            phenotype=phenotype)%>%
   distinct()
 
 Pikeyes.eco <- Pikeyes.clean%>%
   inner_join(Ecotypes2, by = "fish_ID")
 
+#Join muscle data
+Pikemuscles <- fread("Data/Pike/Otopike_SI_clean_average.csv")
+
+Pikemuscles_clean <- Pikemuscles%>%
+  group_by(ID)%>%
+  transmute(fish_ID=ID,
+            capt_date=capt_date,
+            TL_mm=TL_mm,
+            gape_mm=NA,
+            weight_g=weight_g,
+            sex=sex,
+            waterbody=waterbody,
+            Lat=Lat,
+            Long=Long,
+            lens_layer=NA,
+            diameter_mm=NA,
+            total.diameter.mm=NA,
+            Length_back=NA,
+            ID=fish_ID,
+            amount=NA,
+            d15N=d15N,
+            d13C=d13C,
+            d34S=d34S,
+            CN_ratio=CN_ratio,
+            area=study_area,
+            phenotype=ecotype)%>%
+  distinct()
+
+Pikeyes_muscles <- rbind(Pikeyes.eco, Pikemuscles_clean)
+
+Pikeyes_muscles2 <- Pikeyes_muscles%>%
+  group_by(fish_ID)%>%
+  transmute(fish_ID = fish_ID,
+            capt_date = capt_date,
+            TL_mm = TL_mm,
+            gape_mm = case_when(is.na(gape_mm) == TRUE ~ max(gape_mm, na.rm = T),
+                                TRUE ~ gape_mm),
+            weight_g = weight_g,
+            sex = sex,
+            waterbody = waterbody,
+            area = area,
+            lens_layer = case_when(is.na(lens_layer) == TRUE ~ max(lens_layer, na.rm = T)+1,
+                                   TRUE ~ lens_layer),
+            diameter_mm = diameter_mm,
+            total.diameter.mm = total.diameter.mm,
+            length_back = Length_back,
+            amount = amount,
+            d15N = d15N,
+            d13C = d13C,
+            d34S = d34S,
+            CN_ratio = CN_ratio,
+            phenotype = phenotype)
+
 fwrite(Pikeyes.clean, file = "Data/Pike/Lens-SI-all-clean-TL-backcalculated.csv")
-fwrite(Pikeyes.eco, file = "Data/Pike/Lens-SI-eco-clean-cbackcalculated.csv")
+fwrite(Pikeyes_muscles2, file = "Data/Pike/Lens-muscle-SI-eco-clean-cbackcalculated.csv")
 ```
+
+```{r marry lens data to otoliths, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+#load lens data with length
+Lensdata <- fread("Data/Pike/Lens-SI-all-clean-TL-backcalculated.csv")
+
+#load otolith data
+Pikeoto <- fread("Data/Pike/Pikedata_model.csv")
+
+Pikeoto <- as.data.frame(Pikeoto)
+Pikeoto$ID <- as.factor(Pikeoto$ID)
+
+Pikeoto2 <- Pikeoto%>%
+  group_by(ID)%>%
+  dplyr::mutate(trad_um = max(rad_um))
+
+#Backcalculate lengths
+ggplot(Pikeoto2, aes(x = TL_mm, y = trad_um))+
+  geom_point()+
+  theme_bw()
+
+otomod <- lm(TL_mm~trad_um, data = Pikeoto2)
+summary(otomod)
+
+a <- coefficients(otomod)[[1]]
+#Model not needed, as otoliths form at birth!
+
+Pikeoto3 <- Pikeoto2%>%
+  dplyr::mutate(length_back = (rad_um/trad_um)*(TL_mm))
+
+ALK <- Pikeoto3%>%
+  transmute(fish_ID = ID,
+            lifeyear = lifeyear,
+            length_back = length_back)%>%
+  distinct()
+
+#Marry to eye lens layers
+Pikelenses <- as.data.frame(Pikelenses)
+ALK <- as.data.frame(ALK)
+
+#Filter out non-Oto fish
+IDlist <- unique(ALK$ID)
+
+Pikelenses <- Lensdata%>%
+  filter(fish_ID %in% IDlist)%>%
+  drop_na(Length_back)
+
+
+IDOto <- unique(Pikelenses$fish_ID)
+age <- NULL
+ages <- NULL
+
+for (i in 1:length(IDOto)) {
+  age <- ifelse(Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] <= 
+                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 1), "length_back"], 1,
+                 ifelse(Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] <= 
+                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 2), "length_back"] & 
+                     Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] > 
+                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 1), "length_back"], 2,
+                   ifelse(Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] <= 
+                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 3), "length_back"] & 
+                     Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] > 
+                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 2), "length_back"], 3,
+                   ifelse(Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] <= 
+                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 4), "length_back"] & 
+                     Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] > 
+                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 3), "length_back"], 4,
+                   ifelse(Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] <= 
+                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 5), "length_back"] & 
+                     Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] > 
+                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 4), "length_back"], 5,
+                   ifelse(Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] <= 
+                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 6), "length_back"] & 
+                     Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] > 
+                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 5), "length_back"], 6,
+                   ifelse(Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] <= 
+                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 7), "length_back"] & 
+                     Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] > 
+                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 6), "length_back"], 7,
+                   ifelse(Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] <= 
+                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 8), "length_back"] & 
+                     Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] > 
+                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 7), "length_back"], 8,
+                   ifelse(Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] <= 
+                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 9), "length_back"] & 
+                     Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] > 
+                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 8), "length_back"], 9,
+                   ifelse(Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] <= 
+                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 10), "length_back"] & 
+                     Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] > 
+                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 9), "length_back"], 10, NA))))))))))
+  ages <- na.omit(c(ages, age))
+}
+
+Pikelenses$age <- ages
+
+Pikelenses_age <- Pikelenses%>%
+  transmute(ID = fish_ID,
+            lifeyear = age,
+            amount = amount,
+            d15N = d15N,
+            d13C = d13C,
+            d34S = d34S,
+            CN_ratio = CN_ratio)%>%
+  distinct()
+
+Pike_oto_lenses <- Pikeoto3%>%
+  inner_join(Pikelenses_age, by = c("ID", "lifeyear"))
+
+Pikedata_model <- Pike_oto_lenses%>%
+  group_by(ID, lifeyear)%>%
+  dplyr::reframe(ID = ID,
+                   waterbody = waterbody,
+                   TL_mm = TL_mm,
+                   phenotype = phenotype,
+                   sex = sex,
+                   lifeyear = lifeyear,
+                   res_mean = res_mean,
+                   Sr_mean = Sr_mean,
+                   genotype = genotype,
+                   length_back = length_back,
+                   d15N_mean = mean(d15N, na.rm = T),
+                   d13C_mean = mean(d13C, na.rm = T),
+                   d34S_mean = mean(d34S, na.rm = T),
+                   CN_mean = mean(CN_ratio, na.rm = T))%>%
+  distinct()
+
+fwrite(Pikedata_model, "Data/Pike/Pikedata-eye-lens-years.csv")
+```
+
+```{r explore model data, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+Data <- fread("Data/Pike/Pikedata-eye-lens-years.csv")
+
+par(mfrow = c(1,3))
+plot(Data$length_back ~ Data$lifeyear, ylab = "Backcalculated length (mm)", xlab = "Age (years)")
+plot(Data$length_back ~ Data$d13C_mean, ylab = "Backcalculated length (mm)", xlab = "d13C (permil VPDB)")
+plot(Data$length_back ~ Data$d15N_mean, ylab = "Backcalculated length (mm)", xlab = "d15N (permil N2 atm)")
+plot(Data$length_back ~ Data$d34S_mean, ylab = "Backcalculated length (mm)", xlab = "d34S (permil CDT)")
+```
+```{r calculate model, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+Data <- fread("Data/Pike/Pikedata-eye-lens-years.csv")
+
+Data2 <- Data%>%
+  drop_na(d34S_mean)%>%
+  reframe(ID = ID,
+          lifeyear = lifeyear,
+          waterbody = as.factor(waterbody),
+          phenotype = phenotype,
+          genotype = genotype,
+          sex = sex,
+          res_mean = res_mean,
+          Sr_mean = Sr_mean,
+          length_back = length_back,
+          d13C = scale(d13C_mean),
+          d15N = scale(d15N_mean),
+          d34S = scale(d34S_mean),
+          CN = scale(CN_mean))
+
+pikemodel1 <- lmer(length_back~lifeyear+I(lifeyear^2)+sex+d13C*phenotype+d15N*phenotype+d34S*phenotype+CN+(1|ID), data = Data2, REML = T)
+
+summary(pikemodel1)
+r.squaredGLMM(pikemodel1)
+
+pike.vif <- vif(pikemodel1)
+
+barplot(pike.vif[,3], main = "VIF values", horiz = F, col = "darkgreen", ylim = c(0,10),
+        las = 2)
+abline(h = 5, lwd = 3, lty = 2, col="red")
+
+#test effects
+rand(pikemodel1)
+#Individual is significant
+
+#Test age effect
+pikemodel_noage <- update(pikemodel1, ~. -I(lifeyear^2))
+
+anova(pikemodel1, pikemodel_noage)
+#guess what...
+
+#Test sex effect
+pikemodel_nosex <- update(pikemodel1, ~. -sex)
+
+anova(pikemodel1, pikemodel_nosex)
+#surprise...
+
+#Test d13C
+pikemodel_no13C <- update(pikemodel1, ~. -d13C)
+
+anova(pikemodel1, pikemodel_no13C)
+#d13C is significant
+
+#Test d15N
+pikemodel_no15N <- update(pikemodel1, ~. -d15N)
+
+anova(pikemodel1, pikemodel_no15N)
+#d15N is not significant
+
+#test d34S
+pikemodel_no34S <- update(pikemodel1, ~. -d34S*phenotype)
+
+anova(pikemodel1, pikemodel_no34S)
+#interaction d34S x waterbody significant
+
+#test CN ratio
+pikemodel_nofat <- update(pikemodel1, ~. -CN_mean)
+
+anova(pikemodel1, pikemodel_nofat)
+#Fat is not significant
+```
+
 
 ```{r exploration eye lens layers, include=FALSE, eval=FALSE}
 rm(list = ls())
 
 Allpike <- fread("Data/Pike/Lens-SI-all-clean-TL-backcalculated.csv")
-Ecopike <- fread("Data/Pike/Lens-SI-eco-clean-cbackcalculated.csv")
+Ecopike <- fread("Data/Pike/Lens-muscle-SI-eco-clean-cbackcalculated.csv")
+Ecopike_plus_muscle <- fread("Data/Pike/Lens-muscle-SI-eco-clean-cbackcalculated.csv")
 
 #Plot mean lifelong signal
 
@@ -1249,29 +1519,27 @@ pl_theme <- theme(axis.title.x = element_blank(),
                   legend.title = element_text(size = 10, color = "black"),
                   plot.title = element_text(size = 10, color = "black"))
 
-ggplot(Ecopike[Ecopike$lens_layer>1,], aes(Length_back, d34S))+
-  geom_point(size=.2, position = position_dodge(width = 1), alpha = 1)+
-  geom_line(aes(group=fish_ID, color=ecotype), lwd = 2)+
+ggplot(Ecopike[Ecopike$lens_layer>1,], aes(length_back, d34S))+
+  geom_point(aes(shape = phenotype), size=1, position = position_dodge(width = 1), alpha = 1)+
+  geom_smooth(aes(color=phenotype, fill= phenotype), lwd = .5)+
   theme_bw()+
-  labs(y = expression(delta^34~"S"~("\u2030 VPDB")))+
+  labs(y = expression(delta^34~"S"~("\u2030 CDT")))+
   ggtitle("d34S")+
   pl_theme
 
-d15N <- ggplot(Pikelens, aes(Layer_rev, d15N))+
-  geom_point(size=.2, aes(color=ecotype), position = position_dodge(width = 1), alpha = 0.3)+
-  geom_smooth(aes(color = ecotype), method = "loess", lwd = 0.7)+
-  scale_color_manual(breaks = c("freshwater resident", "brackish resident", "cross-habitat", "anadromous"),
-                     values = c("#C5D86D", "#004643", "#F1C40F", "#00BFB2"))+
+ggplot(Ecopike[Ecopike$lens_layer>1,], aes(length_back, d15N))+
+  geom_point(aes(shape = phenotype), size=1, position = position_dodge(width = 1), alpha = 1)+
+  geom_smooth(aes(color=phenotype, fill= phenotype), lwd = .5)+
   theme_bw()+
+  labs(y = expression(delta^15~"N"~("\u2030"~N^2*"atm")))+
   ggtitle("d15N")+
   pl_theme
 
-d13C <- ggplot(Pikelens, aes(Layer_rev, d13C))+
-  geom_point(size=.2, aes(color=ecotype), position = position_dodge(width = 1), alpha = 0.3)+
-  geom_smooth(aes(color = ecotype), method = "loess", lwd = 0.7)+
-  scale_color_manual(breaks = c("freshwater resident", "brackish resident", "cross-habitat", "anadromous"),
-                     values = c("#C5D86D", "#004643", "#F1C40F", "#00BFB2"))+
+ggplot(Ecopike[Ecopike$lens_layer>1,], aes(length_back, d13C))+
+  geom_point(aes(shape = phenotype), size=1, position = position_dodge(width = 1), alpha = 1)+
+  geom_smooth(aes(color=phenotype, fill= phenotype), lwd = .5)+
   theme_bw()+
+  labs(y = expression(delta^13~"C"~("\u2030 VPDB")))+
   ggtitle("d13C")+
   pl_theme
 
@@ -1282,6 +1550,129 @@ Eyeplot1 <- annotate_figure(Eyeplot, bottom = text_grob("Eye lens layer # (inner
 ggsave("Figures/Eyelens-data-ecotypes.png", Eyeplot1, width = 15, height = 7, units = "cm", bg = "white")
 ```
 
+```{r age length key from pike scales and otoliths, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+#Remove BH-90239, BH-90324, BH-90105, BH-90019, BH-90112
+
+Pikescales <- fread("Data/Pike/Transmitter-pike-ages-with-TL.csv")
+
+Pikescales <- Pikescales%>%filter(!fish_ID %in% c("BH-90239", "BH-90324", "BH-90105", "BH-90019", "BH-90112", "BH-90037"))
+
+lm.scale <- lm(TL_mm~total_rad, data = Pikescales)
+
+summary(lm.scale)
+
+ggplot(Pikescales, aes(x = TL_mm, y = total_rad))+
+  geom_point()+
+  theme_bw()
+
+a <- coefficients(lm.scale)[[1]]
+b <- coefficients(lm.scale)[[2]]
+
+Pikescales <- Pikescales%>%
+  mutate(length_back = (rad/total_rad)*(TL_mm-a)+a)
+
+Pikeages <- Pikescales%>%
+  transmute(length = length_back/10,
+            sex=sex,
+            age = lifeyear)%>%
+  mutate(lcat5 = lencat(length, w = 5))%>%
+  distinct()
+
+#length frequency table
+alk.freq <- xtabs(~lcat5+age, data = Pikeages)
+rowSums(alk.freq)
+
+#probability table of age at length
+alk <- prop.table(alk.freq, margin = 1)
+round(alk, 3)
+
+#run multinominal log-linear models, increase iterations to converge
+agemodel1 <- multinom(age ~ lcat5, data = Pikeages, maxit = 1000)
+agemodel2 <- multinom(age ~ lcat5*sex, data = Pikeages, maxit = 1000)
+
+anova(agemodel1, agemodel2)
+#who would´ve thought, sex is highly significant...
+
+length_sim <- seq(min(Pikeages$lcat5), max(Pikeages$lcat5), 5)
+dfF <- data.frame(lcat5 = length_sim, sex = "f")
+dfM <- data.frame(lcat5 = length_sim, sex = "m")
+
+alkF <- predict(agemodel2, dfF, type = "probs")
+rownames(alkF) <- length_sim
+alkPlot(alkF, type = "area", pal = "grey", xlab = "total lengt (cm)", showLegend = TRUE, leg.cex = 0.7)
+alkPlot(alkF,type="bubble",xlab="Total Length (mm)")
+
+alkM <- predict(agemodel2, dfM, type = "probs")
+rownames(alkM) <- length_sim
+alkPlot(alkM, type = "area", pal = "grey", xlab = "total lengt (cm)", showLegend = TRUE, leg.cex = 0.7)
+alkPlot(alkM,type="bubble",xlab="Total Length (mm)")
+
+#Need to split girls from boys
+
+Lenspike <- fread("Data/Pike/Lens-SI-all-clean-TL-backcalculated.csv")
+
+LenspikeF <- Lenspike%>%
+  filter(sex == "f" & Length_back >= 150)%>%
+  transmute(fish_ID=fish_ID,
+            sex=sex,
+            lens_layer=lens_layer,
+            Length_back=Length_back/10,
+            lcat5 = lencat(Length_back, w = 5))%>%
+  distinct()
+
+LenspikeM <- Lenspike%>%
+  filter(sex == "m" & Length_back >= 150)%>%
+  transmute(fish_ID=fish_ID,
+            sex=sex,
+            lens_layer=lens_layer,
+            Length_back=Length_back/10,
+            lcat5 = lencat(Length_back, w = 5))%>%
+  distinct()
+
+
+
+#Split male and female
+PikeagesF <- Pikeages%>%filter(sex == "f")
+PikeagesM <- Pikeages%>%filter(sex == "m")
+
+#Age-length frequency
+alk_freqF <- xtabs(~lcat5+age, data = PikeagesF)
+alk_freqM <- xtabs(~lcat5+age, data = PikeagesM)
+
+alkF <- prop.table(alk_freqF, margin = 1)
+alkM <- prop.table(alk_freqM, margin = 1)
+
+length_nF <- xtabs(~lcat5, data = PikeagesF)
+length_nM <- xtabs(~lcat5, data = PikeagesM)
+
+alkAgeDist(alkF, lenA.n = rowSums(alk_freqF), len.n = length_nF)
+alkAgeDist(alkM, lenA.n = rowSums(alk_freqM), len.n = length_nM)
+
+alkMeanVar(alkF, length~lcat5+age, data = PikeagesF, len.n = length_nF)
+alkMeanVar(alkM, length~lcat5+age, data = PikeagesM, len.n = length_nM)
+
+LenspikeF$age <- NA
+LenspikeF$age <- as.numeric(LenspikeF$age)
+
+LenspikeM$age <- NA
+LenspikeM$age <- as.numeric(LenspikeM$age)
+
+LenspikeF <- LenspikeF%>%drop_na(Length_back)
+LenspikeM <- LenspikeM%>%drop_na(Length_back)
+
+AgedeyeF <- alkIndivAge(alkF, age~Length_back, data = LenspikeF)
+AgedeyeM <- alkIndivAge(alkM, age~Length_back, data = LenspikeM)
+
+#Join together
+LenspikeBaby <- Lenspike%>%
+  filter(Length_back < 150)%>%
+  mutate(age = 1)
+
+```
+
+# Model growth of scale data with muscle isotopes?
 ```{r cleanup scale data, include=FALSE, eval=FALSE}
 rm(list = ls())
 
@@ -1310,25 +1701,27 @@ T.scale.clean <- T.scales%>%
             quality=Quality)
 
 #Load Otolith pike round, to lowercase
-O.scales <- fread("Data/Pike/Otopike_scale_results.csv")
-O.scales$random_ID <- paste0(O.scales$Sample, ".jpg")
-
-decoder.O <- fread("Data/Pike/Decoding_file_29-08-2023_Scales.csv")
+# O.scales <- fread("Data/Pike/Otopike_scale_results.csv")
+# O.scales$random_ID <- paste0(O.scales$Sample, ".jpg")
+# 
+# decoder.O <- fread("Data/Pike/Decoding_file_29-08-2023_Scales.csv")
 
 # Decode scale ages
-O.scale.clean <- O.scales %>% 
-  inner_join(decoder.O, by = "random_ID")%>%
-  transmute(fish_ID=fish_ID,
-            read=1,
-            age=Age,
-            cohort=Cohort,
-            pisc=Piscivorous,
-            lifeyear=I,
-            year=Year,
-            inc_mm=Increment/1000,
-            quality=Quality)
+# O.scale.clean <- O.scales %>% 
+#   inner_join(decoder.O, by = "random_ID")%>%
+#   transmute(fish_ID=fish_ID,
+#             read=1,
+#             age=Age,
+#             cohort=Cohort,
+#             pisc=Piscivorous,
+#             lifeyear=I,
+#             year=Year,
+#             inc_mm=Increment/1000,
+#             quality=Quality)
+# 
+# Scales_all_clean <- rbind(T.scale.clean, O.scale.clean)
 
-Scales_all_clean <- rbind(T.scale.clean, O.scale.clean)
+Scales_all_clean <- T.scale.clean
 
 Pike1 <- fread("C:/Users/timor/Nextcloud2/Boddenhecht/Data/Pike Data/1.pike_data_base_FOR_USERS/1Pike_Latest_Version.txt")
 
@@ -1391,6 +1784,7 @@ pikeages_final <- All.scale.pike%>%
                                       TRUE~lifeyear),
                    year=year,
                    inc_mm=mean(inc_mm, na.rm=T))%>%
+  ungroup()%>%
   distinct()
 
 pikeages_final <- as.data.frame(pikeages_final)
@@ -1403,6 +1797,8 @@ for (i in 1:length(IDpike)) {
   
   rad <- c(rad, d)
 }
+
+pikeages_final$rad <- rad
 
 pikeages_final2 <- pikeages_final%>%
   filter(lifeyear!="edge")%>%
@@ -1492,7 +1888,7 @@ Pikescales2 <- Pikescales%>%
 
 Pikescales2[, length_predict := shift(length_back, type = "lag"), by = fish_ID]
 
-ggplot(Pikescales, aes(inc_mm, inc_at_age_plus_1))+
+ggplot(Pikescales, aes(length_back, length_age_plus_1))+
   geom_point()+
   geom_smooth(method = "lm")+
   theme_minimal()
@@ -1516,30 +1912,48 @@ Pikescales.final <- Pikescales2%>%
 Pike.scales.SI <- Pikescales.final%>%
   inner_join(Pike.SI, by = "fish_ID")
 
+pl_theme <- theme(axis.text = element_text(size = 7, color = "black"),
+                  axis.title = element_text(size = 7, color = "black"),
+                  legend.key.size = unit(.5, "cm"),
+                  legend.text = element_text(size = 7, color = "black"),
+                  legend.title = element_text(size = 7, color = "black"))
+
 C <- ggplot(Pike.scales.SI, aes(age, growth_index, color = d13C))+
-  geom_point(size=2)+
+  geom_point(size=.5)+
+  labs(x = "Age (years)", y = "Age-corrected growth")+
+  scale_x_discrete(breaks = seq(1, 13, 2))+
   scale_color_viridis_c()+
-  theme_minimal()
+  theme_minimal()+
+  pl_theme
 
 N <- ggplot(Pike.scales.SI, aes(age, growth_index, color = d15N))+
-  geom_point(size=2)+
+  geom_point(size=.5)+
+  labs(x = "Age (years)", y = "Age-corrected growth")+
+  scale_x_discrete(breaks = seq(1, 13, 2))+
   scale_color_viridis_c()+
-  theme_minimal()
+  theme_minimal()+
+  pl_theme
+
 
 S <- ggplot(Pike.scales.SI, aes(age, growth_index, color = d34S))+
-  geom_point(size=2)+
+  geom_point(size=.5)+
+  labs(x = "Age (years)", y = "Age-corrected growth")+
+  scale_x_discrete(breaks = seq(1, 13, 2))+
   scale_color_viridis_c()+
-  theme_minimal()
+  theme_minimal()+
+  pl_theme
 
-ggarrange(C, N, S, nrow = 1)
 
-fwrite(Pike.scales.SI, "Data/Pike/Pike-data-SI-growth")
+CNS <- ggarrange(C, N, S, nrow = 1)
+
+ggsave("Figures/CNS-plot-growth-index.png", CNS, width = 15, height = 5, units = "cm", dpi = 600, bg = "white")
+fwrite(Pike.scales.SI, "Data/Pike/Pike-data-SI-growth.csv")
 ```
 
 ```{r modelling growth, include=FALSE, eval=FALSE}
 rm(list = ls())
 
-Pike.scales.SI <- fread("Data/Pike/Pike-data-SI-growth")
+Pike.scales.SI <- fread("Data/Pike/Pike-data-SI-growth.csv")
 
 Pike.scales.Si2 <- Pike.scales.SI%>%
   transmute(fish_ID=fish_ID,
@@ -1627,6 +2041,9 @@ Pikemodel.final <- lmer(growth_index~sex+age+age*d15N_scale+age*d13C_scale+age*d
 
 summary(Pikemodel.final)
 r.squaredGLMM(Pikemodel.final)
+tab_model(Pikemodel.final)
+
+plot(Pike.scales.Si2$age, Pike.scales.Si2$growth_index)
 ```
 
 ```{r model eval, include=FALSE, eval=FALSE}
@@ -1647,6 +2064,83 @@ plot(Pike.scales.Si2$resid~Pike.scales.Si2$d13C_scale, ylab = "Residuals", xlab 
 plot(Pike.scales.Si2$resid~Pike.scales.Si2$d34S_scale, ylab = "Residuals", xlab = "d34S")
 plot(Pike.scales.Si2$resid~Pike.scales.Si2$CN_scale, ylab = "Residuals", xlab = "C:N ratio")
 ```
+
+```{r predict growth, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+Pike.scales.SI <- fread("Data/Pike/Pike-data-SI-growth.csv")
+
+Pike.scales.Si2 <- Pike.scales.SI%>%
+  transmute(fish_ID=fish_ID,
+            waterbody=waterbody,
+            sex=sex,
+            age=age,
+            pisc_scale=scale(pisc),
+            lifeyear=lifeyear,
+            growth_index=growth_index,
+            d15N_scale=scale(d15N),
+            d13C_scale=scale(d13C),
+            d34S_scale=scale(d34S),
+            CN_scale=scale(CN_ratio))%>%
+  drop_na(growth_index)
+
+Pikemodel.final <- lmer(growth_index~sex+age+age*d15N_scale+age*d13C_scale+age*d34S_scale+CN_scale+(1|waterbody), 
+                      REML = T, data = Pike.scales.Si2)
+
+sex <- unique(Pike.scales.Si2$sex)
+age <- unique(Pike.scales.Si2$age)
+waterbody <- unique(Pike.scales.Si2$waterbody)
+d15N <- seq(min(Pike.scales.Si2$d15N_scale), max(Pike.scales.Si2$d15N_scale), 3.4)
+d13C <- seq(min(Pike.scales.Si2$d13C_scale), max(Pike.scales.Si2$d13C_scale), 1)
+d34S <- seq(min(Pike.scales.Si2$d34S_scale), max(Pike.scales.Si2$d34S_scale), 1)
+CN_ratio <- mean(Pike.scales.Si2$CN_scale)
+
+Newdata <- expand.grid(sex=sex,
+                       age=age,
+                       d15N_scale=d15N,
+                       d13C_scale=d13C,
+                       d34S_scale=d34S,
+                       CN_scale=CN_ratio,
+                       waterbody=waterbody)
+
+head(Newdata)
+
+Newdata$prediction <- predict(Pikemodel.final, newdata = Newdata, allow.new.levels = TRUE, type = "response")
+
+pl_theme <- theme(axis.text = element_text(size = 7, color = "black"),
+                  axis.title = element_text(size = 7, color = "black"),
+                  legend.key.size = unit(.5, "cm"),
+                  legend.text = element_text(size = 7, color = "black"),
+                  legend.title = element_text(size = 7, color = "black"))
+
+C <- ggplot(Newdata, aes(d13C_scale, prediction))+
+  geom_point(size = .2)+
+  labs(x = "scaled d13C", y = "predicted growth index")+
+  theme_bw()+
+  pl_theme
+
+N <- ggplot(Newdata, aes(d15N_scale, prediction))+
+  geom_point(size = .2)+
+  labs(x = "scaled d15N", y = "predicted growth index")+
+  theme_bw()+
+  pl_theme
+
+S <- ggplot(Newdata, aes(d34S_scale, prediction))+
+  geom_point(size = .2)+
+  labs(x = "scaled d34S", y = "predicted growth index")+
+  theme_bw()+
+  pl_theme
+
+ggplot(Newdata, aes(as.factor(waterbody), prediction))+
+  geom_boxplot()+
+  labs(x = "Age", y = "predicted growth index")+
+  theme_bw()
+
+CNS <- ggarrange(C, N, S, nrow = 1)
+
+ggsave("Figures/CNS-plot-predicted.png", CNS, width = 15, height = 5, units = "cm", dpi = 600, bg = "white")
+```
+
 
 
 
