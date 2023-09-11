@@ -36,6 +36,9 @@ library(emmeans)
 library(MuMIn)
 library(visreg)
 library(car)
+library(rstan)
+options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)
 ```
 
 # Cleanup
@@ -1428,6 +1431,7 @@ plot(Data$length_back ~ Data$d13C_mean, ylab = "Backcalculated length (mm)", xla
 plot(Data$length_back ~ Data$d15N_mean, ylab = "Backcalculated length (mm)", xlab = "d15N (permil N2 atm)")
 plot(Data$length_back ~ Data$d34S_mean, ylab = "Backcalculated length (mm)", xlab = "d34S (permil CDT)")
 ```
+
 ```{r calculate model, include=FALSE, eval=FALSE}
 rm(list = ls())
 
@@ -1550,6 +1554,84 @@ Eyeplot1 <- annotate_figure(Eyeplot, bottom = text_grob("Eye lens layer # (inner
 ggsave("Figures/Eyelens-data-ecotypes.png", Eyeplot1, width = 15, height = 7, units = "cm", bg = "white")
 ```
 
+# Lifelong growth
+```{r data prep, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+Data <- fread("Data/Pike/Pikedata-eye-lens-years.csv")
+
+Data2 <- Data%>%
+  drop_na(d34S_mean)%>%
+  reframe(ID = ID,
+          ID2 = as.numeric(factor(ID)),
+          sex = sex,
+          TL_mm = TL_mm,
+          length_back = length_back,
+          lifeyear = lifeyear,
+          waterbody = as.factor(waterbody),
+          phenotype = case_when(phenotype == "FW_resident"~"FW-resident",
+                                   TRUE~phenotype),
+          phenotype_num = case_when(phenotype == "FW-resident" ~ 1,
+                                  phenotype == "Anadromous" ~ 2,
+                                  phenotype == "Trans-habitat" ~ 3,
+                                  phenotype == "BW-resident" ~ 4),
+          res_mean = res_mean,
+          Sr_mean = Sr_mean,
+          d13C = scale(d13C_mean),
+          d15N = scale(d15N_mean),
+          d34S = d34S_mean,
+          CN = scale(CN_mean))
+
+fwrite(Data2, file = "Data/Pike/Pikedata_Stan.csv")
+```
+
+```{r run model, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+source("Data/pike/funcs.r")
+growthdata <- fread("Data/Pike/Pikedata_Stan.csv")
+
+
+standata_growth = list(
+	Length_back = growthdata$length_back/10, 
+	Agei = growthdata$lifeyear,
+	diet = growthdata$d34S,
+	N = nrow(growthdata),
+	n_fish = as.integer(max(growthdata$ID2)),
+	n_pheno = as.integer(max(growthdata$phenotype_num)),
+	fish_id = as.integer(growthdata$ID2))
+fishtable = unique(growthdata[, c("ID2", "phenotype_num")])
+fishtable = fishtable[order(fishtable$ID2), ]
+standata_growth$pheno_id_fish = fishtable$phenotype_num
+
+stancode_i = ("Data/pike/gm_gamma_inv_individual.stan")
+mod_i = stan_model(stancode_i, model_name = "Individual pike growth")
+
+fit_gamma_i = sampling(mod_i, iter = 10000, data = standata_growth, init = init_fun,
+					 control = list(adapt_delta = 0.99, max_treedepth = 20), chains = 4, thin = 5)
+
+print(fit_gamma_i, pars = c("LInf", "tZero", "k", "beta1"))
+
+saveRDS(fit_gamma_i, "Data/pike/fit_gamma_i_diet.rds")
+
+p = c("LInf", "tZero", "k", "beta1")
+samps_a = as.array(fit_gamma_i, pars = p)
+
+samps = as.matrix(fit_gamma_i, pars = p)
+dat = data.frame(
+	estimate = apply(samps, 2, median),
+	lower = apply(samps, 2, quantile, 0.05),
+	upper = apply(samps, 2, quantile, 0.95)
+)
+tab = cbind(rownames(dat), as.character(signif(dat$estimate, 3)), 
+			paste0("(", signif(dat$lower, 3), ", ", signif(dat$upper, 3), ")"))
+colnames(tab) = c("Parameter", "Posterior median", "90% CI")
+knitr::kable(tab)
+```
+
+
+
+#Other stuff
 ```{r age length key from pike scales and otoliths, include=FALSE, eval=FALSE}
 rm(list = ls())
 
@@ -1672,7 +1754,7 @@ LenspikeBaby <- Lenspike%>%
 
 ```
 
-# Model growth of scale data with muscle isotopes?
+## Model growth of scale data with muscle isotopes?
 ```{r cleanup scale data, include=FALSE, eval=FALSE}
 rm(list = ls())
 
