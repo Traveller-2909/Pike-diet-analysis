@@ -1,7 +1,7 @@
 ID,Species,capt_date,SL_mm,SL_size_class,sex,weight_g,height_mm,sample_type,area,Long,Lat,d15N,d13C,d34S,CN_ratio,comment1,comment2
 BH-00355,freshwater resident,,552,,m,,,Muscle,Tributary,,,,,,,"",
 BH-00356,freshwater resident,,815,,f,,,Muscle,Tributary,,,,,,,"",
-BH-00385,anadromous,2019-07-10,765,,f,3260,,Muscle,Tributary,,,17.98,-21.83,3.67666666666667,3.2930238326142,|,
+BH-00385,anadromous,,765,,f,,,Muscle,Tributary,,,,,,,"",
 BH-00391,anadromous,,903,,f,,,Muscle,Tributary,,,,,,,"",
 BH-00392,anadromous,,930,,f,,,Muscle,Tributary,,,,,,,"",
 BH-00398,anadromous,,761,,f,,,Muscle,Tributary,,,,,,,"",
@@ -80,8 +80,7 @@ BH-01904,brackish resident,2020-11-27,404,,f,474,,Muscle,GB,,,14.37,-19.73333333
 BH-01906,brackish resident,2019-11-05,1230,,f,13600,,Muscle,WRB,,,16.7833333333333,-19.2366666666667,14.87,3.24802733555019,|,
 BH-01922,brackish resident,2020-02-01,1262,,f,14600,,Muscle,WRB,,,16.6766666666667,-17.93,11.5433333333333,3.20324758066986,|,
 BH-51614,anadromous,,885,,f,,,Muscle,Tributary,,,,,,,"",
-BH-90307,brackish resident,2020-05-02,900,,f,4500,,Muscle,WRB,,,16.5483333333333,-19.125,10.4033333333333,3.34115700426138,|,
-BH-90307,brackish resident,2020-05-02,900,,f,4500,,Muscle,WRB,,,16.5483333333333,-19.125,10.4033333333333,3.34115700426138,"",
+BH-90307,brackish resident,,900,,f,,,Muscle,WRB,,,,,,,"",
 BH-90910,anadromous,,604,,m,,,Muscle,Tributary,,,,,,,"",
 BH-90928,anadromous,2021-04-02,580,,m,1470,,Muscle,Tributary,13.26729,54.381931,15.8133333333333,-16.7,10.4666666666667,3.26441351998961,|,
 BH-90946,anadromous,,694,,m,,,Muscle,Tributary,,,,,,,"",

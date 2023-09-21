@@ -372,7 +372,18 @@ prey_NCS4 <- prey_NCS3%>%
             CN_ratio=Cperc/Nperc,
             comment=Comment)
 
-prey_NCSall <- rbind(prey_NCS2, prey_NCS4)
+prey_NCS5 <- fread("Data/Prey/2023-08-22_NCS_Prey.CSV")
+
+prey_NCS6 <- prey_NCS5%>%
+  transmute(ID=Identifier.1,
+            Sample=Identifier.2,
+            d15N=as.numeric(d15N),
+            d13C=as.numeric(d13C),
+            d34S=as.numeric(d34S),
+            CN_ratio=Cperc/Nperc,
+            comment=Comment)
+
+prey_NCSall <- rbind(prey_NCS2, prey_NCS4, prey_NCS6)
 
 #check missing fish
 preySID <- data.frame(ID=prey_NCS2[grepl("Measurement repeated", prey_NCS2$comment),]$ID)
@@ -385,7 +396,7 @@ IDcheck <- preySID%>%left_join(preySID2, by="ID")
 #Average SI values
 prey_NCSall <- prey_NCSall%>%
   group_by(ID)%>%
-  dplyr::summarise(ID=ID,
+  reframe(ID=ID,
             Sample=Sample,
             d15N=mean(d15N, na.rm = T),
             d13C=mean(d13C, na.rm = T),
@@ -433,7 +444,8 @@ preyfish.SI <- Prey2%>%inner_join(prey_NCSall, by="ID")%>%
                               Species=="Cod"~"G.morhua",
                               Species=="A.tobianus"~"A.tobianus",
                               Species=="S. spratus"~"S.sprattus",
-                              Species=="Salmo trutta  t."~"S.trutta"),
+                              Species=="Salmo trutta  t."~"S.trutta",
+                              Species=="Z. viviparus"~"Z.viviparus"),
             capt_date=capt_date,
             SL_mm=SL_mm,
             SL_size_class=SL_size_class,
@@ -462,7 +474,8 @@ IDcheck <- preySID%>%left_join(preyID, by="ID")
 fwrite(preyfish.SI, "Data/Prey/Preyfish_SI_clean_average.csv")
 ```
 
-```{r Day 1 tricks Prey, include=FALSE, eval=FALSE}
+```{r Prey lipid correction, include=FALSE, eval=FALSE}
+rm(list = ls())
 Prey <- fread("Data/Prey/Preyfish_SI_clean_average.csv")
 
 #Calculate mean of N and C for each species
@@ -472,8 +485,9 @@ sd_by_sp<-aggregate(cbind(d15N, d13C, d34S)~Species, data=Prey, FUN=sd)
 # Merging df
 descriptive<-cbind(m_by_sp, sd_by_sp)
 descriptive<-descriptive[-5]
-colnames(descriptive)<-c("Sp", "d15N", "d13C", "sdd15N", "sdd13C")
+colnames(descriptive)<-c("Sp", "d15N", "d13C", "d34S", "sdd15N", "sdd13C", "sdd34S")
 descriptive
+
 ## Now lets look at the range and n
 range_by_sp<-aggregate(cbind(d15N, d13C, d34S)~Species, data=Prey, FUN=range)
 range_by_sp
@@ -506,12 +520,12 @@ melt_data<-melt(Prey, id.vars=c(1:11, 16,17))
 ggplot(data=melt_data, aes(x=Species, y=value, group=Species, colour=Species))+
   geom_boxplot()+geom_point(position="jitter")+facet_grid(variable~., scales="free_y")+
   theme_bw()
-# Fish lipid content seems to be fine so no correction should be applied. However, in the following sections we have the code to perform
-# lipid correction using a model approach. The other approach is the chemical extraction which has to be done before analyzing samples for SIA
+
 
 ### Lets explore our fish data in more detail to see if we have a problem with the lipids
 ### First we subset the fish
-ggplot(data=Prey[Prey$Species=="C.harengus"|Prey$Species=="G.aculeatus",], aes(x=CN_ratio, y=d13C))+
+ggplot(data=Prey[Prey$Species=="C.harengus"|Prey$Species=="P.fluviatilis"|Prey$Species=="R.rutilus"|
+                   Prey$Species=="P.flesus"|Prey$Species=="N.melanostomus",], aes(x=CN_ratio, y=d13C))+
   geom_smooth(method="lm")+geom_point()+
   facet_grid(Species~., scales="free_y")+
   theme_bw()
@@ -522,7 +536,7 @@ ggplot(data=Prey[Prey$Species=="C.harengus"|Prey$Species=="G.aculeatus",], aes(x
 ## Lipids are depleted in d13C relative to protein (muscle). 
 #It can bias our interpretation of their position in the food web or get wrong proportion on mixing models
 # For Anchovy
-dep = subset(Prey, Species=="G.aculeatus")
+dep = subset(Prey, Species%in%c("C.harengus", "P.flesus","P.fluviatilis","R.rutilus","N.melanostomus"))
 dep$rcn=with(dep, CN_ratio)
 dep$L<-with(dep,-20.54+7.24*rcn)
  
@@ -532,19 +546,7 @@ mean(dep$rcn);sd(dep$rcn)
 # Fishes Kiljunen et al.(2006) # Carefull, this correction is not adequate for invertebrates!!!
 dep$d13Cc<-with(dep,ifelse(rcn>3.5, d13C+7.018*(0.048+3.9/(1+287/L)),d13C))
 
-dep2 = subset(Prey, Species=="C.harengus")
-dep2$rcn=with(dep2, CN_ratio)
-dep2$L<-with(dep2,-20.54+7.24*rcn)
- 
-mean(dep2$d13C);sd(dep2$d13C)
-mean(dep2$rcn);sd(dep2$rcn)
-
-# Fishes Kiljunen et al.(2006) # Carefull, this correction is not adequate for invertebrates!!!
-dep2$d13Cc<-with(dep2,ifelse(rcn>3.5, d13C+7.018*(0.048+3.9/(1+287/L)),d13C))
-
-depdep <- rbind(dep, dep2)
-
-depdep2 <- depdep%>%
+depdep2 <- dep%>%
   transmute(ID=ID,
             Species=Species,
             capt_date=capt_date,
@@ -563,7 +565,7 @@ depdep2 <- depdep%>%
             comment1=comment1,
             comment2=comment2)
 
-C.corrected <- rbind(Prey[Prey$Species!="C.harengus"&Prey$Species!="G.aculeatus",],depdep2)
+C.corrected <- rbind(Prey[!Species%in%c("C.harengus", "P.flesus","P.fluviatilis","R.rutilus","N.melanostomus"),],depdep2)
 
 fwrite(C.corrected, "Data/Prey/Preyfish_SI_clean_average_lipid-corrected.csv")
 ```
@@ -759,7 +761,7 @@ rm(list = ls())
 descriptive <- fread("Data/Pike/Descriptive-whole-sample.csv")
 
 descriptive2 <- descriptive%>%
-  filter(Sp=="C.harengus"|Sp=="R.rutilus"|Sp=="N.melanostomus"|Sp=="G.aculeatus"|Sp=="P.fluviatilis"|Sp=="E.lucius")%>%
+  filter(Sp=="C.harengus"|Sp=="R.rutilus"|Sp=="N.melanostomus"|Sp=="P.flesus"|Sp=="P.fluviatilis"|Sp=="E.lucius")%>%
   drop_na()
 
 #Biplot by species
@@ -870,7 +872,7 @@ colnames(descriptive)<-c("Sp", "d15N", "d13C", "d34S", "sdd15N", "sdd13C", "sdd3
 descriptive
 
 descriptive2 <- descriptive%>%
-  filter(Sp=="C.harengus"|Sp=="R.rutilus"|Sp=="N.melanostomus"|Sp=="G.aculeatus"|Sp=="P.fluviatilis"|
+  filter(Sp=="C.harengus"|Sp=="R.rutilus"|Sp=="N.melanostomus"|Sp=="P.flesus"|Sp=="P.fluviatilis"|
            Sp=="brackish resident"|Sp=="freshwater resident"|Sp=="anadromous"|Sp=="cross-habitat")%>%
   drop_na()
 
@@ -878,7 +880,7 @@ descriptive2$Sp <- as.factor(descriptive2$Sp)
 descriptive2$Sp <- fct_relevel(descriptive2$Sp, "freshwater resident", "anadromous", "cross-habitat", "brackish resident",
                                "C.harengus", "G.aculeatus", "N.melanostmus", "P.fluviatilis", "R.rutilus")
 
-brackish resident --> "#004643", anadromous --> "#00BFB2", cross-habitat --> "#F1C40F", freshwater resident --> "#C5D86D"
+#brackish resident --> "#004643", anadromous --> "#00BFB2", cross-habitat --> "#F1C40F", freshwater resident --> "#C5D86D"
 
 #Biplot by species
 colorBlindBlack8  <- c("#C5D86D", "#00BFB2", "#F1C40F", "#004643", "cyan", "#E6AB02", "#A6761D", "#66A61E","darkblue","darkred","cyan","red","beige", "yellow")
@@ -1004,7 +1006,708 @@ EcoS <- ggplot()+geom_boxplot(data=Ecotypes, aes(y=d34S, x=ecotype, fill=ecotype
 png(filename = "Figures/Ecoplot.png", width = 9000, height = 3000, res = 600)
 ggarrange(EcoC, EcoN, EcoS, nrow = 1, ncol = 3, common.legend = T)
 dev.off()
+```
 
+# Mixing models
+```{r mixing models pike, include=FALSE, eval=FALSE}
+rm(list = ls())
+Prey <- fread("Data/Prey/Preyfish_SI_clean_average_lipid-corrected.csv")
+Pike <- fread("Data/Pike/Pike_SI_all_clean_average_lipid-corrected.csv")
+
+Prey$SL_mm <- as.numeric(Prey$SL_mm)
+
+Prey1 <- Prey%>%filter(area != "Barthe" & area != "Ziese")%>%
+  transmute(ID=ID,
+            Species=Species,
+            group=case_when(Species=="R.rutilus"~"freshwater benthivores",
+                            Species=="C.harengus"~"C.harengus",
+                            Species=="P.flesus"~"marine benthivores",
+                            Species=="P.fluviatilis"~"freshwater benthivores",
+                            Species=="N.melanostomus"~"N.melanostomus",
+                            TRUE~"Other"),
+            SL_mm=SL_mm,
+            SL_size_class=SL_size_class,
+            weight_g=weight_g,
+            height_mm=height_mm,
+            sample_type=sample_type,
+            area=area,
+            Long=Long,
+            Lat=Lat,
+            d15N=d15N,
+            d13C=d13C,
+            d34S=d34S,
+            CN_ratio=CN_ratio,
+            comment1=comment1,
+            comment2=comment2)%>%
+  filter(group!="Other")
+
+Pike2 <- Pike%>%
+  transmute(ID=ID,
+            Species="E.lucius",
+            capt_date=as.character(capt_date),
+            Length=TL_mm,
+            SL_size_class=NA,
+            weight_g=weight_g,
+            height_mm=NA,
+            sample_type="muscle",
+            area=case_when(area=="Barthe"~"Zufluss",
+                           area=="Barthe/Peene"~"Zufluss",
+                           area=="BAT"~"Grabow",
+                           area=="Beek"~"Zufluss",
+                           area=="BEG"~"NRB",
+                           area=="BEZ"~"NRB",
+                           area=="Duwenbeek"~"Zufluss",
+                           area=="GB"~"GB",
+                           area=="GJB"~"NRB",
+                           area=="KB"~"WRB",
+                           area=="KD"~"KD",
+                           area=="KJB"~"KJB",
+                           area=="NHG"~"Zufluss",
+                           area=="P"~"P",
+                           area=="Peene"~"Zufluss",
+                           area=="S"~"S",
+                           area=="SB"~"WRB",
+                           area=="Sehrowbach"~"Zufluss",
+                           area=="U"~"U",
+                           area=="VB"~"WRB",
+                           area=="WB"~"NRB",
+                           area=="Ziese"~"Zufluss"),
+            Long=Long,
+            Lat=Lat,
+            d15N=d15N,
+            d13C=d13C,
+            d34S=d34S,
+            CN_ratio=CN_ratio,
+            comment1=comment,
+            comment2=NA)%>%
+  mutate(halflife = exp(0.22*log(weight_g)+3.28))%>%
+  filter(area!="KD"&area!="U")%>%
+  drop_na(d15N,d13C,d34S,Length,area)%>%
+  distinct()
+
+fwrite(Pike2, "Data/Mixing models/Pikemix.csv")
+
+mix.filename <- "Data/Mixing models/Pikemix.csv"
+
+Pike3 <- Pike2%>%
+  group_by(area)%>%
+  reframe(area=area,
+                   N = length(unique(ID)),
+                   years = paste(min(year(parse_date_time(capt_date,"ymd")), na.rm = T), "-", max(year(parse_date_time(capt_date,"ymd")), na.rm = T)))%>%
+  distinct()
+
+# Load mixture data
+mix <- load_mix_data(filename=mix.filename, 
+                     iso_names=c("d15N", "d13C", "d34S"),
+                     factors="area",
+                     fac_random=FALSE,
+                     fac_nested=FALSE,
+                     cont_effects="Length")
+
+# Prepare source data
+m_by_sp<-aggregate(cbind(d15N, d13C, d34S)~group, data=Prey1, FUN=mean)
+
+sd_by_sp<-aggregate(cbind(d15N, d13C, d34S)~group, data=Prey1, FUN=sd)
+
+length_by_sp<-aggregate(cbind(d15N)~group, data=Prey1, FUN=length)
+
+
+descriptive<-cbind(m_by_sp, sd_by_sp, length_by_sp)
+descriptive<-descriptive[c(-5,-9)]
+colnames(descriptive)<-c("prey", "Meand15N", "Meand13C", "Meand34S", "SDd15N", "SDd13C", "SDd34S","n")
+fwrite(descriptive, "Data/Mixing models/Sources.csv")
+
+source.filename <- "Data/Mixing models/Sources.csv"
+# # Load source data
+source<- load_source_data(filename=source.filename, source_factors=NULL,
+                          conc_dep=FALSE, data_type="means", mix)
+
+discr <- descriptive%>%
+  transmute(prey=prey,
+            Meand15N=2.9,
+            Meand13C=1.2,
+            Meand34S=-0.5,
+            SDd15N=0.32,
+            SDd13C=0.3,
+            SDd34S=0.2)
+
+fwrite(discr, "Data/Mixing models/Discrimination.csv")
+
+discr.filename <- "Data/Mixing models/Discrimination.csv"
+
+discr.df <- load_discr_data(filename=discr.filename, mix)
+
+plot_data(filename="isospace_plotn",
+          plot_save_pdf=FALSE,
+          plot_save_png=FALSE,
+          return_obj = T,
+          mix,source,discr.df)
+
+##### 3. Writing the mode ######
+# Name of the model
+model_filename <- "Data/Mixing models/MixSIAR_model_pike.txt"
+
+# Include residual error; appropriate in situations where, for instance, each mixture data point was 
+# generated through the combination of many samples from the source population
+resid_err <- TRUE
+
+# Include process error; derived from an assumption about the mixing process. 
+# Analyst provides a single mixture value for each of the j tracers considered
+process_err <- TRUE
+
+# Save it
+write_JAGS_model(model_filename, resid_err, process_err, mix, source)
+
+# We run a model with uninformative priors
+jags.pike <- run_model(run="normal", mix, source, discr.df, model_filename, alpha.prior = 1)
+
+# Extracting data
+Pike_no_priors<-data.frame(jags.pike[["BUGSoutput"]][["sims.list"]][["p.global"]]) # p. global is the overall contribution by each species
+# Extract column names
+colnames(Pike_no_priors)<- source[["source_names"]]
+
+write.csv(Pike_no_priors,paste("1. Pike (",Sys.Date(),")-fit.csv",sep=""),row.names = F)
+
+saveRDS(jags.pike, "Data/Mixing models/Mixing.model-run-locations.rds")
+
+# Obtain the WAIC for model comparison
+WAIC_ice<-loo::loo(jags.pike$BUGSoutput$sims.list$loglik)
+```
+
+```{r plot results, include=FALSE, eval=FALSE}
+rm(list = ls())
+jags.pike <- readRDS("Data/Mixing models/Mixing.model-run-locations.rds")
+
+source.filename <- "Data/Mixing models/Sources.csv"
+mix.filename <- "Data/Mixing models/Pikemix.csv"
+
+Pike <- fread("Data/pike/Pike_SI_all_clean_average_lipid-corrected.csv")
+
+Pike2 <- Pike%>%
+  transmute(ID=ID,
+            Species="E.lucius",
+            capt_date=as.character(capt_date),
+            Length=TL_mm,
+            SL_size_class=NA,
+            weight_g=weight_g,
+            height_mm=NA,
+            sample_type="muscle",
+            area=case_when(area=="BAT"~"Grabow",
+                           area=="BEG"~"NRB",
+                           area=="BEZ"~"NRB",
+                           area=="GB"~"GB",
+                           area=="GJB"~"NRB",
+                           area=="KB"~"WRB",
+                           area=="KD"~"KD",
+                           area=="KJB"~"KJB",
+                           area=="P"~"P",
+                           area=="S"~"S",
+                           area=="SB"~"WRB",
+                           area=="U"~"U",
+                           area=="VB"~"WRB",
+                           area=="WB"~"NRB",
+                           TRUE~area),
+            Long=Long,
+            Lat=Lat,
+            d15N=d15N,
+            d13C=d13C,
+            d34S=d34S,
+            CN_ratio=CN_ratio,
+            comment1=comment,
+            comment2=NA)%>%
+  mutate(halflife = exp(0.22*log(weight_g)+3.28))%>%
+  filter(area!="KD"&area!="U")%>%
+  drop_na(d15N,d13C,d34S,Length,area)%>%
+  distinct()
+
+# Load mixture data
+mix <- load_mix_data(filename=mix.filename, 
+                     iso_names=c("d15N", "d13C", "d34S"),
+                     factors="area",
+                     fac_random=FALSE,
+                     fac_nested=FALSE,
+                     cont_effects="Length")
+
+# Load source data
+source<- load_source_data(filename=source.filename, source_factors=NULL,
+                          conc_dep=FALSE, data_type="means", mix)
+
+
+
+output_options <- list(summary_save = TRUE,                 
+                       summary_name = "summary_statistics", 
+                       sup_post = TRUE,                    
+                       plot_post_save_pdf = FALSE,           
+                       plot_post_name = "posterior_density",
+                       sup_pairs = TRUE,             
+                       plot_pairs_save_pdf = TRUE,    
+                       plot_pairs_name = "pairs_plot",
+                       sup_xy = TRUE,           
+                       plot_xy_save_pdf = TRUE,
+                       plot_xy_name = "xy_plot",
+                       gelman = TRUE,
+                       heidel = FALSE,  
+                       geweke = TRUE,   
+                       diag_save = TRUE,
+                       diag_name = "diagnostics",
+                       indiv_effect = FALSE,       
+                       plot_post_save_png = FALSE, 
+                       plot_pairs_save_png = FALSE,
+                       plot_xy_save_png = FALSE,
+                       diag_save_ggmcmc = FALSE,
+                       return_obj = TRUE)
+
+diag <- output_diagnostics(jags.pike, mix, source, output_options)
+df.stats <- output_stats(jags.pike, mix, source, output_options)
+rownames(df.stats)
+g.post2 <- output_posteriors(jags.pike, mix, source, output_options)
+
+names(g.post2)
+
+GB <- g.post2$fac1[[1]]
+GR <- g.post2$fac1[[2]]
+KJB <- g.post2$fac1[[3]]
+NRB <- g.post2$fac1[[4]]
+P <- g.post2$fac1[[5]]
+S <- g.post2$fac1[[6]]
+WRB <- g.post2$fac1[[7]]
+Trib <- g.post2$fac1[[8]]
+
+pl.theme <- theme(panel.grid.major = element_line(),
+                  legend.background = element_blank(),
+                  legend.box.background = element_blank(),
+                  axis.line = element_line(linewidth = .5, colour = "black", linetype = 1),
+                  axis.ticks = element_line(linewidth = .5, colour = "black"),
+                  axis.text = element_text(size = 12, colour = "black"),
+                  axis.text.y = element_text(size = 12, colour = "black"),
+                  axis.title.x = element_blank(),
+                  axis.title.y = element_blank(),
+                  legend.position = "bottom",
+                  legend.text = element_text(size = 12),
+                  legend.title = element_text(size = 12),
+                  legend.key.size = unit(.8,"line"),
+                  plot.title = element_text(size = 12, colour = "black"))
+
+pl.color <- scale_color_manual(breaks = c("C.harengus", "freshwater benthivores", "marine benthivores", "N.melanostomus"),
+                              values = c("#29B6F6", "#00796B", "#1A237E","#B71C1C"),
+                              labels = c("C. harengus", "freshwater benthivores", "marine benthivores", "N. melanostomus"))
+pl.fill <- scale_fill_manual(breaks = c("C.harengus", "freshwater benthivores", "marine benthivores", "N.melanostomus"),
+                              values = c("#29B6F6", "#00796B", "#1A237E","#B71C1C"),
+                              labels = c("C. harengus", "freshwater benthivores", "marine benthivores", "N. melanostomus"))
+
+scalex <- scale_x_continuous(breaks = c(0, 0.25, 0.50, 0.75, 1.00),
+                   labels = c("0", "25", "50", "75", "100"),
+                   limits = c(0,1))
+
+scaley <- scale_y_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1),
+                             labels = c("0.00", "0.25", "0.50", "0.75", "1.00"))
+
+GB.plot <- GB+
+  labs(title = "Greifswalder Bodden", fill = "diet", color = "diet")+
+  pl.theme+
+  pl.color+
+  pl.fill+
+  scalex+
+  scaley+
+  guides(color = guide_legend(ncol = 2, nrow = 2))
+
+GR.plot <- GR+
+  labs(title = "Grabow", fill = "diet", color = "diet")+
+  pl.theme+
+  pl.color+
+  pl.fill+
+  scalex+
+  scaley+
+  guide+
+  guides(color = guide_legend(ncol = 2, nrow = 2))
+
+KJB.plot <- KJB+
+  labs(title = "Kleiner Jasmunder Bodden", fill = "diet", color = "diet")+
+  pl.theme+
+  pl.color+
+  pl.fill+
+  scalex+
+  scaley+
+  guides(color = guide_legend(ncol = 2, nrow = 2))
+
+NRB.plot <- NRB+
+  labs(title = "NRBC", fill = "diet", color = "diet")+
+  pl.theme+
+  pl.color+
+  pl.fill+
+  scalex+
+  scaley+
+  guides(color = guide_legend(ncol = 2, nrow = 2))
+
+P.plot <- P+
+  labs(title = "Peenestrom", fill = "diet", color = "diet")+
+  pl.theme+
+  pl.color+
+  pl.fill+
+  scalex+
+  scaley+
+  guides(color = guide_legend(ncol = 2, nrow = 2))
+
+S.plot <- S+
+  labs(title = "Strelasund", fill = "diet", color = "diet")+
+  pl.theme+
+  pl.color+
+  pl.fill+
+  scalex+
+  scaley+
+  guides(color = guide_legend(ncol = 2, nrow = 2))
+
+WRB.plot <- WRB+
+  labs(title = "WRBC", fill = "diet", color = "diet")+
+  pl.theme+
+  pl.color+
+  pl.fill+
+  scalex+
+  scaley+
+  guides(color = guide_legend(ncol = 2, nrow = 2))
+
+Trib.plot <- Trib+
+  labs(title = "tributaries", fill = "diet", color = "diet")+
+  pl.theme+
+  pl.color+
+  pl.fill+
+  scalex+
+  scaley+
+  guides(color = guide_legend(ncol = 2, nrow = 2))
+
+Allplot <- ggarrange(WRB.plot, NRB.plot, GB.plot, GR.plot, S.plot, KJB.plot, P.plot, Trib.plot, nrow = 4, ncol = 2, 
+                     common.legend = TRUE)
+Allplot2 <- annotate_figure(Allplot, left = text_grob("Pposterior density", rot = 90, size = 12), 
+                            bottom = text_grob("diet proportion (%)", size = 12))
+
+ggsave("Figures/pike-diet-areas.png", Allplot2, width = 6, height = 10, bg = "white")
+
+GB_cont_all <- g.post2$cont[[1]]
+GB_cont <- GB_cont_all[[1]]
+GR_cont_all <- g.post2$cont[[2]]
+GR_cont <- GR_cont_all[[1]]
+KJB_cont_all <- g.post2$cont[[3]]
+KJB_cont <- KJB_cont_all[[1]]
+NRB_cont_all <- g.post2$cont[[4]]
+NRB_cont <- NRB_cont_all[[1]]
+P_cont_all <- g.post2$cont[[5]]
+P_cont <- P_cont_all[[1]]
+S_cont_all <- g.post2$cont[[6]]
+S_cont <- S_cont_all[[1]]
+WRB_cont_all <- g.post2$cont[[7]]
+WRB_cont <- WRB_cont_all[[1]]
+Trib_cont_all <- g.post2$cont[[8]]
+Trib_cont <- Trib_cont_all[[1]]
+
+scalex2 <- scale_x_continuous(breaks = c(0, 250, 500, 750, 1000, 1250),
+                   labels = c("0", "25", "50", "75", "100", "125"),
+                   limits = c(0,1300))
+scaley2 <- scale_y_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1),
+                             labels = c("0", "25", "50", "75", "100"))
+
+GB.plot <- GB_cont+
+  labs(title = "Greifswalder Bodden", fill = "diet", color = "diet")+
+  pl.theme+
+  pl.color+
+  pl.fill+
+  scalex2+
+  scaley2+
+  guides(color = guide_legend(ncol = 2, nrow = 2))
+
+GR.plot <- GR_cont+
+  labs(title = "Grabow", fill = "diet", color = "diet")+
+  pl.theme+
+  pl.color+
+  pl.fill+
+  scalex2+
+  scaley2+
+  guides(color = guide_legend(ncol = 2, nrow = 2))
+
+KJB.plot <- KJB_cont+
+  labs(title = "Kleiner Jasmunder Bodden", fill = "diet", color = "diet")+
+  pl.theme+
+  pl.color+
+  pl.fill+
+  scalex2+
+  scaley2+
+  guides(color = guide_legend(ncol = 2, nrow = 2))
+
+NRB.plot <- NRB_cont+
+  labs(title = "NRBC", fill = "diet", color = "diet")+
+  pl.theme+
+  pl.color+
+  pl.fill+
+  scalex2+
+  scaley2+
+  guides(color = guide_legend(ncol = 2, nrow = 2))
+
+P.plot <- P_cont+
+  labs(title = "Peenestrom", fill = "diet", color = "diet")+
+  pl.theme+
+  pl.color+
+  pl.fill+
+  scalex2+
+  scaley2+
+  guides(color = guide_legend(ncol = 2, nrow = 2))
+
+S.plot <- S_cont+
+  labs(title = "Strelasund", fill = "diet", color = "diet")+
+  pl.theme+
+  pl.color+
+  pl.fill+
+  scalex2+
+  scaley2+
+  guides(color = guide_legend(ncol = 2, nrow = 2))
+
+WRB.plot <- WRB_cont+
+  labs(title = "WRBC", fill = "diet", color = "diet")+
+  pl.theme+
+  pl.color+
+  pl.fill+
+  scalex2+
+  scaley2+
+  guides(color = guide_legend(ncol = 2, nrow = 2))
+
+Trib.plot <- Trib_cont+
+  labs(title = "tributaries", fill = "diet", color = "diet")+
+  pl.theme+
+  pl.color+
+  pl.fill+
+  scalex2+
+  scaley2+
+  guides(color = guide_legend(ncol = 2, nrow = 2))
+
+Allplot <- ggarrange(WRB.plot, NRB.plot, GB.plot, GR.plot, S.plot, KJB.plot, P.plot, Trib.plot, nrow = 4, ncol = 2, 
+                     common.legend = T, legend = "top")
+Allplot2 <- annotate_figure(Allplot, left = text_grob("diet proportion (%)", rot = 90, size = 12), 
+                            bottom = text_grob("total length (cm)", size = 12))
+
+ggsave("Figures/length-diet-areas.png", Allplot2, width = 6, height = 10, bg = "white")
+
+NRB_long <- NRB_cont_all[[4]]
+WRB_long <- WRB_cont_all[[4]]
+GB_long <- GB_cont_all[[4]]
+S_long <- S_cont_all[[4]]
+
+NRB.plot <- NRB_long+
+  labs(title = "NRBC", fill = "diet", color = "diet")+
+  pl.theme+
+  pl.color+
+  pl.fill+
+  scalex+
+  scaley+
+  annotation_custom(text_grob("ID: BH-01556, total length: 110 cm", size = 12), xmin = 0, ymin = 1)
+
+S.plot <- S_long+
+  labs(title = "Strelasund", fill = "diet", color = "diet")+
+  pl.theme+
+  pl.color+
+  pl.fill+
+  scalex+
+  scaley+
+  annotation_custom(text_grob("ID: BH-90085, total length: 117 cm", size = 12), xmin = 0, ymin = 1)
+
+
+WRB.plot <- WRB_long+
+  labs(title = "WRBC", fill = "diet", color = "diet")+
+  pl.theme+
+  pl.color+
+  pl.fill+
+  scalex+
+  scaley+
+  annotation_custom(text_grob("ID: BH-01922, total length: 126 cm", size = 12), xmin = 0, ymin = 1)
+
+GB.plot <- GB_long+
+  labs(title = "Greifswalder Bodden", fill = "diet", color = "diet")+ 
+  pl.theme+
+  pl.color+
+  pl.fill+
+  scalex+
+  scaley+
+  annotation_custom(text_grob("ID: BH-90752, total length: 107 cm", size = 12), xmin = 0, ymin = 1)
+
+Allplot <- ggarrange(NRB.plot, S.plot, WRB.plot,GB.plot, nrow = 2, ncol = 2, 
+                     common.legend = T, legend = "top")
+Allplot2 <- annotate_figure(Allplot, left = text_grob("posterior density", rot = 90, size = 12), 
+                            bottom = text_grob("diet proportion (%)", size = 12))
+
+ggsave("Figures/diet-max-length.png", Allplot2, width = 10, height = 10, bg = "white")
+
+saveRDS(g.post2, "Data/Mixing models/outputs_no-priors_locations.rds")
+```
+
+```{r rest Si, eval=FALSE}
+rm(list = ls())
+# Create diagnostics, summary statistics, and posterior plots
+jags.pike <- readRDS("Data/Mixing models/Mixing.model-run-locations.rds")
+g.post <- readRDS("Data/Mixing models/outputs_no-priors_locations.rds")
+
+source.filename <- "Data/Mixing models/Sources.csv"
+mix.filename <- "Data/Mixing models/Pikemix.csv"
+
+Pike <- fread("Data/pike/Pike_SI_all_clean_average_lipid-corrected.csv")
+
+Pike2 <- Pike%>%
+  transmute(ID=ID,
+            Species="E.lucius",
+            capt_date=as.character(capt_date),
+            Length=TL_mm,
+            SL_size_class=NA,
+            weight_g=weight_g,
+            height_mm=NA,
+            sample_type="muscle",
+            area=case_when(area=="BAT"~"Grabow",
+                           area=="BEG"~"NRB",
+                           area=="BEZ"~"NRB",
+                           area=="GB"~"GB",
+                           area=="GJB"~"NRB",
+                           area=="KB"~"WRB",
+                           area=="KD"~"KD",
+                           area=="KJB"~"KJB",
+                           area=="P"~"P",
+                           area=="S"~"S",
+                           area=="SB"~"WRB",
+                           area=="U"~"U",
+                           area=="VB"~"WRB",
+                           area=="WB"~"NRB",
+                           TRUE~area),
+            Long=Long,
+            Lat=Lat,
+            d15N=d15N,
+            d13C=d13C,
+            d34S=d34S,
+            CN_ratio=CN_ratio,
+            comment1=comment,
+            comment2=NA)%>%
+  mutate(halflife = exp(0.22*log(weight_g)+3.28))%>%
+  filter(area!="KD"&area!="U")%>%
+  drop_na(d15N,d13C,d34S,Length,area)%>%
+  distinct()
+
+# Load mixture data
+mix <- load_mix_data(filename=mix.filename, 
+                     iso_names=c("d15N", "d13C", "d34S"),
+                     factors="area",
+                     fac_random=FALSE,
+                     fac_nested=FALSE,
+                     cont_effects="Length")
+
+# Load source data
+source<- load_source_data(filename=source.filename, source_factors=NULL,
+                          conc_dep=FALSE, data_type="means", mix)
+
+global.contrib.p <- data.frame(median = jags.pike$BUGSoutput$median$p.fac1,
+                             area=c("GB", "Grabow","KJB","NRB","P","S","WRB","Zufluss"))
+global.contrib.sd <- data.frame(sd = jags.pike$BUGSoutput$sd$p.fac1,
+                             area=c("GB", "Grabow","KJB","NRB","P","S","WRB","Zufluss"))
+
+names(global.contrib.p) <- c(paste0("p.", source[["source_names"]]),"area")
+names(global.contrib.sd) <- c(paste0("sd.", source[["source_names"]]),"area")
+
+sum <- rowSums(global.contrib.p[,1:4])
+
+global.contrib.p2 <- global.contrib.p%>%
+  pivot_longer(cols = p.C.harengus:p.N.melanostomus,names_to = "species", values_to = "median")%>%
+  transmute(area=area,
+            species=sub("p.","",species),
+            median=median)
+global.contrib.sd2 <- global.contrib.sd%>%
+  pivot_longer(cols = sd.C.harengus:sd.N.melanostomus,names_to = "species", values_to = "sd")%>%
+  transmute(area=area,
+            species=sub("sd.","",species),
+            sd=sd)
+
+global.contrib2 <- global.contrib.p2%>%inner_join(global.contrib.sd2, by = c("species", "area"))
+
+
+indiv.contrib <- data.frame(contr=jags.pike$BUGSoutput$mean$p.ind)
+indiv.sd <- data.frame(sd=jags.pike$BUGSoutput$sd$p.ind)
+names(indiv.contrib) <- paste0("p.",source[["source_names"]])
+names(indiv.sd) <- paste0("sd.",source[["source_names"]])
+indiv.contrib$ID <- Pike2$ID
+indiv.sd$ID <- Pike2$ID
+
+contrib.pike <- indiv.contrib%>%
+  inner_join(indiv.sd, by = "ID")
+
+Pike.contrib <- Pike2 %>%
+  inner_join(contrib.pike, by = "ID")%>%
+  transmute(ID=ID,
+            capt_date,
+            TL_mm = Length,
+            weight_g=weight_g,
+            area=area,
+            Long=Long,
+            Lat=Lat,
+            halflife=halflife,
+            p.C.harengus=p.C.harengus,
+            sd.C.harengus=sd.C.harengus,
+            p.marine.benthivores=`p.marine benthivores`,
+            sd.marine.benthivores=`sd.marine benthivores`,
+            p.freshwater.benthivores=`p.freshwater benthivores`,
+            sd.freshwater.benthivores=`sd.freshwater benthivores`,
+            p.N.melanostomus=p.N.melanostomus,
+            sd.N.melanostomus=sd.N.melanostomus)
+
+fwrite(Pike.contrib, "Data/Mixing models/Pike_individual_diet.csv")
+
+Pike.contrib.Bodden <- Pike.contrib%>%
+  filter(area=="NRB"|area=="Grabow"|area=="WRB"|area=="GB"|area=="S"|area=="P"|area=="KJB")
+
+pl.theme <- theme(panel.grid.major = element_line(),
+                  legend.background = element_blank(),
+                  legend.box.background = element_blank(),
+                  axis.line = element_line(linewidth = .5, colour = "black", linetype = 1),
+                  axis.ticks = element_line(linewidth = .5, colour = "black"),
+                  axis.text = element_text(size = 12, colour = "black"),
+                  axis.text.y = element_text(size = 12, colour = "black"),
+                  axis.title.x = element_text(size = 12, colour = "black"),
+                  axis.title.y = element_text(size = 12, colour = "black"),
+                  legend.text = element_text(size = 12),
+                  legend.title = element_text(size = 12),
+                  legend.key.size = unit(.8,"line"),
+                  plot.title = element_text(size = 12, colour = "black"))
+
+Pike.length <- ggplot(Pike.contrib.Bodden)+
+  geom_smooth(aes(TL_mm, p.C.harengus, color="C.harengus", fill="C.harengus"))+
+  geom_smooth(aes(TL_mm, p.freshwater.benthivores, color="freshwater benthivores", fill="freshwater benthivores"))+
+  geom_smooth(aes(TL_mm, p.marine.benthivores, color="marine benthivores", fill="marine benthivores"))+
+  geom_smooth(aes(TL_mm, p.N.melanostomus, color="N.melanostomus", fill="N.melanostomus"))+
+  scale_color_manual(name = "prey type",
+                     breaks = c("C.harengus", "freshwater benthivores", "marine benthivores", "N.melanostomus"),
+                     values = c("#29B6F6", "#00796B", "#1A237E","#B71C1C"),
+                     labels = c("C. harengus", "freshwater benthivores", "marine benthivores", "N. melanostomus"))+
+  scale_fill_manual(name = "prey type",
+                    breaks = c("C.harengus", "freshwater benthivores", "marine benthivores", "N.melanostomus"),
+                    values = c("#29B6F6", "#00796B", "#1A237E","#B71C1C"),
+                    labels = c("C. harengus", "freshwater benthivores", "marine benthivores", "N. melanostomus"))+
+  scale_y_continuous(expand = c(0,0),
+                     breaks = c(0,0.25,0.5,0.75,1), labels = c("0", "25", "50", "75", "100"))+
+  scale_x_continuous(expand = c(0,0),
+                     limits = c(min(Pike.contrib.Bodden$TL_mm),max(Pike.contrib.Bodden$TL_mm)),
+                     breaks = c(200,300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300), 
+                     labels = c("20","30","40","50","60","70","80","90","100","110","120","130"))+
+  labs(x="total length (cm)", y="pike diet proportion (%)")+
+  coord_cartesian(ylim = c(0,1))+
+  theme_classic()+
+  pl.theme
+
+ggsave("Figures/diet-per-length_global.png", Pike.length, width = 15, height = 9, units = "cm", dpi = 600)
+
+global <- ggplot(global.contrib2)+
+  geom_bar(aes(area, median, fill=species), stat="identity")+
+  labs(x = "area", y = "pike diet proportion")+
+  scale_x_discrete(breaks = c("GB", "Grabow", "KJB", "NRB", "P", "S", "WRB", "Zufluss"),
+                   labels = c("GB", "Grabow", "KJB", "NRBC", "P", "S", "WRBC", "tributary"))+
+  scale_fill_manual(name="prey type",
+                    breaks = c("C.harengus", "freshwater benthivores", "marine benthivores", "N.melanostomus"),
+                    values = c("#29B6F6", "#00796B", "#1A237E","#B71C1C"),
+                    labels = c("C. harengus", "freshwater benthivores", "marine benthivores", "N. melanostomus"))+
+  theme_classic()+
+  pl.theme+
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+
+ggsave("Figures/diet_proportion_areas.png", global, width = 15, height = 9, units = "cm", dpi = 600)
 ```
 
 # Eye lens analysis
@@ -1453,14 +2156,14 @@ Data2 <- Data%>%
           d34S = scale(d34S_mean),
           CN = scale(CN_mean))
 
-pikemodel1 <- lmer(length_back~lifeyear+I(lifeyear^2)+sex+d13C*phenotype+d15N*phenotype+d34S*phenotype+CN+(1|ID), data = Data2, REML = T)
+pikemodel1 <- lmer(length_back~I(lifeyear^2)+sex+d13C+d15N+d34S+CN+(1|ID), data = Data2, REML = T)
 
 summary(pikemodel1)
 r.squaredGLMM(pikemodel1)
 
 pike.vif <- vif(pikemodel1)
 
-barplot(pike.vif[,3], main = "VIF values", horiz = F, col = "darkgreen", ylim = c(0,10),
+barplot(pike.vif, main = "VIF values", horiz = F, col = "darkgreen", ylim = c(0,10),
         las = 2)
 abline(h = 5, lwd = 3, lty = 2, col="red")
 
@@ -1481,7 +2184,7 @@ anova(pikemodel1, pikemodel_nosex)
 #surprise...
 
 #Test d13C
-pikemodel_no13C <- update(pikemodel1, ~. -d13C)
+pikemodel_no13C <- update(pikemodel1, ~. -d13C*lifeyear)
 
 anova(pikemodel1, pikemodel_no13C)
 #d13C is significant
@@ -1499,10 +2202,12 @@ anova(pikemodel1, pikemodel_no34S)
 #interaction d34S x waterbody significant
 
 #test CN ratio
-pikemodel_nofat <- update(pikemodel1, ~. -CN_mean)
+pikemodel_nofat <- update(pikemodel1, ~. -CN)
 
 anova(pikemodel1, pikemodel_nofat)
 #Fat is not significant
+
+tab_model(pikemodel1)
 ```
 
 
@@ -1577,10 +2282,10 @@ Data2 <- Data%>%
                                   phenotype == "BW-resident" ~ 4),
           res_mean = res_mean,
           Sr_mean = Sr_mean,
-          d13C = scale(d13C_mean),
-          d15N = scale(d15N_mean),
+          d13C = (d13C_mean+(max(sqrt(d13C_mean^2)))),
+          d15N = d15N_mean,
           d34S = d34S_mean,
-          CN = scale(CN_mean))
+          CN = CN_mean)
 
 fwrite(Data2, file = "Data/Pike/Pikedata_Stan.csv")
 ```
@@ -1595,7 +2300,10 @@ growthdata <- fread("Data/Pike/Pikedata_Stan.csv")
 standata_growth = list(
 	Length_back = growthdata$length_back/10, 
 	Agei = growthdata$lifeyear,
-	diet = growthdata$d34S,
+	dietS = growthdata$d34S,
+	dietC = growthdata$d13C,
+	dietN = growthdata$d15N,
+	dietCN = growthdata$CN,
 	N = nrow(growthdata),
 	n_fish = as.integer(max(growthdata$ID2)),
 	n_pheno = as.integer(max(growthdata$phenotype_num)),
@@ -1604,15 +2312,22 @@ fishtable = unique(growthdata[, c("ID2", "phenotype_num")])
 fishtable = fishtable[order(fishtable$ID2), ]
 standata_growth$pheno_id_fish = fishtable$phenotype_num
 
-stancode_i = ("Data/pike/gm_gamma_inv_individual.stan")
-mod_i = stan_model(stancode_i, model_name = "Individual pike growth")
+stancode_base = ("Data/pike/gm_gamma_inv_individual_base.stan")
+stancode_CNS_CN = ("Data/pike/gm_gamma_inv_individual_CNS_CN.stan")
 
-fit_gamma_i = sampling(mod_i, iter = 10000, data = standata_growth, init = init_fun,
-					 control = list(adapt_delta = 0.99, max_treedepth = 20), chains = 4, thin = 5)
+mod_base = stan_model(stancode_base, model_name = "Individual pike growth base")
+mod_CNS_CN = stan_model(stancode_CNS_CN, model_name = "Individual pike growth CNS CN")
 
-print(fit_gamma_i, pars = c("LInf", "tZero", "k", "beta1"))
+#fit_base = sampling(mod_base, iter = 10000, data = standata_growth, init = init_fun,
+#					 control = list(adapt_delta = 0.99, max_treedepth = 20), chains = 4, thin = 5)
 
-saveRDS(fit_gamma_i, "Data/pike/fit_gamma_i_diet.rds")
+fit_CNS_CN = sampling(mod_CNS_CN, iter = 10000, data = standata_growth, init = init_fun,
+                      control = list(adapt_delta = 0.99, max_treedepth = 20), chains = 4, thin = 5)
+
+
+print(fit_CNS_CN, pars = c("LInf", "tZero", "k", "beta1", "beta2", "beta3", "beta4"))
+
+saveRDS(fit_CNS_CN, "Data/pike/fit_gamma_diet_CNS_CN.rds")
 
 p = c("LInf", "tZero", "k", "beta1")
 samps_a = as.array(fit_gamma_i, pars = p)
