@@ -2314,20 +2314,42 @@ standata_growth$pheno_id_fish = fishtable$phenotype_num
 
 stancode_base = ("Data/pike/gm_gamma_inv_individual_base.stan")
 stancode_CNS_CN = ("Data/pike/gm_gamma_inv_individual_CNS_CN.stan")
+stancode_CNS = ("Data/pike/gm_gamma_inv_individual_CNS.stan")
+stancode_CS = ("Data/pike/gm_gamma_inv_individual_CS.stan")
+stancode_NS = ("Data/pike/gm_gamma_inv_individual_NS.stan")
 
 mod_base = stan_model(stancode_base, model_name = "Individual pike growth base")
 mod_CNS_CN = stan_model(stancode_CNS_CN, model_name = "Individual pike growth CNS CN")
+mod_CNS = stan_model(stancode_CNS, model_name = "Individual pike growth CNS")
+mod_CS = stan_model(stancode_CS, model_name = "Individual pike growth CS")
+mod_NS = stan_model(stancode_NS, model_name = "Individual pike growth NS")
 
-#fit_base = sampling(mod_base, iter = 10000, data = standata_growth, init = init_fun,
-#					 control = list(adapt_delta = 0.99, max_treedepth = 20), chains = 4, thin = 5)
+# fit_base = sampling(mod_base, iter = 10000, data = standata_growth, init = init_fun,
+# 				 control = list(adapt_delta = 0.99, max_treedepth = 20), chains = 4, thin = 5)
 
-fit_CNS_CN = sampling(mod_CNS_CN, iter = 10000, data = standata_growth, init = init_fun,
+# fit_CNS_CN = sampling(mod_CNS_CN, iter = 10000, data = standata_growth, init = init_fun,
+#                       control = list(adapt_delta = 0.99, max_treedepth = 20), chains = 4, thin = 5)
+
+# fit_CNS = sampling(mod_CNS, iter = 10000, data = standata_growth, init = init_fun,
+#                       control = list(adapt_delta = 0.99, max_treedepth = 20), chains = 4, thin = 5)
+
+# fit_CS = sampling(mod_CS, iter = 10000, data = standata_growth, init = init_fun,
+#                       control = list(adapt_delta = 0.99, max_treedepth = 20), chains = 4, thin = 5)
+
+fit_NS = sampling(mod_NS, iter = 10000, data = standata_growth, init = init_fun,
                       control = list(adapt_delta = 0.99, max_treedepth = 20), chains = 4, thin = 5)
 
-
+print(fit_base, pars = c("LInf", "tZero", "k"))
 print(fit_CNS_CN, pars = c("LInf", "tZero", "k", "beta1", "beta2", "beta3", "beta4"))
+print(fit_CNS, pars = c("LInf", "tZero", "k", "beta1", "beta2", "beta3"))
+print(fit_CS, pars = c("LInf", "tZero", "k", "beta1", "beta2"))
+print(fit_NS, pars = c("LInf", "tZero", "k", "beta1", "beta3"))
 
-saveRDS(fit_CNS_CN, "Data/pike/fit_gamma_diet_CNS_CN.rds")
+#saveRDS(fit_base, "Data/pike/fit_gamma_diet_base.rds")
+#saveRDS(fit_CNS_CN, "Data/pike/fit_gamma_diet_CNS_CN.rds")
+#saveRDS(fit_CNS, "Data/pike/fit_gamma_diet_CNS.rds")
+#saveRDS(fit_CS, "Data/pike/fit_gamma_diet_CS.rds")
+saveRDS(fit_NS, "Data/pike/fit_gamma_diet_NS.rds")
 
 p = c("LInf", "tZero", "k", "beta1")
 samps_a = as.array(fit_gamma_i, pars = p)
