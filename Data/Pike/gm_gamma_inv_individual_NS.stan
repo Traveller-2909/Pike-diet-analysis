@@ -117,3 +117,11 @@ model {
 	beta1 ~ normal(0, sigma_beta1);
 	beta3 ~ normal(0, sigma_beta3);
 }
+
+//individual ikelihoods for loo
+generated quantities {
+    vector[N] log_lik;
+    for (i in 1:N) {
+      log_lik[i] = normal_lpdf(Length_back[i]|LInf*(1-exp(-k*(Agei[i]+tZero))), phi);
+    }
+}

@@ -1639,6 +1639,10 @@ Pike.contrib <- Pike2 %>%
             area=area,
             Long=Long,
             Lat=Lat,
+            d15N=d15N,
+            d13C=d13C,
+            d34S=d34S,
+            CN_ratio=CN_ratio,
             halflife=halflife,
             p.C.harengus=p.C.harengus,
             sd.C.harengus=sd.C.harengus,
@@ -1709,6 +1713,30 @@ global <- ggplot(global.contrib2)+
 
 ggsave("Figures/diet_proportion_areas.png", global, width = 15, height = 9, units = "cm", dpi = 600)
 ```
+
+```{r explore muscle iso, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+Pikediet <- fread("Data/Mixing models/Pike_individual_diet.csv")
+
+ggplot(Pikediet, aes(p.C.harengus, CN_ratio))+
+  geom_point()+
+  geom_smooth(method = "lm")+
+  theme_bw()
+
+ggplot(Pikediet, aes(as.factor(month(capt_date)), p.C.harengus))+
+  geom_point()+
+  theme_bw()
+
+Pikediet <- Pikediet%>%
+  mutate(condition = ((weight_g/TL_mm^3)*100000))
+
+ggplot(Pikediet, aes(p.C.harengus, condition))+
+  geom_point()+
+  geom_smooth(method = "lm")+
+  theme_bw()
+```
+
 
 # Eye lens analysis
 ```{r eye lens inner diameters, include=FALSE, eval=FALSE}
@@ -2135,7 +2163,7 @@ plot(Data$length_back ~ Data$d15N_mean, ylab = "Backcalculated length (mm)", xla
 plot(Data$length_back ~ Data$d34S_mean, ylab = "Backcalculated length (mm)", xlab = "d34S (permil CDT)")
 ```
 
-```{r calculate model, include=FALSE, eval=FALSE}
+```{r base model, include=FALSE, eval=FALSE}
 rm(list = ls())
 
 Data <- fread("Data/Pike/Pikedata-eye-lens-years.csv")
@@ -2158,9 +2186,6 @@ Data2 <- Data%>%
 
 pikemodel1 <- lmer(length_back~I(lifeyear^2)+sex+d13C+d15N+d34S+CN+(1|ID), data = Data2, REML = T)
 
-summary(pikemodel1)
-r.squaredGLMM(pikemodel1)
-
 pike.vif <- vif(pikemodel1)
 
 barplot(pike.vif, main = "VIF values", horiz = F, col = "darkgreen", ylim = c(0,10),
@@ -2174,41 +2199,193 @@ rand(pikemodel1)
 #Test age effect
 pikemodel_noage <- update(pikemodel1, ~. -I(lifeyear^2))
 
-anova(pikemodel1, pikemodel_noage)
-#guess what...
-
 #Test sex effect
 pikemodel_nosex <- update(pikemodel1, ~. -sex)
 
-anova(pikemodel1, pikemodel_nosex)
-#surprise...
-
 #Test d13C
-pikemodel_no13C <- update(pikemodel1, ~. -d13C*lifeyear)
-
-anova(pikemodel1, pikemodel_no13C)
-#d13C is significant
+pikemodel_no13C <- update(pikemodel1, ~. -d13C)
 
 #Test d15N
 pikemodel_no15N <- update(pikemodel1, ~. -d15N)
 
-anova(pikemodel1, pikemodel_no15N)
-#d15N is not significant
-
 #test d34S
-pikemodel_no34S <- update(pikemodel1, ~. -d34S*phenotype)
-
-anova(pikemodel1, pikemodel_no34S)
-#interaction d34S x waterbody significant
+pikemodel_no34S <- update(pikemodel1, ~. -d34S)
 
 #test CN ratio
 pikemodel_nofat <- update(pikemodel1, ~. -CN)
 
-anova(pikemodel1, pikemodel_nofat)
-#Fat is not significant
+anova(pikemodel1, pikemodel_noage, pikemodel_nosex, pikemodel_no13C, pikemodel_no15N, pikemodel_no34S, pikemodel_nofat)
 
-tab_model(pikemodel1)
+r.squaredGLMM(pikemodel1)
+r.squaredGLMM(pikemodel_nosex)
+r.squaredGLMM(pikemodel_no13C)
+r.squaredGLMM(pikemodel_no15N)
+r.squaredGLMM(pikemodel_no34S)
+r.squaredGLMM(pikemodel_nofat)
+
+#Alternative model
+pikemodel2 <- lmer(length_back~I(lifeyear^2)+sex+phenotype*d13C+phenotype*d15N+phenotype*d34S+CN+(1|ID), 
+                   data = Data2, REML = T)
+
+#Test sex effect
+pikemodel_nosex <- update(pikemodel2, ~. -sex)
+
+#Test d13C
+pikemodel_no13C <- update(pikemodel2, ~. -phenotype*d13C)
+
+#Test d15N
+pikemodel_no15N <- update(pikemodel2, ~. -phenotype*d15N)
+
+#test d34S
+pikemodel_no34S <- update(pikemodel2, ~. -phenotype*d34S)
+
+#test CN ratio
+pikemodel_nofat <- update(pikemodel2, ~. -CN)
+
+anova(pikemodel2, pikemodel_nosex, pikemodel_no13C, pikemodel_no15N, pikemodel_no34S, pikemodel_nofat)
+
+r.squaredGLMM(pikemodel2)
+r.squaredGLMM(pikemodel_nosex)
+r.squaredGLMM(pikemodel_no13C)
+r.squaredGLMM(pikemodel_no15N)
+r.squaredGLMM(pikemodel_no34S)
+r.squaredGLMM(pikemodel_nofat)
+
+#age interaction
+pikemodel3 <- lmer(length_back~I(lifeyear^2)+sex+lifeyear*d13C+lifeyear*d15N+lifeyear*d34S+CN+(1|ID), 
+                   data = Data2, REML = T)
+
+#Test sex effect
+pikemodel_nosex <- update(pikemodel3, ~. -sex)
+
+#Test d13C
+pikemodel_no13C <- update(pikemodel3, ~. -lifeyear*d13C)
+
+#Test d15N
+pikemodel_no15N <- update(pikemodel3, ~. -lifeyear*d15N)
+
+#test d34S
+pikemodel_no34S <- update(pikemodel3, ~. -lifeyear*d34S)
+
+#test CN ratio
+pikemodel_nofat <- update(pikemodel3, ~. -CN)
+
+anova(pikemodel3, pikemodel_nosex, pikemodel_no13C, pikemodel_no15N, pikemodel_no34S, pikemodel_nofat)
+
+r.squaredGLMM(pikemodel3)
+r.squaredGLMM(pikemodel_nosex)
+r.squaredGLMM(pikemodel_no13C)
+r.squaredGLMM(pikemodel_no15N)
+r.squaredGLMM(pikemodel_no34S)
+r.squaredGLMM(pikemodel_nofat)
 ```
+
+```{r model figures, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+pikes <- fread("Data/Pike/Pikedata-eye-lens-years.csv")
+
+pikes <- pikes%>%
+  drop_na(d34S_mean)%>%
+  reframe(ID = ID,
+          lifeyear = lifeyear,
+          waterbody = as.factor(waterbody),
+          phenotype = phenotype,
+          genotype = genotype,
+          sex = sex,
+          res_mean = res_mean,
+          Sr_mean = Sr_mean,
+          length_back = length_back,
+          d13C = scale(d13C_mean),
+          d15N = scale(d15N_mean),
+          d34S = scale(d34S_mean),
+          CN = scale(CN_mean))
+
+#factorize temperature
+pikes$agefact <- ifelse(pikes$lifeyear==1, 2, 
+                         ifelse(pikes$lifeyear==2, 1,
+                                ifelse(pikes$lifeyear>2, 3, NA)))
+
+pikes$agefact2 <- factor(pikes$agefact,levels = c(2,1,3),
+                                            labels = c("0-1 years", "1-2 years", 
+                                                       "> 2 years"))
+
+mypallette <- viridis::viridis(4, direction = -1)
+
+#Temperature effect
+d13C <- ggplot(pikes, aes(d13C,length_back, color=agefact2))+
+  geom_point(size=.5)+
+  scale_x_continuous(limits = c(-2,2))+
+  stat_smooth(method = "lm", fill="gray", fullrange = T, lwd=.8)+
+  labs(x=expression("scaled"~delta^13*"C"~("z-score")), 
+       y="backcalculated total length (mm)",
+       color="ageclass")+
+  scale_color_viridis_d()+
+  theme_classic()+
+  theme(panel.grid.major = element_line(),
+        legend.position = c(.9,.82),
+        legend.background = element_blank(),
+        legend.box.background = element_rect(),
+        axis.line = element_line(size = .5, colour = "black", linetype = 1),
+        axis.ticks = element_line(size = .5, colour = "black"),
+        axis.text = element_text(size = 10, colour = "black"),
+        axis.title.x = element_text(size = 10, margin = margin(t=15), colour = "black"),
+        axis.title.y = element_blank(),
+        legend.text = element_text(size = 10),
+        legend.title = element_text(size = 10, colour = "black"),
+        legend.key.size = unit(.8,"line"))
+
+d15N <- ggplot(pikes, aes(d15N,length_back, color=agefact2))+
+  geom_point(size=.5)+
+  scale_x_continuous(limits = c(-2,2))+
+  stat_smooth(method = "lm", fill="gray", fullrange = T, lwd=.8)+
+  labs(x=expression("scaled"~delta^15*"N"~("z-score")), 
+       y="backcalculated total length (mm)",
+       color="ageclass")+
+  scale_color_viridis_d()+
+  theme_classic()+
+  theme(panel.grid.major = element_line(),
+        legend.position = c(.9,.82),
+        legend.background = element_blank(),
+        legend.box.background = element_rect(),
+        axis.line = element_line(size = .5, colour = "black", linetype = 1),
+        axis.ticks = element_line(size = .5, colour = "black"),
+        axis.text = element_text(size = 10, colour = "black"),
+        axis.title.x = element_text(size = 10, margin = margin(t=15), colour = "black"),
+        axis.title.y = element_blank(),
+        legend.text = element_text(size = 10),
+        legend.title = element_text(size = 10, colour = "black"),
+        legend.key.size = unit(.8,"line"))
+
+d34S <- ggplot(pikes, aes(d34S,length_back, color=agefact2))+
+  geom_point(size=.5)+
+  scale_x_continuous(limits = c(-2,2))+
+  stat_smooth(method = "lm", fill="gray", fullrange = T, lwd=.8)+
+  labs(x=expression("scaled"~delta^34*"S"~("z-score")), 
+       y="backcalculated total length (mm)",
+       color="ageclass")+
+  scale_color_viridis_d()+
+  theme_classic()+
+  theme(panel.grid.major = element_line(),
+        legend.position = c(.9,.82),
+        legend.background = element_blank(),
+        legend.box.background = element_rect(),
+        axis.line = element_line(size = .5, colour = "black", linetype = 1),
+        axis.ticks = element_line(size = .5, colour = "black"),
+        axis.text = element_text(size = 10, colour = "black"),
+        axis.title.x = element_text(size = 10, margin = margin(t=15), colour = "black"),
+        axis.title.y = element_blank(),
+        legend.text = element_text(size = 10),
+        legend.title = element_text(size = 10, colour = "black"),
+        legend.key.size = unit(.8,"line"))
+
+Isogrowth <- ggarrange(d13C, d15N, d34S, nrow = 1, labels = c("A", "B", "C"), 
+                       hjust = 1, common.legend = T, legend = "bottom")
+Isogrowth2 <- annotate_figure(Isogrowth, left = text_grob("backcalculated total length (mm)", rot = 90))
+
+ggsave("Figures/Iso-effect-growth.png", Isogrowth2, width = 15, height = 9, units = "cm", dpi = 600, bg = "white")
+```
+
 
 
 ```{r exploration eye lens layers, include=FALSE, eval=FALSE}
@@ -2228,24 +2405,24 @@ pl_theme <- theme(axis.title.x = element_blank(),
                   legend.title = element_text(size = 10, color = "black"),
                   plot.title = element_text(size = 10, color = "black"))
 
-ggplot(Ecopike[Ecopike$lens_layer>1,], aes(length_back, d34S))+
-  geom_point(aes(shape = phenotype), size=1, position = position_dodge(width = 1), alpha = 1)+
+d34S <- ggplot(Ecopike[Ecopike$lens_layer>1,], aes(length_back, d34S))+
+  geom_point(aes(shape = phenotype), size=.5, position = position_dodge(width = 1), alpha = 1)+
   geom_smooth(aes(color=phenotype, fill= phenotype), lwd = .5)+
   theme_bw()+
   labs(y = expression(delta^34~"S"~("\u2030 CDT")))+
   ggtitle("d34S")+
   pl_theme
 
-ggplot(Ecopike[Ecopike$lens_layer>1,], aes(length_back, d15N))+
-  geom_point(aes(shape = phenotype), size=1, position = position_dodge(width = 1), alpha = 1)+
+d15N <- ggplot(Ecopike[Ecopike$lens_layer>1,], aes(length_back, d15N))+
+  geom_point(aes(shape = phenotype), size=.5, position = position_dodge(width = 1), alpha = 1)+
   geom_smooth(aes(color=phenotype, fill= phenotype), lwd = .5)+
   theme_bw()+
   labs(y = expression(delta^15~"N"~("\u2030"~N^2*"atm")))+
   ggtitle("d15N")+
   pl_theme
 
-ggplot(Ecopike[Ecopike$lens_layer>1,], aes(length_back, d13C))+
-  geom_point(aes(shape = phenotype), size=1, position = position_dodge(width = 1), alpha = 1)+
+d13C <- ggplot(Ecopike[Ecopike$lens_layer>1,], aes(length_back, d13C))+
+  geom_point(aes(shape = phenotype), size=.5, position = position_dodge(width = 1), alpha = 1)+
   geom_smooth(aes(color=phenotype, fill= phenotype), lwd = .5)+
   theme_bw()+
   labs(y = expression(delta^13~"C"~("\u2030 VPDB")))+
@@ -2254,7 +2431,7 @@ ggplot(Ecopike[Ecopike$lens_layer>1,], aes(length_back, d13C))+
 
 Eyeplot <- ggarrange(d34S, d15N, d13C, nrow = 1, common.legend = T)
 
-Eyeplot1 <- annotate_figure(Eyeplot, bottom = text_grob("Eye lens layer # (inner to outer)", size = 10, color = "black"))
+Eyeplot1 <- annotate_figure(Eyeplot, bottom = text_grob("Backcalculated length (mm)", size = 10, color = "black"))
 
 ggsave("Figures/Eyelens-data-ecotypes.png", Eyeplot1, width = 15, height = 7, units = "cm", bg = "white")
 ```
@@ -2317,39 +2494,48 @@ stancode_CNS_CN = ("Data/pike/gm_gamma_inv_individual_CNS_CN.stan")
 stancode_CNS = ("Data/pike/gm_gamma_inv_individual_CNS.stan")
 stancode_CS = ("Data/pike/gm_gamma_inv_individual_CS.stan")
 stancode_NS = ("Data/pike/gm_gamma_inv_individual_NS.stan")
+stancode_CN = ("Data/pike/gm_gamma_inv_individual_CN.stan")
 
 mod_base = stan_model(stancode_base, model_name = "Individual pike growth base")
 mod_CNS_CN = stan_model(stancode_CNS_CN, model_name = "Individual pike growth CNS CN")
 mod_CNS = stan_model(stancode_CNS, model_name = "Individual pike growth CNS")
 mod_CS = stan_model(stancode_CS, model_name = "Individual pike growth CS")
 mod_NS = stan_model(stancode_NS, model_name = "Individual pike growth NS")
+mod_CN = stan_model(stancode_CN, model_name = "Individual pike growth CN")
 
-# fit_base = sampling(mod_base, iter = 10000, data = standata_growth, init = init_fun,
-# 				 control = list(adapt_delta = 0.99, max_treedepth = 20), chains = 4, thin = 5)
+fit_base = sampling(mod_base, iter = 1000, data = standata_growth, init = init_fun,
+				 control = list(adapt_delta = 0.99, max_treedepth = 20), chains = 4, thin = 5)
 
-# fit_CNS_CN = sampling(mod_CNS_CN, iter = 10000, data = standata_growth, init = init_fun,
-#                       control = list(adapt_delta = 0.99, max_treedepth = 20), chains = 4, thin = 5)
-
-# fit_CNS = sampling(mod_CNS, iter = 10000, data = standata_growth, init = init_fun,
-#                       control = list(adapt_delta = 0.99, max_treedepth = 20), chains = 4, thin = 5)
-
-# fit_CS = sampling(mod_CS, iter = 10000, data = standata_growth, init = init_fun,
-#                       control = list(adapt_delta = 0.99, max_treedepth = 20), chains = 4, thin = 5)
-
-fit_NS = sampling(mod_NS, iter = 10000, data = standata_growth, init = init_fun,
+fit_CNS_CN = sampling(mod_CNS_CN, iter = 1000, data = standata_growth, init = init_fun,
                       control = list(adapt_delta = 0.99, max_treedepth = 20), chains = 4, thin = 5)
+
+fit_CNS = sampling(mod_CNS, iter = 1000, data = standata_growth, init = init_fun,
+                      control = list(adapt_delta = 0.99, max_treedepth = 20), chains = 4, thin = 5)
+
+fit_CS = sampling(mod_CS, iter = 1000, data = standata_growth, init = init_fun,
+                      control = list(adapt_delta = 0.99, max_treedepth = 20), chains = 4, thin = 5)
+
+fit_NS = sampling(mod_NS, iter = 1000, data = standata_growth, init = init_fun,
+                      control = list(adapt_delta = 0.99, max_treedepth = 20), chains = 4, thin = 5)
+
+fit_CN = sampling(mod_CN, iter = 1000, data = standata_growth, init = init_fun,
+                      control = list(adapt_delta = 0.99, max_treedepth = 20), chains = 4, thin = 5)
+
+
 
 print(fit_base, pars = c("LInf", "tZero", "k"))
 print(fit_CNS_CN, pars = c("LInf", "tZero", "k", "beta1", "beta2", "beta3", "beta4"))
 print(fit_CNS, pars = c("LInf", "tZero", "k", "beta1", "beta2", "beta3"))
 print(fit_CS, pars = c("LInf", "tZero", "k", "beta1", "beta2"))
 print(fit_NS, pars = c("LInf", "tZero", "k", "beta1", "beta3"))
+print(fit_CN, pars = c("LInf", "tZero", "k", "beta2", "beta3"))
 
-#saveRDS(fit_base, "Data/pike/fit_gamma_diet_base.rds")
+saveRDS(fit_base, "Data/pike/fit_gamma_diet_base.rds")
 #saveRDS(fit_CNS_CN, "Data/pike/fit_gamma_diet_CNS_CN.rds")
 #saveRDS(fit_CNS, "Data/pike/fit_gamma_diet_CNS.rds")
 #saveRDS(fit_CS, "Data/pike/fit_gamma_diet_CS.rds")
-saveRDS(fit_NS, "Data/pike/fit_gamma_diet_NS.rds")
+#saveRDS(fit_NS, "Data/pike/fit_gamma_diet_NS.rds")
+#saveRDS(fit_CN, "Data/pike/fit_gamma_diet_CN.rds")
 
 p = c("LInf", "tZero", "k", "beta1")
 samps_a = as.array(fit_gamma_i, pars = p)
@@ -2365,6 +2551,28 @@ tab = cbind(rownames(dat), as.character(signif(dat$estimate, 3)),
 colnames(tab) = c("Parameter", "Posterior median", "90% CI")
 knitr::kable(tab)
 ```
+
+```{r compare models}
+rm(list = ls())
+
+base <- readRDS("Data/pike/fit_gamma_diet_base.rds")
+CNS_CN <- readRDS("Data/pike/fit_gamma_diet_CNS_CN.rds")
+CNS <- readRDS("Data/pike/fit_gamma_diet_CNS.rds")
+CN <- readRDS("Data/pike/fit_gamma_diet_CS.rds")
+NS <- readRDS("Data/pike/fit_gamma_diet_NS.rds")
+CN <- readRDS("Data/pike/fit_gamma_diet_CN.rds")
+
+fits = list(base = fit_base, CNS_CN = fit_CNS_CN, CNS = fit_CNS, CN = fit_CN, CS = fit_CS, NS = fit_NS)
+
+loos = lapply(fits, loo, pars = "log_lik")
+
+looics = sapply(loos, function(x) x$estimates['looic', 'Estimate'])
+delta_looic = looics - min(looics)
+wi = exp(-0.5*delta_looic) / sum(exp(-0.5*delta_looic))
+round(rbind(looic = looics, dlooic = delta_looic, weight = wi), 2)
+
+```
+
 
 
 
