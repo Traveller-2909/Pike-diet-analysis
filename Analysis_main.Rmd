@@ -40,8 +40,194 @@ library(rstan)
 options(mc.cores = parallel::detectCores())
 rstan_options(auto_write = TRUE)
 ```
+# Stomach contents
 
-# Cleanup
+```{r stomach content cleanup, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+### Magenzusammensetzung
+
+stomach <- fread("Data/Pike/SC_Database.csv")
+
+stomach2 <- stomach%>%
+  transmute(Date = Date,
+            Fish_ID = Fish_ID,
+            Species = case_when(Species == "S. lucioperca" ~ "Sander lucioperca",
+                                Species == "P.fluviatilis" ~ "Perca fluviatilis",
+                                Species == "S.erythrophthalmus" ~ "Scardinius erythrophthalmus",
+                                Species == "C.harengus" ~ "Clupea harengus",
+                                Species == "G.aculeatus" ~ "Gasteroseus aculeatus",
+                                Species == "P.pungitius" ~ "Pungitius pungitius",
+                                Species == "I.alpestris" ~ "I.alpestris",
+                                Species == "Gastropoda" ~ "Gastropoda",
+                                Species == "R.rutilus" ~ "Rutilus rutilus",
+                                Species == "N.melanostomus" ~ "Neogobius melanostomus",
+                                Species == "Isopoda" ~ "Isopoda",
+                                Species == "A.aquaticus" ~ "A.aquaticus",
+                                Species == "Gammarus" ~ "Gammarus",
+                                Species == "E.danica" ~ "Sander lucioperca",
+                                Species == "S.spinachia" ~ "Spinachia spinachia",
+                                Species == "P.flesus" ~ "Platichthys flesus",
+                                Species == "P.elegans" ~ "P.elegans",
+                                Species == "fish larva" ~ "fish larva",
+                                Species == "A.brama" ~ "Abramis brama",
+                                Species == "B.bjoerkna" ~ "Blicca bjoerkna",
+                                Species == "A.alburnus" ~ "Alburnus alburnus",
+                                Species == "G.cernua" ~ "Gymnocephalus cernua"),
+            sex = sex,
+            pike_weight_g = Weight_g,
+            pike_TL_mm = Total_Length_mm,
+            length = prey_length_mm,
+            weight = Prey_weight_g,
+            stomach_weight = Stomach_weight_g,
+            area = Area,
+            gear = Gear)
+
+Pike <- fread("C:/Users/timor/Nextcloud2/Boddenhecht/Data/Pike Data/1.pike_data_base_FOR_USERS/1Pike_Latest_Version.txt")
+SI <- fread("C:/Users/timor/Nextcloud2/Boddenhecht/Data/Pike Data/1.pike_data_base_FOR_USERS/1Sampling_Instance_Latest_Version.txt")
+
+nordic <- fread("Data/Prey/Nordic multimesh gillnets.csv")
+names(nordic)[7] <- c("length")
+names(nordic)[8] <- c("weight")
+
+# binding data frames
+nordic <- plyr::rbind.fill(stomach2,nordic)
+str(nordic)
+unique(nordic$Species)
+nordic$Species <- as.factor(as.character(nordic$Species))
+nordic$weight <- as.numeric(as.character(nordic$weight))
+nordic$length <- as.numeric(as.character(nordic$length))
+
+#####Rename Species because written wrong
+levels(nordic$Species)[levels(nordic$Species)=="Perca fluviatilis "] <- "Perca fluviatilis"
+levels(nordic$Species)[levels(nordic$Species)=="Rutilus rutilus "] <- "Rutilus rutilus"
+levels(nordic$Species)[levels(nordic$Species)=="Pungitius pungitius"] <- "Pungitis pungitis"
+levels(nordic$Species)[levels(nordic$Species)=="Neogobius melanostomus "] <- "Neogobius melanostomus"
+levels(nordic$Species)[levels(nordic$Species)=="Spinachia spinachia"] <- "Spinachio spinachio"
+
+#calculate missing lengths and weights
+for(i in 1:nrow(nordic)){
+  row.i <- nordic[i,]
+  if(is.na(row.i$length)){
+    mod <- mean(filter(nordic, Species == row.i$Species)$length,na.rm=TRUE)
+    # Now assign calculated value into cell of original dataframe
+    nordic[i,]$length <- mod
+    cat(i, "done ", row.i$Species,"\n")
+  }else{cat(".")}
+}
+
+nordic <- nordic%>%filter(length != "NaN")
+
+for(i in 1:nrow(nordic)){
+  row.i <- nordic[i,]
+  if(is.na(row.i$weight)){
+    mod <- lm(data = filter(nordic, Species == row.i$Species), log(weight) ~ log(length))
+    log.weight <- predict(mod, data.frame(length = row.i$length))
+    pred.weight <- 2.718281828459 ^ log.weight
+    # Now assign calculated value into cell of original dataframe
+    nordic[i,]$weight <- pred.weight
+    cat(i, "done ", row.i$Species,"\n")
+  }else{cat(".")}
+}
+
+Pike_SC <- nordic%>%filter(!is.na(Fish_ID))%>%
+  transmute(Date = Date,
+            fish_ID = Fish_ID,
+            species = Species,
+            sex = sex,
+            pike_weight_g = pike_weight_g,
+            pike_TL_mm = pike_TL_mm,
+            prey_length_mm = length,
+            prey_weight_g = weight,
+            area = area)
+
+fwrite(Pike_SC, "Data/Pike/Stomach-contents-Database-clean.csv")
+
+Marlon_SC <- fread("Data/Pike/SC_Marlon-MA.csv")
+
+Marlon_SC2 <- Marlon_SC%>%
+  transmute(Date = Date.x,
+            fish_ID = Fish_ID,
+            species = Species,
+            sex = NA,
+            pike_weight_g = Weight,
+            pike_TL_mm = Total_Length_mm,
+            prey_length_mm = length,
+            prey_weight_g = weight,
+            area = case_when(Comparison_Area_Name == "Werderbucht" ~ "BAT",
+                             Comparison_Area_Name == "Ummanz" ~ "SB",
+                             Comparison_Area_Name == "Neuensiener_Selliner_See" ~ "GB"))
+
+SC_all <- rbind(Pike_SC, Marlon_SC2)
+
+fwrite(SC_all, "Data/Pike/Stomach-contents-all-clean.csv")
+```
+
+```{r stomach contents graphics, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+SC_data <- fread("Data/Pike/Stomach-contents-all-clean.csv")
+
+SC_data2 <- SC_data%>%
+  mutate(area2 = as.factor(case_when(area == "GB" ~ "lagoon",
+                           area == "SB" ~ "lagoon",
+                           area == "Duwenbeek" ~ "lagoon",
+                           area == "NHG" ~ "lagoon",
+                           area == "Ziese" ~ "lagoon",
+                           area == "Sehrowbach" ~ "lagoon",
+                           area == "Barthe" ~ "lagoon",
+                           area == "KB" ~ "lagoon",
+                           area == "P" ~ "lagoon",
+                           area == "BAT" ~ "lagoon")))
+
+SC_summary <- SC_data2%>%
+  reframe(species = case_when(species == "Gasteroseus aculeatus" ~ "Gasterosteus aculeatus",
+                              species == "Gammerus sp." ~ "Gammarus",
+                              species == "P.elegans" ~ "Palaemon adspersus",
+                              species == "Pungitis pungitis" ~ "Pungitius pungitius",
+                              species == "Spinachio spinachio" ~ "Spinachia spinachia",
+                              TRUE ~ species),
+          prey_weight_g = prey_weight_g,
+          total_biomass_g = sum(prey_weight_g, na.rm = T),
+          area2 = area2)%>%
+  group_by(species)%>%
+  reframe(species = as.factor(species),
+          prey_weight_g = sum(prey_weight_g, na.rm = T),
+          total_biomass_g = total_biomass_g,
+          area2 = area2)%>%
+  mutate(proportion = prey_weight_g/total_biomass_g)%>%
+  distinct()
+
+SC_summary2 <- SC_summary%>%
+  reframe(species = case_when(proportion < 0.05 ~ "other",
+                              TRUE ~ species),
+          proportion = proportion,
+          area2 = area2)%>%
+  group_by(species, area2)%>%
+  reframe(proportion2 = sum(proportion),
+          order = case_when(species == "Clupea harengus" ~ 1,
+                            species == "Rutilus rutilus" ~ 2,
+                            species == "Perca fluviatilis" ~ 3,
+                            species == "Neogobius melanostomus" ~ 4,
+                            species == "Platichthys flesus" ~ 5,
+                            species == "other" ~ 6))%>%
+  distinct()
+
+SC_summary2$species <- reorder(SC_summary2$species, SC_summary2$order)
+
+Props <- ggplot(SC_summary2, aes(x = "", y = proportion2, fill = species)) +
+  geom_bar(stat = "identity") +
+  coord_polar(theta = "y") +  # Convert to a polar coordinate for pie chart
+  labs(title = "Species contributions to pike stomach contents", 
+       fill = "Species") +
+  geom_text(aes(label = scales::percent(proportion2)), position = position_stack(vjust = 0.5))+
+  scale_fill_viridis_d(alpha = 0.9)+
+  theme_void()
+
+ggsave("Figures/Stomach-contents-all.png", Props, width = 15, height = 15, units = "cm", dpi = 300, bg = "white")
+```
+
+# SI Cleanup
 ```{r pike muscle data cleanup, include=FALSE, eval=FALSE}
 rm(list = ls())
 
@@ -236,6 +422,89 @@ dep2 <- dep%>%
 fwrite(dep2, "Data/Pike/Pike_SI_all_clean_average_lipid-corrected.csv")
 fwrite(pikedata2, "Data/Pike/Pike_SI_all_clean_average.csv")
 fwrite(Otopike.SI, "Data/Pike/Otopike_SI_clean_average.csv")
+```
+
+```{r pike ecotypes cleanup, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+Allpike <- fread("Data/Pike/Pike_SI_all_clean_average_lipid-corrected.csv")
+Otopike <- fread("Data/Pike/Otopike_SI_clean_average.csv")
+Telepike <- fread("Data/Pike/Pikedata_telemetry_types.txt")
+
+#Reformat Otopike
+Otopike2 <- Otopike%>%
+  transmute(ID = ID,
+            capt_date = capt_date,
+            TL_mm = TL_mm,
+            weight_g = weight_g,
+            sex = sex,
+            area = case_when(study_area == "WRB" ~ "Mesohaline",
+                             study_area == "NRB" ~ "Mesohaline",
+                             study_area == "GB" ~ "Mesohaline",
+                             TRUE ~ study_area),
+            Long = Long,
+            Lat = Lat,
+            ecotype = case_when(ecotype == "FW_resident" ~ "FW-resident",
+                                ecotype == "Trans-habitat" ~ "Cross-habitat",
+                                TRUE ~ ecotype),
+            d15N = d15N,
+            d13C = d13C,
+            d34S = d34S,
+            CN_ratio = CN_ratio)%>%
+  drop_na(d34S)%>%
+  distinct()
+
+#Reformat telepike
+Telepike2 <- Telepike%>%
+  filter(diag != "nodata")%>%
+  transmute(ID = ID,
+            ecotype = diag)%>%
+  distinct()
+  
+#Join
+TeleSI <- Allpike%>%
+  inner_join(Telepike2, by = "ID")%>%
+  transmute(ID = ID,
+            capt_date = capt_date,
+            TL_mm = TL_mm,
+            weight_g = weight_g,
+            sex = sex,
+            area = case_when(area == "Peene" ~ "Tributary",
+                             area == "P" ~ "Oligohaline",
+                             area == "WB"~ "Mesohaline",
+                             area == "KJB" ~ "Oligohaline",
+                             area == "BAT" ~ "Mesohaline",
+                             area == "BEG" ~ "Mesohaline",
+                             area == "GJB" ~ "Mesohaline",
+                             area == "KB" ~ "Mesohaline",
+                             area == "SB" ~ "Mesohaline",
+                             area == "U" ~ "NA",
+                             area == "GB" ~ "Mesohaline",
+                             area == "S" ~ "Mesohaline",
+                             area == "Sehrowbach" ~ "Tributary",
+                             area == "Barthe" ~ "Tributary",
+                             area == "VB" ~ "Mesohaline",
+                             area == "Beek" ~ "Tributary",
+                             area == "Duwenbeek" ~ "Tributary",
+                             area == "NHG" ~ "Tributary",
+                             area == "Ziese" ~ "Tributary"),
+            Long = Long,
+            Lat = Lat,
+            ecotype = case_when(ecotype == "Brackish" ~ "BW-resident",
+                                ecotype == "Fresh" ~ "FW-resident",
+                                ecotype == "Ubergangs II" ~ "Cross-habitat",
+                                ecotype == "Ubergangs I" ~ "Cross-habitat",
+                                ecotype == "Anadrom" ~ "Anadromous"),
+            d15N = d15N,
+            d13C = d13C,
+            d34S = d34S,
+            CN_ratio = CN_ratio)%>%
+  distinct()
+
+#Ecotypes
+Ecotypes_SI <- rbind(Otopike2, TeleSI)
+
+fwrite(Ecotypes_SI, "Data/Pike/Ecotypes-Oto-Tele_SI_clean.csv")
 ```
 
 ```{r pike eye lens data cleanup, include=FALSE, eval=FALSE}
@@ -1174,51 +1443,147 @@ saveRDS(jags.pike, "Data/Mixing models/Mixing.model-run-locations.rds")
 WAIC_ice<-loo::loo(jags.pike$BUGSoutput$sims.list$loglik)
 ```
 
-```{r plot results, include=FALSE, eval=FALSE}
+```{r mixing models ecotypes, include=FALSE, eval=FALSE}
 rm(list = ls())
-jags.pike <- readRDS("Data/Mixing models/Mixing.model-run-locations.rds")
+Prey <- fread("Data/Prey/Preyfish_SI_clean_average_lipid-corrected.csv")
+Pike <- fread("Data/Pike/Ecotypes-Oto-Tele_SI_clean.csv")
 
-source.filename <- "Data/Mixing models/Sources.csv"
-mix.filename <- "Data/Mixing models/Pikemix.csv"
+Prey$SL_mm <- as.numeric(Prey$SL_mm)
 
-Pike <- fread("Data/pike/Pike_SI_all_clean_average_lipid-corrected.csv")
-
-Pike2 <- Pike%>%
+Prey1 <- Prey%>%
   transmute(ID=ID,
-            Species="E.lucius",
-            capt_date=as.character(capt_date),
-            Length=TL_mm,
-            SL_size_class=NA,
+            Species=Species,
+            group=case_when(area=="Barthe"~"freshwater",
+                            area=="Ziese"~"freshwater",
+                            area!="Barthe"&area!="Ziese"&Species=="R.rutilus"~"lagoon",
+                            Species=="C.harengus"~"marine",
+                            Species=="P.flesus"~"marine",
+                            area!="Barthe"&area!="Ziese"&Species=="P.fluviatilis"~"lagoon",
+                            Species=="N.melanostomus"~"lagoon",
+                            TRUE~"Other"),
+            SL_mm=SL_mm,
+            SL_size_class=SL_size_class,
             weight_g=weight_g,
-            height_mm=NA,
-            sample_type="muscle",
-            area=case_when(area=="BAT"~"Grabow",
-                           area=="BEG"~"NRB",
-                           area=="BEZ"~"NRB",
-                           area=="GB"~"GB",
-                           area=="GJB"~"NRB",
-                           area=="KB"~"WRB",
-                           area=="KD"~"KD",
-                           area=="KJB"~"KJB",
-                           area=="P"~"P",
-                           area=="S"~"S",
-                           area=="SB"~"WRB",
-                           area=="U"~"U",
-                           area=="VB"~"WRB",
-                           area=="WB"~"NRB",
-                           TRUE~area),
+            height_mm=height_mm,
+            sample_type=sample_type,
+            area=area,
             Long=Long,
             Lat=Lat,
             d15N=d15N,
             d13C=d13C,
             d34S=d34S,
             CN_ratio=CN_ratio,
-            comment1=comment,
-            comment2=NA)%>%
+            comment1=comment1,
+            comment2=comment2)%>%
+  filter(group!="Other")
+
+Pike2 <- Pike%>%
+  transmute(ID=ID,
+            Species="E.lucius",
+            capt_date=as.character(capt_date),
+            Length=TL_mm,
+            weight_g=weight_g,
+            area=area,
+            ecotype=ecotype,
+            Long=Long,
+            Lat=Lat,
+            d15N=d15N,
+            d13C=d13C,
+            d34S=d34S,
+            CN_ratio=CN_ratio)%>%
   mutate(halflife = exp(0.22*log(weight_g)+3.28))%>%
   filter(area!="KD"&area!="U")%>%
   drop_na(d15N,d13C,d34S,Length,area)%>%
   distinct()
+
+fwrite(Pike2, "Data/Mixing models/Pikemix-ecotypes.csv")
+
+mix.filename <- "Data/Mixing models/Pikemix-ecotypes.csv"
+
+# Load mixture data
+mix <- load_mix_data(filename=mix.filename, 
+                     iso_names=c("d15N", "d13C", "d34S"),
+                     factors="ecotype",
+                     fac_random=FALSE,
+                     fac_nested=FALSE,
+                     cont_effects="Length")
+
+# Prepare source data
+m_by_sp<-aggregate(cbind(d15N, d13C, d34S)~group, data=Prey1, FUN=mean)
+
+sd_by_sp<-aggregate(cbind(d15N, d13C, d34S)~group, data=Prey1, FUN=sd)
+
+length_by_sp<-aggregate(cbind(d15N)~group, data=Prey1, FUN=length)
+
+
+descriptive<-cbind(m_by_sp, sd_by_sp, length_by_sp)
+descriptive<-descriptive[c(-5,-9)]
+colnames(descriptive)<-c("prey", "Meand15N", "Meand13C", "Meand34S", "SDd15N", "SDd13C", "SDd34S","n")
+fwrite(descriptive, "Data/Mixing models/Sources.csv")
+
+source.filename <- "Data/Mixing models/Sources.csv"
+# # Load source data
+source<- load_source_data(filename=source.filename, source_factors=NULL,
+                          conc_dep=FALSE, data_type="means", mix)
+
+discr <- descriptive%>%
+  transmute(prey=prey,
+            Meand15N=2.9,
+            Meand13C=1.2,
+            Meand34S=-0.5,
+            SDd15N=0.32,
+            SDd13C=0.3,
+            SDd34S=0.2)
+
+fwrite(discr, "Data/Mixing models/Discrimination.csv")
+
+discr.filename <- "Data/Mixing models/Discrimination.csv"
+
+discr.df <- load_discr_data(filename=discr.filename, mix)
+
+plot_data(filename="isospace_plotn",
+          plot_save_pdf=FALSE,
+          plot_save_png=FALSE,
+          return_obj = T,
+          mix,source,discr.df)
+
+##### 3. Writing the mode ######
+# Name of the model
+model_filename <- "Data/Mixing models/MixSIAR_model_pike-ecotype-TL.txt"
+
+# Include residual error; appropriate in situations where, for instance, each mixture data point was 
+# generated through the combination of many samples from the source population
+resid_err <- TRUE
+
+# Include process error; derived from an assumption about the mixing process. 
+# Analyst provides a single mixture value for each of the j tracers considered
+process_err <- TRUE
+
+# Save it
+write_JAGS_model(model_filename, resid_err, process_err, mix, source)
+
+# We run a model with uninformative priors
+jags.pike <- run_model(run="normal", mix, source, discr.df, model_filename, alpha.prior = 1)
+
+# Extracting data
+Pike_no_priors<-data.frame(jags.pike[["BUGSoutput"]][["sims.list"]][["p.global"]]) # p. global is the overall contribution by each species
+# Extract column names
+colnames(Pike_no_priors)<- source[["source_names"]]
+
+write.csv(Pike_no_priors,paste("1. Pike (",Sys.Date(),")-fit.csv",sep=""),row.names = F)
+
+saveRDS(jags.pike, "Data/Mixing models/Mixing.model-test-run-ecotypes.rds")
+
+# Obtain the WAIC for model comparison
+WAIC_pike <- loo::loo(jags.pike$BUGSoutput$sims.list$loglik)
+```
+
+```{r plot results, include=FALSE, eval=FALSE}
+rm(list = ls())
+jags.pike <- readRDS("Data/Mixing models/Mixing.model-test-run-ecotypes.rds")
+
+source.filename <- "Data/Mixing models/Sources.csv"
+mix.filename <- "Data/Mixing models/Pikemix-ecotypes.csv"
 
 # Load mixture data
 mix <- load_mix_data(filename=mix.filename, 
@@ -1736,7 +2101,6 @@ ggplot(Pikediet, aes(p.C.harengus, condition))+
   geom_smooth(method = "lm")+
   theme_bw()
 ```
-
 
 # Eye lens analysis
 ```{r eye lens inner diameters, include=FALSE, eval=FALSE}
