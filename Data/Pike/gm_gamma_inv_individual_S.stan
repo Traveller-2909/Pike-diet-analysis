@@ -24,7 +24,7 @@ data {
 	//data vectors
 	vector <lower=0, upper=13> [N] Agei; //Age in years
 	vector <lower=0> [N] Length_back; //backcalculated lenghts
-	vector <lower=0> [N] diet; //d34S value indicating marine diet
+	vector[N] dietS; //d34S value indicating marine diet
 	
 	//groups
 	int<lower=1> n_fish; //number of individual fish
@@ -39,6 +39,7 @@ parameters {
 	vector <lower=0> [n_fish] tZero_i; //Age at wich size = 0 at fish level (size can´t be zero, so has to be negative)
 	vector <lower=0> [n_fish] k_i;     //Growth completion parameter at fish level
 	real beta1; //Effect of marine diet on growth
+	
 	real <lower=0> sigma_beta1; //standart deviation for beta1
 
 	// phenotype level
@@ -72,12 +73,12 @@ transformed parameters {
 model {
 	// observation level
 	Length_back ~ gamma(gamm_a_v(phi, N), gamm_b_v(mu, phi));
-
+	
 	// fish-level
 	for(i in 1:n_fish) {
 		int eid = pheno_id_fish[i];
-		real beta1_effect = beta1 * diet[i];
-		LInf_i[i] ~ gamma(gamm_a(LInf_pheno_phi[eid]+beta1_effect), gamm_b(LInf_pheno[eid], LInf_pheno_phi[eid]));
+		real LInf_hat = exp(log(LInf_pheno[eid]) + beta1 * dietS[i]);
+		LInf_i[i] ~ gamma(gamm_a(LInf_pheno_phi[eid]), gamm_b(LInf_hat, LInf_pheno_phi[eid]));
 		tZero_i[i] ~ gamma(gamm_a(tZero_pheno_phi[eid]), gamm_b(tZero_pheno[eid], tZero_pheno_phi[eid]));
 		k_i[i] ~ gamma(gamm_a(k_pheno_phi[eid]), gamm_b(k_pheno[eid], k_pheno_phi[eid]));
 	}
@@ -109,4 +110,12 @@ model {
 	
 	//diet parameters
 	beta1 ~ normal(0, sigma_beta1);
+}
+
+//individual ikelihoods for loo
+generated quantities {
+    vector[N] log_lik;
+    for (i in 1:N) {
+      log_lik[i] = normal_lpdf(Length_back[i]|LInf*(1-exp(-k*(Agei[i]+tZero))), phi);
+    }
 }

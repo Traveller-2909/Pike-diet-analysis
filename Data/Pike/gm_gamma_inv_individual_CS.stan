@@ -80,9 +80,8 @@ model {
 	// fish-level
 	for(i in 1:n_fish) {
 		int eid = pheno_id_fish[i];
-		real beta1_effect = beta1 * dietS[i];
-		real beta2_effect = beta2 * dietC[i];
-		LInf_i[i] ~ gamma(gamm_a(LInf_pheno_phi[eid]+beta1_effect+beta2_effect), gamm_b(LInf_pheno[eid], LInf_pheno_phi[eid]));
+		real LInf_hat = exp(log(LInf_pheno[eid]) + beta1 * dietS[i] + beta2 * dietC[i]);
+		LInf_i[i] ~ gamma(gamm_a(LInf_pheno_phi[eid]), gamm_b(LInf_hat, LInf_pheno_phi[eid]));
 		tZero_i[i] ~ gamma(gamm_a(tZero_pheno_phi[eid]), gamm_b(tZero_pheno[eid], tZero_pheno_phi[eid]));
 		k_i[i] ~ gamma(gamm_a(k_pheno_phi[eid]), gamm_b(k_pheno[eid], k_pheno_phi[eid]));
 	}

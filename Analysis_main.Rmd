@@ -1030,12 +1030,12 @@ rm(list = ls())
 descriptive <- fread("Data/Pike/Descriptive-whole-sample.csv")
 
 descriptive2 <- descriptive%>%
-  filter(Sp=="C.harengus"|Sp=="R.rutilus"|Sp=="N.melanostomus"|Sp=="P.flesus"|Sp=="P.fluviatilis"|Sp=="E.lucius")%>%
+  filter(Sp!="T.tinca")%>%
   drop_na()
 
 #Biplot by species
 brewer.pal(n = 14, name = "Dark2")
-colorBlindBlack8  <- c("#1B9E77", "#D95F02", "#7570B3", "#E7298A", "#66A61E", "#E6AB02", "#A6761D", "#666666","darkblue","darkred","cyan","red","beige", "yellow")
+colorBlindBlack8  <- c("#1B9E77", "#D95F02", "#7570B3", "#E7298A", "#66A61E", "#E6AB02", "#A6761D", "#666666","darkblue","darkred","cyan","red","darkgreen", "orange")
 
 
 Binorm <- ggplot()+ geom_errorbar(data=descriptive2, aes(x=d13C, y=d15N, ymin = d15N-sdd15N,ymax = d15N+sdd15N, col=Sp),
@@ -1044,12 +1044,12 @@ Binorm <- ggplot()+ geom_errorbar(data=descriptive2, aes(x=d13C, y=d15N, ymin = 
                  height=.5, size=.5)+
   scale_colour_manual("", values=colorBlindBlack8)+ #1:nlevels(sources$prey))+
   scale_fill_manual("", values=1:nlevels(descriptive2$sp))+
-  xlim(-24,-12)+ylim(8,18)+
+  xlim(-25,-12)+ylim(8,18)+
   theme_bw()+xlab(delta^"13"~"C(\u2030)")+ylab(delta^"15"~"N(\u2030)")+
   theme(text = element_text(size = 10, color = "black"),
         legend.position="bottom",
-        legend.text = element_text(color = "black", size=7, face="italic"),
-        legend.key.size = unit(.6, 'cm'),
+        legend.text = element_text(color = "black", size=5, face="italic"),
+        legend.key.size = unit(.5, 'cm'),
         strip.background = element_rect(colour="black", fill="white"))
 
 BiNS <- ggplot()+ geom_errorbar(data=descriptive2, aes(x=d34S, y=d15N, ymin = d15N-sdd15N,ymax = d15N+sdd15N, col=Sp),
@@ -1062,8 +1062,8 @@ BiNS <- ggplot()+ geom_errorbar(data=descriptive2, aes(x=d34S, y=d15N, ymin = d1
   theme_bw()+xlab(delta^"34"~"S(\u2030)")+ylab(delta^"15"~"N(\u2030)")+
   theme(text = element_text(size = 10, color = "black"),
         legend.position="none",
-        legend.text = element_text(color = "black", size=7, face="italic"),
-        legend.key.size = unit(1, 'cm'),
+        legend.text = element_text(color = "black", size=5, face="italic"),
+        legend.key.size = unit(.5, 'cm'),
         strip.background = element_rect(colour="black", fill="white"))
 
 BiCS <- ggplot()+ geom_errorbar(data=descriptive2, aes(x=d13C, y=d34S, ymin = d34S+sdd34S,ymax = d34S-sdd34S, col=Sp),
@@ -1072,12 +1072,12 @@ BiCS <- ggplot()+ geom_errorbar(data=descriptive2, aes(x=d13C, y=d34S, ymin = d3
                  height=.5, size=.5)+
   scale_colour_manual("", values=colorBlindBlack8)+ #1:nlevels(sources$prey))+
   scale_fill_manual("", values=1:nlevels(descriptive2$sp))+
-  xlim(-24,-12)+ylim(5,22)+
+  xlim(-25,-12)+ylim(5,22)+
   theme_bw()+xlab(delta^"13"~"C(\u2030)")+ylab(delta^"34"~"S(\u2030)")+
   theme(text = element_text(size = 10, color = "black"),
         legend.position="none",
-        legend.text = element_text(color = "black", size=7, face="italic"),
-        legend.key.size = unit(1, 'cm'),
+        legend.text = element_text(color = "black", size=5, face="italic"),
+        legend.key.size = unit(.5, 'cm'),
         strip.background = element_rect(colour="black", fill="white"))
 
 
@@ -1563,7 +1563,7 @@ process_err <- TRUE
 write_JAGS_model(model_filename, resid_err, process_err, mix, source)
 
 # We run a model with uninformative priors
-jags.pike <- run_model(run="normal", mix, source, discr.df, model_filename, alpha.prior = 1)
+jags.pike <- run_model(run="test", mix, source, discr.df, model_filename, alpha.prior = 1)
 
 # Extracting data
 Pike_no_priors<-data.frame(jags.pike[["BUGSoutput"]][["sims.list"]][["p.global"]]) # p. global is the overall contribution by each species
@@ -1572,7 +1572,7 @@ colnames(Pike_no_priors)<- source[["source_names"]]
 
 write.csv(Pike_no_priors,paste("1. Pike (",Sys.Date(),")-fit.csv",sep=""),row.names = F)
 
-saveRDS(jags.pike, "Data/Mixing models/Mixing.model-test-run-ecotypes.rds")
+saveRDS(jags.pike, "Data/Mixing models/Output/Mixing.model-test-run-ecotypes.rds")
 
 # Obtain the WAIC for model comparison
 WAIC_pike <- loo::loo(jags.pike$BUGSoutput$sims.list$loglik)
@@ -1580,7 +1580,7 @@ WAIC_pike <- loo::loo(jags.pike$BUGSoutput$sims.list$loglik)
 
 ```{r plot results, include=FALSE, eval=FALSE}
 rm(list = ls())
-jags.pike <- readRDS("Data/Mixing models/Mixing.model-test-run-ecotypes.rds")
+jags.pike <- readRDS("Data/Mixing models/Output/Mixing.model-test-run-ecotypes.rds")
 
 source.filename <- "Data/Mixing models/Sources.csv"
 mix.filename <- "Data/Mixing models/Pikemix-ecotypes.csv"
@@ -1588,7 +1588,7 @@ mix.filename <- "Data/Mixing models/Pikemix-ecotypes.csv"
 # Load mixture data
 mix <- load_mix_data(filename=mix.filename, 
                      iso_names=c("d15N", "d13C", "d34S"),
-                     factors="area",
+                     factors="ecotype",
                      fac_random=FALSE,
                      fac_nested=FALSE,
                      cont_effects="Length")
@@ -1629,14 +1629,10 @@ g.post2 <- output_posteriors(jags.pike, mix, source, output_options)
 
 names(g.post2)
 
-GB <- g.post2$fac1[[1]]
-GR <- g.post2$fac1[[2]]
-KJB <- g.post2$fac1[[3]]
-NRB <- g.post2$fac1[[4]]
-P <- g.post2$fac1[[5]]
-S <- g.post2$fac1[[6]]
-WRB <- g.post2$fac1[[7]]
-Trib <- g.post2$fac1[[8]]
+Anadrom <- g.post2$fac1[[1]]
+Brackish <- g.post2$fac1[[2]]
+Cross <- g.post2$fac1[[3]]
+Fresh <- g.post2$fac1[[4]]
 
 pl.theme <- theme(panel.grid.major = element_line(),
                   legend.background = element_blank(),
@@ -1653,12 +1649,12 @@ pl.theme <- theme(panel.grid.major = element_line(),
                   legend.key.size = unit(.8,"line"),
                   plot.title = element_text(size = 12, colour = "black"))
 
-pl.color <- scale_color_manual(breaks = c("C.harengus", "freshwater benthivores", "marine benthivores", "N.melanostomus"),
-                              values = c("#29B6F6", "#00796B", "#1A237E","#B71C1C"),
-                              labels = c("C. harengus", "freshwater benthivores", "marine benthivores", "N. melanostomus"))
-pl.fill <- scale_fill_manual(breaks = c("C.harengus", "freshwater benthivores", "marine benthivores", "N.melanostomus"),
-                              values = c("#29B6F6", "#00796B", "#1A237E","#B71C1C"),
-                              labels = c("C. harengus", "freshwater benthivores", "marine benthivores", "N. melanostomus"))
+pl.color <- scale_color_manual(breaks = c("marine", "lagoon", "freshwater"),
+                              values = c("#29B6F6", "#00796B","#B71C1C"),
+                              labels = c("marine food web", "lagoon food web", "freshwater food web"))
+pl.fill <- scale_fill_manual(breaks = c("marine", "lagoon", "freshwater"),
+                              values = c("#29B6F6", "#00796B","#B71C1C"),
+                              labels = c("marine food web", "lagoon food web", "freshwater food web"))
 
 scalex <- scale_x_continuous(breaks = c(0, 0.25, 0.50, 0.75, 1.00),
                    labels = c("0", "25", "50", "75", "100"),
@@ -1667,8 +1663,8 @@ scalex <- scale_x_continuous(breaks = c(0, 0.25, 0.50, 0.75, 1.00),
 scaley <- scale_y_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1),
                              labels = c("0.00", "0.25", "0.50", "0.75", "1.00"))
 
-GB.plot <- GB+
-  labs(title = "Greifswalder Bodden", fill = "diet", color = "diet")+
+FW_plot <- Fresh+
+  labs(title = "freshwater resident", fill = "diet", color = "diet")+
   pl.theme+
   pl.color+
   pl.fill+
@@ -1676,18 +1672,8 @@ GB.plot <- GB+
   scaley+
   guides(color = guide_legend(ncol = 2, nrow = 2))
 
-GR.plot <- GR+
-  labs(title = "Grabow", fill = "diet", color = "diet")+
-  pl.theme+
-  pl.color+
-  pl.fill+
-  scalex+
-  scaley+
-  guide+
-  guides(color = guide_legend(ncol = 2, nrow = 2))
-
-KJB.plot <- KJB+
-  labs(title = "Kleiner Jasmunder Bodden", fill = "diet", color = "diet")+
+Ana_plot <- Anadrom+
+  labs(title = "anadromous", fill = "diet", color = "diet")+
   pl.theme+
   pl.color+
   pl.fill+
@@ -1695,8 +1681,8 @@ KJB.plot <- KJB+
   scaley+
   guides(color = guide_legend(ncol = 2, nrow = 2))
 
-NRB.plot <- NRB+
-  labs(title = "NRBC", fill = "diet", color = "diet")+
+Cross_plot <- Cross+
+  labs(title = "cross-habitat", fill = "diet", color = "diet")+
   pl.theme+
   pl.color+
   pl.fill+
@@ -1704,8 +1690,8 @@ NRB.plot <- NRB+
   scaley+
   guides(color = guide_legend(ncol = 2, nrow = 2))
 
-P.plot <- P+
-  labs(title = "Peenestrom", fill = "diet", color = "diet")+
+BW_plot <- Brackish+
+  labs(title = "brackish resident", fill = "diet", color = "diet")+
   pl.theme+
   pl.color+
   pl.fill+
@@ -1713,39 +1699,12 @@ P.plot <- P+
   scaley+
   guides(color = guide_legend(ncol = 2, nrow = 2))
 
-S.plot <- S+
-  labs(title = "Strelasund", fill = "diet", color = "diet")+
-  pl.theme+
-  pl.color+
-  pl.fill+
-  scalex+
-  scaley+
-  guides(color = guide_legend(ncol = 2, nrow = 2))
-
-WRB.plot <- WRB+
-  labs(title = "WRBC", fill = "diet", color = "diet")+
-  pl.theme+
-  pl.color+
-  pl.fill+
-  scalex+
-  scaley+
-  guides(color = guide_legend(ncol = 2, nrow = 2))
-
-Trib.plot <- Trib+
-  labs(title = "tributaries", fill = "diet", color = "diet")+
-  pl.theme+
-  pl.color+
-  pl.fill+
-  scalex+
-  scaley+
-  guides(color = guide_legend(ncol = 2, nrow = 2))
-
-Allplot <- ggarrange(WRB.plot, NRB.plot, GB.plot, GR.plot, S.plot, KJB.plot, P.plot, Trib.plot, nrow = 4, ncol = 2, 
+Allplot <- ggarrange(FW_plot, Ana_plot, Cross_plot, BW_plot, nrow = 2, ncol = 2, 
                      common.legend = TRUE)
-Allplot2 <- annotate_figure(Allplot, left = text_grob("Pposterior density", rot = 90, size = 12), 
+Allplot2 <- annotate_figure(Allplot, left = text_grob("posterior density", rot = 90, size = 12), 
                             bottom = text_grob("diet proportion (%)", size = 12))
 
-ggsave("Figures/pike-diet-areas.png", Allplot2, width = 6, height = 10, bg = "white")
+ggsave("Figures/pike-diet-ecotypes.png", Allplot2, width = 15, height = 15, units = "cm", dpi = 300, bg = "white")
 
 GB_cont_all <- g.post2$cont[[1]]
 GB_cont <- GB_cont_all[[1]]

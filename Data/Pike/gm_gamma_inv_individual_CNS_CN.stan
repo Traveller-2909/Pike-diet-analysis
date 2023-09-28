@@ -24,10 +24,8 @@ data {
 	//data vectors
 	vector <lower=0, upper=13> [N] Agei; //Age in years
 	vector <lower=0> [N] Length_back; //backcalculated lenghts
-	vector[N] dietS; //d34S value indicating marine diet
 	vector[N] dietC; //d13C value indicating habitat
 	vector[N] dietN; //d15N value indicating trophic position
-	vector[N] dietCN; //CN ratio indicating condition
 	
 	//groups
 	int<lower=1> n_fish; //number of individual fish
@@ -41,15 +39,11 @@ parameters {
 	vector <lower=0> [n_fish] LInf_i;  //Mean maximum adult size at fish level
 	vector <lower=0> [n_fish] tZero_i; //Age at wich size = 0 at fish level (size can´t be zero, so has to be negative)
 	vector <lower=0> [n_fish] k_i;     //Growth completion parameter at fish level
-	real beta1; //Effect of marine diet on growth
 	real beta2;
 	real beta3;
-	real beta4;
 	
-	real <lower=0> sigma_beta1; //standart deviation for beta1
 	real <lower=0> sigma_beta2; //standart deviation for beta1
 	real <lower=0> sigma_beta3; //standart deviation for beta1
-	real <lower=0> sigma_beta4; //standart deviation for beta1
 
 	// phenotype level
 	vector <lower=0> [n_pheno] LInf_pheno; //Mean maximum adult size at phenotype level
@@ -82,15 +76,12 @@ transformed parameters {
 model {
 	// observation level
 	Length_back ~ gamma(gamm_a_v(phi, N), gamm_b_v(mu, phi));
-
+	
 	// fish-level
 	for(i in 1:n_fish) {
 		int eid = pheno_id_fish[i];
-		real beta1_effect = beta1 * dietS[i];
-		real beta2_effect = beta2 * dietC[i];
-		real beta3_effect = beta3 * dietN[i];
-		real beta4_effect = beta4 * dietCN[i];
-		LInf_i[i] ~ gamma(gamm_a(LInf_pheno_phi[eid]+beta1_effect+beta2_effect+beta3_effect+beta4_effect), gamm_b(LInf_pheno[eid], LInf_pheno_phi[eid]));
+		real LInf_hat = exp(log(LInf_pheno[eid]) + beta2 * dietC[i] + beta3 * dietN[i]);
+		LInf_i[i] ~ gamma(gamm_a(LInf_pheno_phi[eid]), gamm_b(LInf_hat, LInf_pheno_phi[eid]));
 		tZero_i[i] ~ gamma(gamm_a(tZero_pheno_phi[eid]), gamm_b(tZero_pheno[eid], tZero_pheno_phi[eid]));
 		k_i[i] ~ gamma(gamm_a(k_pheno_phi[eid]), gamm_b(k_pheno[eid], k_pheno_phi[eid]));
 	}
@@ -113,10 +104,8 @@ model {
 	k_pheno_phi ~ cauchy(0, 200);
 	tZero_pheno_phi ~ cauchy(0, 200);
 	phi ~ cauchy(0, 200);
-	sigma_beta1 ~ cauchy(0, 200);
 	sigma_beta2 ~ cauchy(0, 200);
 	sigma_beta3 ~ cauchy(0, 200);
-	sigma_beta4 ~ cauchy(0, 200);
 
 	// proposed revisions
 	LInf ~ normal(0, 150);
@@ -124,10 +113,8 @@ model {
 	tZero ~ normal(0, 1);
 	
 	//diet parameters
-	beta1 ~ normal(0, sigma_beta1);
 	beta2 ~ normal(0, sigma_beta2);
 	beta3 ~ normal(0, sigma_beta3);
-	beta4 ~ normal(0, sigma_beta4);
 }
 
 //individual ikelihoods for loo
