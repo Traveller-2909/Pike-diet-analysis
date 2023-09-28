@@ -32,6 +32,7 @@ library(RColorBrewer)
 library(lme4)
 library(nlme)
 library(lmerTest)
+library(sjPlot)
 library(emmeans)
 library(MuMIn)
 library(visreg)
@@ -942,7 +943,6 @@ Ecotypes <- fread("Data/Pike/Otopike_SI_clean_average.csv")
 Prey$SL_mm <- as.numeric(Prey$SL_mm)
 
 Prey <- Prey%>%
-  filter(area!="Barthe"&area!="Ziese")%>%
   mutate(sex="NA")
 
 Pike2 <- Pike%>%
@@ -1025,26 +1025,35 @@ ggplot(data=Pikeprey, aes(x=Species, y=d34S, group=Species, colour=Species))+geo
   theme_bw()
 ```
 
+# SI basic visuals
 ```{r biplots whole sample, include=FALSE, eval=FALSE}
 rm(list = ls())
 descriptive <- fread("Data/Pike/Descriptive-whole-sample.csv")
+Prey <- fread("Data/Prey/Preyfish_SI_clean_average_lipid-corrected.csv")
+Prey <- Prey%>%
+  filter(Species!="T.tinca"&Species!="S.lucioperca"&Species!="S.erythrophthalmus")%>%
+  drop_na(Species, d13C, d34S, d15N)
+
+Prey$Species <- as.factor(Prey$Species)
+
+
+str(Prey)
 
 descriptive2 <- descriptive%>%
-  filter(Sp!="T.tinca")%>%
+  filter(Sp!="T.tinca"&Sp!="S.lucioperca"&Sp!="S.erythrophthalmus")%>%
   drop_na()
 
 #Biplot by species
 brewer.pal(n = 14, name = "Dark2")
-colorBlindBlack8  <- c("#1B9E77", "#D95F02", "#7570B3", "#E7298A", "#66A61E", "#E6AB02", "#A6761D", "#666666","darkblue","darkred","cyan","red","darkgreen", "orange")
+colorBlindBlack8  <- c("#1B9E77", "#D95F02", "#7570B3", "#E7298A", "#66A61E", "#E6AB02", "#A6761D", "#666666","darkblue","darkred","cyan","red","darkgreen", "orange","blue")
 
-
-Binorm <- ggplot()+ geom_errorbar(data=descriptive2, aes(x=d13C, y=d15N, ymin = d15N-sdd15N,ymax = d15N+sdd15N, col=Sp),
-                        width=.5, size=.5) + 
-  geom_errorbarh(data=descriptive2, aes(x=d13C, y=d15N, xmin = d13C+sdd13C,xmax = d13C-sdd13C, col=Sp),
-                 height=.5, size=.5)+
+Binorm <- ggplot()+ 
+  geom_errorbar(data=descriptive2, aes(x = d13C, ymin = d15N-sdd15N,ymax = d15N+sdd15N, col=Sp), width=.5, size=.5) +
+  geom_errorbarh(data=descriptive2, aes(y = d15N, xmin = d13C+sdd13C,xmax = d13C-sdd13C, col=Sp), height=.5, size=.5)+
+  stat_density_2d(data = Prey, aes(x = d13C, y = d15N, fill = Species), geom = "polygon", contour = FALSE,color = "black")+
   scale_colour_manual("", values=colorBlindBlack8)+ #1:nlevels(sources$prey))+
-  scale_fill_manual("", values=1:nlevels(descriptive2$sp))+
-  xlim(-25,-12)+ylim(8,18)+
+  scale_fill_manual("", values=colorBlindBlack8)+
+  xlim(-30,-12)+ylim(8,18)+
   theme_bw()+xlab(delta^"13"~"C(\u2030)")+ylab(delta^"15"~"N(\u2030)")+
   theme(text = element_text(size = 10, color = "black"),
         legend.position="bottom",
@@ -1161,59 +1170,147 @@ descriptive2$Sp <- as.factor(descriptive2$Sp)
 descriptive2$Sp <- fct_relevel(descriptive2$Sp, "freshwater resident pike", 
                                "anadromous pike", "cross-habitat pike", "brackish resident pike")
 
+Pikeprey$Species <- as.factor(Pikeprey$Species)
+Pikeprey$Species <- fct_relevel(Pikeprey$Species, c("freshwater resident pike", 
+                               "anadromous pike", 
+                               "cross-habitat pike", 
+                               "brackish resident pike",
+                               "freshwater",
+                               "lagoon",
+                               "marine"))
+
 #brackish resident --> "#004643", anadromous --> "#00BFB2", cross-habitat --> "#F1C40F", freshwater resident --> "#C5D86D"
 
 #Biplot by species
 colorBlindBlack8  <- c("#C5D86D", "#00BFB2", "#F1C40F", "#004643",
-                        "lightgreen", "brown4", "#004690")
+                        "green", "brown4", "#004690")
 
 
-Binorm <- ggplot()+ geom_errorbar(data=descriptive2, aes(x=d13C, y=d15N, ymin = d15N-sdd15N,ymax = d15N+sdd15N, col=Sp),
-                        width=.5, size=.5) + 
-  geom_errorbarh(data=descriptive2, aes(x=d13C, y=d15N, xmin = d13C+sdd13C,xmax = d13C-sdd13C, col=Sp),
-                 height=.5, size=.5)+
-  scale_colour_manual("", values=colorBlindBlack8)+ #1:nlevels(sources$prey))+
-  scale_fill_manual("", values=1:nlevels(descriptive2$sp))+
-  #xlim(-24,-12)+ylim(8,18)+
+Binorm <- ggplot()+ 
+  stat_density_2d(data = Pikeprey, aes(x = d13C, y = d15N, fill = Species, color = Species), 
+                  alpha = 0.3, geom = "polygon", size = .1)+
+  # geom_errorbar(data=descriptive2, aes(x=d13C, y=d15N, ymin = d15N-sdd15N,ymax = d15N+sdd15N, col=Sp),
+  #                       width=.5, size=.5) + 
+  # geom_errorbarh(data=descriptive2, aes(x=d13C, y=d15N, xmin = d13C+sdd13C,xmax = d13C-sdd13C, col=Sp),
+  #                height=.5, size=.5)+
+  scale_colour_manual(breaks = c("freshwater resident pike", 
+                                 "anadromous pike", 
+                                 "cross-habitat pike", 
+                                 "brackish resident pike",
+                                 "freshwater",
+                                 "lagoon",
+                                 "marine"), 
+                      values=colorBlindBlack8,
+                    labels = c("freshwater resident pike", 
+                                 "anadromous pike", 
+                                 "cross-habitat pike", 
+                                 "brackish resident pike",
+                                 "freshwater prey",
+                                 "lagoon prey",
+                                 "marine prey"))+
+  scale_fill_manual(breaks = c("freshwater resident pike", 
+                                 "anadromous pike", 
+                                 "cross-habitat pike", 
+                                 "brackish resident pike",
+                                 "freshwater",
+                                 "lagoon",
+                                 "marine"), 
+                    values=colorBlindBlack8,
+                    labels = c("freshwater resident pike", 
+                                 "anadromous pike", 
+                                 "cross-habitat pike", 
+                                 "brackish resident pike",
+                                 "freshwater prey",
+                                 "lagoon prey",
+                                 "marine prey"))+
+  xlim(-27,-12)+ylim(10,20)+
+  labs(fill = "Group", color = "Group")+
   theme_bw()+xlab(delta^"13"~"C(\u2030)")+ylab(delta^"15"~"N(\u2030)")+
   theme(text = element_text(size = 10, color = "black"),
         legend.position="bottom",
-        legend.text = element_text(color = "black", size=7, face="italic"),
-        legend.key.size = unit(.6, 'cm'),
+        legend.text = element_text(color = "black", size=5, face="italic"),
+        legend.key.size = unit(.5, 'cm'),
         strip.background = element_rect(colour="black", fill="white"))
 
-BiNS <- ggplot()+ geom_errorbar(data=descriptive2, aes(x=d34S, y=d15N, ymin = d15N-sdd15N,ymax = d15N+sdd15N, col=Sp),
-                        width=.5, size=.5) + 
-  geom_errorbarh(data=descriptive2, aes(x=d34S, y=d15N, xmin = d34S+sdd34S,xmax = d34S-sdd34S, col=Sp),
-                 height=.5, size=.5)+
-  scale_colour_manual("", values=colorBlindBlack8)+ #1:nlevels(sources$prey))+
-  scale_fill_manual("", values=1:nlevels(descriptive2$sp))+
-  #xlim(5,22)+ylim(8,18)+
+BiNS <- ggplot()+
+  stat_density_2d(data = Pikeprey, aes(x = d34S, y = d15N, fill = Species, color = Species), 
+                  alpha = 0.3, geom = "polygon", size = 0.1)+
+  # geom_errorbar(data=descriptive2, aes(x=d34S, y=d15N, ymin = d15N-sdd15N,ymax = d15N+sdd15N, color=Sp),
+  #                       width=.5, size=.5) +
+  # geom_errorbarh(data=descriptive2, aes(x=d34S, y=d15N, xmin = d34S+sdd34S,xmax = d34S-sdd34S, color=Sp),
+  #                height=.5, size=.5)+
+  scale_colour_manual(breaks = c("freshwater resident pike", 
+                                 "anadromous pike", 
+                                 "cross-habitat pike", 
+                                 "brackish resident pike",
+                                 "freshwater",
+                                 "lagoon",
+                                 "marine"), 
+                      values=colorBlindBlack8,
+                    labels = c("freshwater resident pike", 
+                                 "anadromous pike", 
+                                 "cross-habitat pike", 
+                                 "brackish resident pike",
+                                 "freshwater prey",
+                                 "lagoon prey",
+                                 "marine prey"))+
+  scale_fill_manual(breaks = c("freshwater resident pike", 
+                                 "anadromous pike", 
+                                 "cross-habitat pike", 
+                                 "brackish resident pike",
+                                 "freshwater",
+                                 "lagoon",
+                                 "marine"), 
+                    values=colorBlindBlack8,
+                    labels = c("freshwater resident pike", 
+                                 "anadromous pike", 
+                                 "cross-habitat pike", 
+                                 "brackish resident pike",
+                                 "freshwater prey",
+                                 "lagoon prey",
+                                 "marine prey"))+
+  xlim(0,25)+ylim(10,20)+
+  labs(fill = "Group", color = "Group")+
   theme_bw()+xlab(delta^"34"~"S(\u2030)")+ylab(delta^"15"~"N(\u2030)")+
   theme(text = element_text(size = 10, color = "black"),
         legend.position="none",
-        legend.text = element_text(color = "black", size=7, face="italic"),
-        legend.key.size = unit(1, 'cm'),
+        legend.text = element_text(color = "black", size=5, face="italic"),
+        legend.key.size = unit(.5, 'cm'),
         strip.background = element_rect(colour="black", fill="white"))
 
-BiCS <- ggplot()+ geom_errorbar(data=descriptive2, aes(x=d13C, y=d34S, ymin = d34S+sdd34S,ymax = d34S-sdd34S, col=Sp),
-                        width=.5, size=.5) + 
-  geom_errorbarh(data=descriptive2, aes(x=d13C, y=d34S, xmin = d13C+sdd13C,xmax = d13C-sdd13C, col=Sp),
-                 height=.5, size=.5)+
-  scale_colour_manual("", values=colorBlindBlack8)+ #1:nlevels(sources$prey))+
-  scale_fill_manual("", values=1:nlevels(descriptive2$sp))+
-  #xlim(-24,-12)+ylim(5,22)+
+BiCS <- ggplot()+ 
+  stat_density_2d(data = Pikeprey, aes(x = d13C, y = d34S, fill = Species, color = Species), 
+                  alpha = 0.3, geom = "polygon", size = 0.1)+
+  # geom_errorbar(data=descriptive2, aes(x=d13C, y=d34S, ymin = d34S+sdd34S,ymax = d34S-sdd34S, col=Sp),
+  #                       width=.5, size=.5) + 
+  # geom_errorbarh(data=descriptive2, aes(x=d13C, y=d34S, xmin = d13C+sdd13C,xmax = d13C-sdd13C, col=Sp),
+  #                height=.5, size=.5)+
+  scale_colour_manual(breaks = c("freshwater resident pike", 
+                                 "anadromous pike", 
+                                 "cross-habitat pike", 
+                                 "brackish resident pike",
+                                 "freshwater",
+                                 "lagoon",
+                                 "marine"), values=colorBlindBlack8)+
+  scale_fill_manual(breaks = c("freshwater resident pike", 
+                                 "anadromous pike", 
+                                 "cross-habitat pike", 
+                                 "brackish resident pike",
+                                 "freshwater",
+                                 "lagoon",
+                                 "marine"), values=colorBlindBlack8)+
+  xlim(-27,-12)+ylim(0,25)+
   theme_bw()+xlab(delta^"13"~"C(\u2030)")+ylab(delta^"34"~"S(\u2030)")+
   theme(text = element_text(size = 10, color = "black"),
         legend.position="none",
-        legend.text = element_text(color = "black", size=7, face="italic"),
-        legend.key.size = unit(1, 'cm'),
+        legend.text = element_text(color = "black", size=5, face="italic"),
+        legend.key.size = unit(.5, 'cm'),
         strip.background = element_rect(colour="black", fill="white"))
 
 
 Ecopike <- ggarrange(Binorm, BiNS, BiCS, ncol = 3, nrow = 1, common.legend = T)
 
-ggsave("Figures/Biplots-muscle-ecotypes.png", Ecopike, width = 16, height = 6, units = "cm", dpi = 600, bg = "white")
+ggsave("Figures/Biplots-muscle-ecotypes_density.png", Ecopike, width = 16, height = 6, units = "cm", dpi = 600, bg = "white")
 ```
 
 ```{r size and sex effects whole sample, include=FALSE, eval=FALSE}
@@ -2481,6 +2578,7 @@ Data <- fread("Data/Pike/Pikedata-eye-lens-years.csv")
 
 Data2 <- Data%>%
   drop_na(d34S_mean)%>%
+  group_by(ID)%>%
   reframe(ID = ID,
           lifeyear = lifeyear,
           waterbody = as.factor(waterbody),
@@ -2489,13 +2587,17 @@ Data2 <- Data%>%
           sex = sex,
           res_mean = res_mean,
           Sr_mean = Sr_mean,
-          length_back = length_back,
+          length_back = case_when(lifeyear > 1 ~ length_back-lag(length_back),
+                                  TRUE ~ length_back),
           d13C = scale(d13C_mean),
           d15N = scale(d15N_mean),
           d34S = scale(d34S_mean),
-          CN = scale(CN_mean))
+          CN = scale(CN_mean))%>%
+  drop_na()
 
-pikemodel1 <- lmer(length_back~I(lifeyear^2)+sex+d13C+d15N+d34S+CN+(1|ID), data = Data2, REML = T)
+fwrite(Data2, "Data/Pike/Pikedata-model.csv")
+
+pikemodel1 <- lmer(length_back~lifeyear+sex+d13C+d15N+d34S+CN+(1|ID), data = Data2, REML = T)
 
 pike.vif <- vif(pikemodel1)
 
@@ -2508,24 +2610,33 @@ rand(pikemodel1)
 #Individual is significant
 
 #Test age effect
-pikemodel_noage <- update(pikemodel1, ~. -I(lifeyear^2))
+pikemodel_noage <- update(pikemodel1, ~. -lifeyear)
+anova(pikemodel1, pikemodel_noage)
 
 #Test sex effect
 pikemodel_nosex <- update(pikemodel1, ~. -sex)
+anova(pikemodel1, pikemodel_nosex)
 
 #Test d13C
 pikemodel_no13C <- update(pikemodel1, ~. -d13C)
+anova(pikemodel1, pikemodel_no13C)
 
 #Test d15N
 pikemodel_no15N <- update(pikemodel1, ~. -d15N)
+anova(pikemodel1, pikemodel_no15N)
 
 #test d34S
 pikemodel_no34S <- update(pikemodel1, ~. -d34S)
+anova(pikemodel1, pikemodel_no34S)
 
 #test CN ratio
 pikemodel_nofat <- update(pikemodel1, ~. -CN)
+anova(pikemodel1, pikemodel_nofat)
 
 anova(pikemodel1, pikemodel_noage, pikemodel_nosex, pikemodel_no13C, pikemodel_no15N, pikemodel_no34S, pikemodel_nofat)
+
+summary(pikemodel1)
+tab_model(pikemodel1)
 
 r.squaredGLMM(pikemodel1)
 r.squaredGLMM(pikemodel_nosex)
@@ -2535,23 +2646,30 @@ r.squaredGLMM(pikemodel_no34S)
 r.squaredGLMM(pikemodel_nofat)
 
 #Alternative model
-pikemodel2 <- lmer(length_back~I(lifeyear^2)+sex+phenotype*d13C+phenotype*d15N+phenotype*d34S+CN+(1|ID), 
+pikemodel2 <- lmer(length_back~lifeyear+sex+phenotype*d13C+phenotype*d15N+phenotype*d34S+CN+(1|ID), 
                    data = Data2, REML = T)
+
+rand(pikemodel2)
 
 #Test sex effect
 pikemodel_nosex <- update(pikemodel2, ~. -sex)
+anova(pikemodel2, pikemodel_nosex)
 
 #Test d13C
 pikemodel_no13C <- update(pikemodel2, ~. -phenotype*d13C)
+anova(pikemodel2, pikemodel_no13C)
 
 #Test d15N
 pikemodel_no15N <- update(pikemodel2, ~. -phenotype*d15N)
+anova(pikemodel2, pikemodel_no15N)
 
 #test d34S
 pikemodel_no34S <- update(pikemodel2, ~. -phenotype*d34S)
+anova(pikemodel2, pikemodel_no34S)
 
 #test CN ratio
 pikemodel_nofat <- update(pikemodel2, ~. -CN)
+anova(pikemodel2, pikemodel_nofat)
 
 anova(pikemodel2, pikemodel_nosex, pikemodel_no13C, pikemodel_no15N, pikemodel_no34S, pikemodel_nofat)
 
@@ -2571,12 +2689,15 @@ pikemodel_nosex <- update(pikemodel3, ~. -sex)
 
 #Test d13C
 pikemodel_no13C <- update(pikemodel3, ~. -lifeyear*d13C)
+anova(pikemodel3, pikemodel_no13C)
 
 #Test d15N
 pikemodel_no15N <- update(pikemodel3, ~. -lifeyear*d15N)
+anova(pikemodel3, pikemodel_no15N)
 
 #test d34S
 pikemodel_no34S <- update(pikemodel3, ~. -lifeyear*d34S)
+anova(pikemodel3, pikemodel_no34S)
 
 #test CN ratio
 pikemodel_nofat <- update(pikemodel3, ~. -CN)
@@ -2589,15 +2710,39 @@ r.squaredGLMM(pikemodel_no13C)
 r.squaredGLMM(pikemodel_no15N)
 r.squaredGLMM(pikemodel_no34S)
 r.squaredGLMM(pikemodel_nofat)
+
+summary(pikemodel1)
+summary(pikemodel2)
+summary(pikemodel3)
+```
+
+```{r model eval, include=FALSE, eval=FALSE}
+
+Data3 <- Data2 %>% drop_na()
+Data3$resid <- resid(pikemodel1)
+
+plot(pikemodel1, xlab = "Fitted", ylab = "Residuals")
+
+hist(Data3$resid, main = "", xlab = "Residuals")
+
+qqnorm(resid(pikemodel1))
+qqline(resid(pikemodel1))
+
+par(mfrow=c(2,3))
+plot(Data3$resid~as.factor(Data3$sex), ylab = "Residuals", xlab = "Sex")
+plot(Data3$resid~Data3$lifeyear, ylab = "Residuals", xlab = "Age")
+plot(Data3$resid~Data3$d15N, ylab = "Residuals", xlab = "d15N")
+plot(Data3$resid~Data3$d13C, ylab = "Residuals", xlab = "d13C")
+plot(Data3$resid~Data3$d34S, ylab = "Residuals", xlab = "d34S")
+plot(Data3$resid~Data3$CN, ylab = "Residuals", xlab = "C:N ratio")
 ```
 
 ```{r GLMM model figures, include=FALSE, eval=FALSE}
 rm(list = ls())
 
-pikes <- fread("Data/Pike/Pikedata-eye-lens-years.csv")
+pikes <- fread("Data/Pike/Pikedata-model.csv")
 
 pikes <- pikes%>%
-  drop_na(d34S_mean)%>%
   reframe(ID = ID,
           lifeyear = lifeyear,
           waterbody = as.factor(waterbody),
@@ -2607,12 +2752,12 @@ pikes <- pikes%>%
           res_mean = res_mean,
           Sr_mean = Sr_mean,
           length_back = length_back,
-          d13C = scale(d13C_mean),
-          d15N = scale(d15N_mean),
-          d34S = scale(d34S_mean),
-          CN = scale(CN_mean))
+          d13C = d13C,
+          d15N = d15N,
+          d34S = d34S,
+          CN = CN)
 
-#factorize temperature
+#factorize age
 pikes$agefact <- ifelse(pikes$lifeyear==1, 2, 
                          ifelse(pikes$lifeyear==2, 1,
                                 ifelse(pikes$lifeyear>2, 3, NA)))
@@ -2692,12 +2837,12 @@ d34S <- ggplot(pikes, aes(d34S,length_back, color=agefact2))+
 
 Isogrowth <- ggarrange(d13C, d15N, d34S, nrow = 1, labels = c("A", "B", "C"), 
                        hjust = 1, common.legend = T, legend = "bottom")
-Isogrowth2 <- annotate_figure(Isogrowth, left = text_grob("backcalculated total length (mm)", rot = 90))
+Isogrowth2 <- annotate_figure(Isogrowth, left = text_grob("Annual growth (mm)", rot = 90))
 
 ggsave("Figures/Iso-effect-growth.png", Isogrowth2, width = 15, height = 9, units = "cm", dpi = 600, bg = "white")
 ```
 
-```{r exploration eye lens layers, include=FALSE, eval=FALSE}
+```{r plot eye lens isotopes, include=FALSE, eval=FALSE}
 rm(list = ls())
 
 Allpike <- fread("Data/Pike/Lens-SI-all-clean-TL-backcalculated.csv")
@@ -2714,25 +2859,51 @@ pl_theme <- theme(axis.title.x = element_blank(),
                   legend.title = element_text(size = 10, color = "black"),
                   plot.title = element_text(size = 10, color = "black"))
 
+mypallette  <- c("#C5D86D", "#00BFB2", "#F1C40F", "#004643")
+
 d34S <- ggplot(Ecopike[Ecopike$lens_layer>1,], aes(length_back, d34S))+
-  geom_point(aes(shape = phenotype), size=.5, position = position_dodge(width = 1), alpha = 1)+
+  geom_point(aes(color = phenotype), size=.3, position = position_dodge(width = 1), alpha = 0.5)+
   geom_smooth(aes(color=phenotype, fill= phenotype), lwd = .5)+
+  scale_color_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                     values = mypallette,
+                     labels = c("freshwater", "anadromous", "cross-habitat", "brackish"))+
+  scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                     values = mypallette,
+                     labels = c("freshwater", "anadromous", "cross-habitat", "brackish"))+
+  scale_shape_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                     labels = c("freshwater", "anadromous", "cross-habitat", "brackish"))+
   theme_bw()+
   labs(y = expression(delta^34~"S"~("\u2030 CDT")))+
   ggtitle("d34S")+
   pl_theme
 
 d15N <- ggplot(Ecopike[Ecopike$lens_layer>1,], aes(length_back, d15N))+
-  geom_point(aes(shape = phenotype), size=.5, position = position_dodge(width = 1), alpha = 1)+
+  geom_point(aes(color = phenotype), size=.3, position = position_dodge(width = 1), alpha = 0.5)+
   geom_smooth(aes(color=phenotype, fill= phenotype), lwd = .5)+
+  scale_color_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                     values = mypallette,
+                     labels = c("freshwater", "anadromous", "cross-habitat", "brackish"))+
+  scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                     values = mypallette,
+                     labels = c("freshwater", "anadromous", "cross-habitat", "brackish"))+
+  scale_shape_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                     labels = c("freshwater", "anadromous", "cross-habitat", "brackish"))+
   theme_bw()+
   labs(y = expression(delta^15~"N"~("\u2030"~N^2*"atm")))+
   ggtitle("d15N")+
   pl_theme
 
 d13C <- ggplot(Ecopike[Ecopike$lens_layer>1,], aes(length_back, d13C))+
-  geom_point(aes(shape = phenotype), size=.5, position = position_dodge(width = 1), alpha = 1)+
+  geom_point(aes(color = phenotype), size=.3, position = position_dodge(width = 1), alpha = 0.5)+
   geom_smooth(aes(color=phenotype, fill= phenotype), lwd = .5)+
+  scale_color_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                     values = mypallette,
+                     labels = c("freshwater", "anadromous", "cross-habitat", "brackish"))+
+  scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                     values = mypallette,
+                     labels = c("freshwater", "anadromous", "cross-habitat", "brackish"))+
+  scale_shape_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                     labels = c("freshwater", "anadromous", "cross-habitat", "brackish"))+
   theme_bw()+
   labs(y = expression(delta^13~"C"~("\u2030 VPDB")))+
   ggtitle("d13C")+
@@ -2881,9 +3052,6 @@ wi = exp(-0.5*delta_looic) / sum(exp(-0.5*delta_looic))
 round(rbind(looic = looics, dlooic = delta_looic, weight = wi), 2)
 
 ```
-
-
-
 
 #Other stuff
 ```{r age length key from pike scales and otoliths, include=FALSE, eval=FALSE}
