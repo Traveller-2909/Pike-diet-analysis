@@ -39,11 +39,15 @@ parameters {
 	vector <lower=0> [n_fish] LInf_i;  //Mean maximum adult size at fish level
 	vector <lower=0> [n_fish] tZero_i; //Age at wich size = 0 at fish level (size can´t be zero, so has to be negative)
 	vector <lower=0> [n_fish] k_i;     //Growth completion parameter at fish level
+	real beta1;
 	real beta2;
 	real beta3;
+	real beta4;
 	
+	real <lower=0> sigma_beta1;
 	real <lower=0> sigma_beta2; //standart deviation for beta1
 	real <lower=0> sigma_beta3; //standart deviation for beta1
+	real <lower=0> sigma_beta4;
 
 	// phenotype level
 	vector <lower=0> [n_pheno] LInf_pheno; //Mean maximum adult size at phenotype level
@@ -80,7 +84,7 @@ model {
 	// fish-level
 	for(i in 1:n_fish) {
 		int eid = pheno_id_fish[i];
-		real LInf_hat = exp(log(LInf_pheno[eid]) + beta2 * dietC[i] + beta3 * dietN[i]);
+		real LInf_hat = exp(log(LInf_pheno[eid]) + beta1 * dietS[i] + beta2 * dietC[i] + beta3 * dietN[i] + beta4 * dietCN);
 		LInf_i[i] ~ gamma(gamm_a(LInf_pheno_phi[eid]), gamm_b(LInf_hat, LInf_pheno_phi[eid]));
 		tZero_i[i] ~ gamma(gamm_a(tZero_pheno_phi[eid]), gamm_b(tZero_pheno[eid], tZero_pheno_phi[eid]));
 		k_i[i] ~ gamma(gamm_a(k_pheno_phi[eid]), gamm_b(k_pheno[eid], k_pheno_phi[eid]));
@@ -104,8 +108,10 @@ model {
 	k_pheno_phi ~ cauchy(0, 200);
 	tZero_pheno_phi ~ cauchy(0, 200);
 	phi ~ cauchy(0, 200);
+	sigma_beta1 ~ cauchy(0, 200);
 	sigma_beta2 ~ cauchy(0, 200);
 	sigma_beta3 ~ cauchy(0, 200);
+	sigma_beta4 ~ cauchy(0, 200);
 
 	// proposed revisions
 	LInf ~ normal(0, 150);
@@ -113,14 +119,16 @@ model {
 	tZero ~ normal(0, 1);
 	
 	//diet parameters
+	beta1 ~ normal(0, sigma_beta1);
 	beta2 ~ normal(0, sigma_beta2);
 	beta3 ~ normal(0, sigma_beta3);
+	beta4 ~ normal(0, sigma_beta4);
 }
 
 //individual ikelihoods for loo
 generated quantities {
     vector[N] log_lik;
     for (i in 1:N) {
-      log_lik[i] = normal_lpdf(Length_back[i]|LInf*(1-exp(-k*(Agei[i]+tZero))), phi);
+      log_lik[i] = gamma_lpdf(Length_back | gamm_a_v(phi, N), gamm_b_v(mu, phi));
     }
 }

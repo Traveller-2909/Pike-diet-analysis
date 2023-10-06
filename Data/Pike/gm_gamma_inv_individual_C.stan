@@ -116,6 +116,6 @@ model {
 generated quantities {
     vector[N] log_lik;
     for (i in 1:N) {
-      log_lik[i] = normal_lpdf(Length_back[i]|LInf*(1-exp(-k*(Agei[i]+tZero))), phi);
+      log_lik[i] = gamma_lpdf(Length_back | gamm_a_v(phi, N), gamm_b_v(mu, phi));
     }
 }
