@@ -504,6 +504,48 @@ Allpike <- fread("Data/Pike/Pike_SI_all_clean_average_lipid-corrected.csv")
 Otopike <- fread("Data/Pike/Otopike_SI_clean_average.csv")
 Telepike <- fread("Data/Pike/Pikedata_telemetry_types.txt")
 
+Save_anadrom_tele <- Telepike%>%
+  group_by(ID)%>%
+  mutate(score = case_when(diag == "Anadrom" ~ 1,
+                           TRUE ~ 0))%>%
+  reframe(ID = ID,
+          scoresum = sum(score))%>%
+  filter(scoresum >= 2)%>%
+  distinct()%>%
+  transmute(ID, 
+            ecotype = "Anadromous")
+
+Save_anadrom_oto <- Otopike%>%
+  filter(ecotype == "Anadromous")%>%
+  transmute(ID,
+            ecotype)%>%
+  distinct()
+
+Save_anadrom <- rbind(Save_anadrom_oto, Save_anadrom_tele)
+
+PikeDB <- fread("C:/Users/timor/Nextcloud2/Boddenhecht/Data/Pike Data/1.pike_data_base_FOR_USERS/1Pike_Latest_Version.txt")
+
+Pike_geno <- fread("Data/Pike/Ecotypes/discrete-cluster-assignment.csv")
+
+PikeDB$waterbody <- PikeDB$Waterbody
+PikeDB$ID <- PikeDB$Fish_ID
+
+Save_anadrom_loc <- Save_anadrom%>%
+  inner_join(PikeDB, by = "ID")%>%
+  transmute(ID, ecotype, waterbody)%>%
+  distinct()
+
+Save_anadrom_loc_geno <- Save_anadrom_loc%>%
+  left_join(Pike_geno, by = "ID")%>%
+  transmute(ID, ecotype, 
+            genotype = case_when(hardclust == "1" ~ "freshwater genotype",
+                                 hardclust == "2" ~ "brackish genotype",
+                                 hardclust == "3" ~ "anadromous genotype",
+                                 hardclust == "U" ~ "unassigned genotype"),
+            waterbody=waterbody.x)
+
+fwrite(Save_anadrom_loc_geno, "Data/Pike/Ecotypes/certain-anadromous.csv")
+
 #Reformat Otopike
 Otopike2 <- Otopike%>%
   transmute(ID = ID,
