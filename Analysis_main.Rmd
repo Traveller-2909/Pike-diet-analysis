@@ -506,14 +506,20 @@ Telepike <- fread("Data/Pike/Pikedata_telemetry_types.txt")
 
 Save_anadrom_tele <- Telepike%>%
   group_by(ID)%>%
-  mutate(score = case_when(diag == "Anadrom" ~ 1,
+  mutate(score = case_when(diag == "Anadrom" ~ 10,
+                           diag == "Brackish" ~ 100,
+                           diag == "Fresh" ~ 200,
+                           diag == "Ubergangs I" ~ 300,
+                           diag == "Ubergangs II" ~ 400,
+                           diag == "nodata"~1,
                            TRUE ~ 0))%>%
-  reframe(ID = ID,
-          scoresum = sum(score))%>%
-  filter(scoresum >= 2)%>%
-  distinct()%>%
+    reframe(ID = ID,
+            scoresum = sum(score),
+            diag)%>%
+    filter(scoresum > 10 & scoresum < 100)%>%
   transmute(ID, 
-            ecotype = "Anadromous")
+            ecotype = "Anadromous")%>%
+  distinct()
 
 Save_anadrom_oto <- Otopike%>%
   filter(ecotype == "Anadromous")%>%
