@@ -166,13 +166,13 @@ SC_all <- rbind(Pike_SC, Marlon_SC2)
 fwrite(SC_all, "Data/Pike/Stomach-contents-all-clean.csv")
 ```
 
-```{r stomach contents graphics, include=FALSE, eval=FALSE}
+```{r stomach contents summary, include=FALSE, eval=FALSE}
 rm(list = ls())
 
 SC_data <- fread("Data/Pike/Stomach-contents-all-clean.csv")
 
 SC_data2 <- SC_data%>%
-  mutate(date = as.Date(lubridate::parse_date_time(Date, "d.m.y")),
+  mutate(date = as.Date(lubridate::parse_date_time(Date, "ymd")),
          area2 = as.factor(case_when(area == "GB" ~ "lagoon",
                            area == "SB" ~ "lagoon",
                            area == "Duwenbeek" ~ "lagoon",
@@ -242,26 +242,21 @@ SC_summary <- SC_data2%>%
           prey_weight_g = prey_weight_g,
           total_biomass_g = sum(prey_weight_g, na.rm = T),
           area2 = area2)%>%
-  left_join(Prey_energy_species2, by = "species")%>%
   group_by(species)%>%
   reframe(species = as.factor(species),
           prey_weight_g = sum(prey_weight_g, na.rm = T),
           total_biomass_g = total_biomass_g,
-          spec_energy_cont = case_when(is.na(Species) == FALSE ~ Caloric_value_mJ_per_kg/1000*prey_weight_g,
-                                       TRUE ~ 18.79740/1000*prey_weight_g),
           area2 = area2)%>%
   mutate(proportion = prey_weight_g/total_biomass_g)%>%
   distinct()
 
 SC_summary2 <- SC_summary%>%
-  reframe(species = case_when(proportion < 0.05 ~ "other",
-                              TRUE ~ species),
+  reframe(species = as.factor(case_when(proportion < 0.05 ~ "other",
+                              TRUE ~ species)),
           proportion = proportion,
-          spec_energy_cont = spec_energy_cont,
           area2 = area2)%>%
-  group_by(species, area2)%>%
+  group_by(species)%>%
   reframe(proportion2 = sum(proportion),
-          spec_energy_mJ = sum(spec_energy_cont),
           order = case_when(species == "Clupea harengus" ~ 1,
                             species == "Rutilus rutilus" ~ 2,
                             species == "Perca fluviatilis" ~ 3,
@@ -269,35 +264,132 @@ SC_summary2 <- SC_summary%>%
                             species == "Platichthys flesus" ~ 5,
                             species == "other" ~ 6))%>%
   ungroup()%>%
-  distinct()%>%
-  mutate(total_energy = sum(spec_energy_mJ),
-         prop_energy = spec_energy_mJ/total_energy)
+  distinct()
 
+SC_months <- SC_data2%>%
+  mutate(month = month(date))%>%
+  group_by(month)%>%
+  reframe(species = case_when(species == "Gasteroseus aculeatus" ~ "Gasterosteus aculeatus",
+                              species == "Gammerus sp." ~ "Gammarus",
+                              species == "P.elegans" ~ "Palaemon adspersus",
+                              species == "Pungitis pungitis" ~ "Pungitius pungitius",
+                              species == "Spinachio spinachio" ~ "Spinachia spinachia",
+                              TRUE ~ species),
+          prey_weight_g = prey_weight_g,
+          total_biomass_g = sum(prey_weight_g, na.rm = T),
+          area2 = area2,
+          sample = length(unique(fish_ID)))
 
-SC_summary2$species <- reorder(SC_summary2$species, SC_summary2$order)
+SC_months2 <- SC_months%>%
+  mutate(species = case_when(species == "Perca fluviatilis" ~ species,
+                              species == "Rutilus rutilus" ~ species,
+                              species == "Clupea harengus" ~ species,
+                              species == "Platichtys flesus" ~ species,
+                              species == "Neogobius melanostomus" ~ species,
+                              TRUE ~ "other"),
+         order = case_when(species == "Clupea harengus" ~ 1,
+                            species == "Rutilus rutilus" ~ 2,
+                            species == "Perca fluviatilis" ~ 3,
+                            species == "Neogobius melanostomus" ~ 4,
+                            species == "Platichthys flesus" ~ 5,
+                            species == "other" ~ 6))%>%
+  group_by(month, species)%>%
+  reframe(prey_weight_g = sum(prey_weight_g),
+          total_biomass_g = total_biomass_g,
+          proportion = prey_weight_g/total_biomass_g,
+          order = order,
+          sample = sample)%>%
+  distinct()
+
+fwrite(SC_summary2, "Data/Prey/Stomach_proportions_total.csv")
+fwrite(SC_months2, "Data/Prey/Stomach_proportions_months.csv")
+fwrite(Prey_energy_species2, "Data/Prey/Energy_content_species.csv")
+```
+
+```{r stomach content graphics, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+SC_summary <- fread("Data/Prey/Stomach_proportions_total.csv")
+SC_months <- fread("Data/Prey/Stomach_proportions_months.csv")
+Prey_energy <- fread("Data/Prey/Energy_content_species.csv")
+
+SC_summary$species <- reorder(SC_summary$species, SC_summary$order)
+SC_months$species <- reorder(SC_months$species, SC_months$order)
+Prey_energy$species <- reorder(Prey_energy$species, Prey_energy$order)
+
+monthlabel <- SC_months%>%
+  group_by(month)%>%
+  reframe(month = month,
+          sample = sample,
+          proportion = 1,
+          species = "other")%>%
+  distinct()
+
+SC_summary2 <- SC_summary%>%
+  arrange(order)%>%
+  mutate(csum = rev(cumsum(rev(proportion2))),
+           pos1 = proportion2/2 + lead(csum, 1),
+           pos = case_when(is.na(pos1) == TRUE ~ proportion2/2,
+                           TRUE ~ pos1))
 
 Props <- ggplot(SC_summary2, aes(x = "", y = proportion2, fill = species)) +
   geom_bar(stat = "identity") +
   coord_polar(theta = "y") +  # Convert to a polar coordinate for pie chart
-  labs(title = "proportion of biomass",
+  labs(title = "prey proportion of total biomass",
        fill = "Species") +
-  geom_text(aes(label = scales::percent(proportion2)), position = position_stack(vjust = 0.5))+
+  geom_label_repel(aes(y = pos, label = scales::percent(proportion2)), nudge_x = .75, 
+                   size = 3, show.legend = FALSE, fill = "white")+
   scale_fill_viridis_d(alpha = 0.9)+
-  theme_void()
+  theme_void()+
+  theme(plot.title = element_text(size = 10, color = "black", hjust = 1),
+        plot.margin = margin(-10,-10,-10,-10),
+        legend.text = element_text(size = 5.5, color = "black", face = "italic"),
+        legend.key.size = unit(0.3, "cm"),
+        legend.margin = margin(t = 10),
+        legend.title = element_blank())
 
-Energ <- ggplot(Prey_energy_species2, aes(x = species, y = Caloric_value_mJ_per_kg, fill = species))+
-  geom_boxplot(alpha = 0.8)+
-  labs(title = "Specific energy content",
-       y = "Caloric value (mJ/kg)",
-       fill = "Species")+
+months <- ggplot(SC_months, aes(x = as.factor(month), y = proportion, fill = species)) +
+  geom_bar(stat = "identity")+
+  geom_text(data = monthlabel, aes(label = paste0("N = ", sample)), 
+            position = position_stack(vjust = 1), size = 2, vjust = 18) +
+  labs(x = "month", y = "proportion", title = "prey proportions per month", fill = "Species")+
+  scale_y_discrete(breaks = c(unique(SC_months$species)),
+                   labels = c("C. harengus", "R. rutilus", "P. fluviatilis", "other", "P. flesus", "N. melanostomus"))+
   scale_fill_viridis_d()+
   theme_bw()+
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-        plot.margin = margin(88,1,1,1))
+  theme(axis.title = element_text(size = 10, color = "black"),
+        plot.title = element_text(size = 10, color = "black"),
+        axis.text = element_text(size = 5, color = "black"),
+        legend.text = element_text(size = 5.5, color = "black", face = "italic"),
+        legend.key.size = unit(0.3, "cm"),
+        legend.margin = margin(t = 10),
+        legend.title = element_blank())
 
-Pies <- ggarrange(Props, Energ, common.legend = T, labels = c("A", "B"))
+Energ <- ggplot(Prey_energy, aes(x = species, y = Caloric_value_mJ_per_kg, fill = species))+
+  geom_boxplot(alpha = 0.8, width = 0.5, lwd = 0.3)+
+  labs(title = "species-specific energy content",
+       y = "Energy (mJ/kg)",
+       fill = "Species")+
+  scale_x_discrete(breaks = c(unique(Prey_energy$species)),
+                   labels = c("C. harengus", "R. rutilus", "P. fluviatilis", "other", "P. flesus", "N. melanostomus"))+
+  scale_fill_viridis_d()+
+  theme_bw()+
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_text(size = 10, color = "black"),
+        axis.title.y = element_text(size = 10, color = "black"),
+        axis.title.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        plot.title = element_text(size = 10, color = "black"),
+        legend.text = element_text(size = 5.5, color = "black", face = "italic"),
+        legend.key.size = unit(0.3, "cm"),
+        legend.margin = margin(t = 10),
+        legend.title = element_blank())
 
-ggsave("Figures/Stomach-contents-all.png", Pies, width = 15, height = 15, units = "cm", dpi = 300, bg = "white")
+Pies <- ggarrange(Props, months, Energ, common.legend = T, legend = "bottom",
+                  labels = c("A", "B", "C"), vjust = .5, ncol = 1)+
+  theme(plot.margin = margin(10,1,1,1))
+
+ggsave("Figures/Stomach-contents-all_months.png", Pies, width = 8, height = 15, units = "cm", dpi = 600, bg = "white")
 ```
 
 # SI Cleanup
@@ -1706,6 +1798,13 @@ mix4 <- load_mix_data(filename=mix.filename,
                      fac_nested=FALSE,
                      cont_effects="Length")
 
+mix5 <- load_mix_data(filename=mix.filename, 
+                     iso_names=c("d15N", "d13C", "d34S"),
+                     factors=c("area","ecotype"),
+                     fac_random=c(FALSE, FALSE),
+                     fac_nested=c(FALSE,FALSE),
+                     cont_effects="Length")
+
 # Prepare source data
 m_by_sp<-aggregate(cbind(d15N, d13C, d34S)~group, data=Prey1, FUN=mean)
 
@@ -1752,6 +1851,7 @@ model1_filename <- "Data/Mixing models/MixSIAR_model_pike-ecotype-TL.txt"
 model2_filename <- "Data/Mixing models/MixSIAR_model_pike-TL.txt"
 model3_filename <- "Data/Mixing models/MixSIAR_model_pike-ecotype.txt"
 model4_filename <- "Data/Mixing models/MixSIAR_model_pike-area-TL.txt"
+model5_filename <- "Data/Mixing models/MixSIAR_model_pike-ecotype-area-TL.txt"
 
 # Include residual error; appropriate in situations where, for instance, each mixture data point was 
 # generated through the combination of many samples from the source population
@@ -1767,32 +1867,39 @@ write_JAGS_model(model1_filename, resid_err, process_err, mix1, source)
 write_JAGS_model(model2_filename, resid_err, process_err, mix2, source)
 write_JAGS_model(model3_filename, resid_err, process_err, mix3, source)
 write_JAGS_model(model4_filename, resid_err, process_err, mix4, source)
+write_JAGS_model(model5_filename, resid_err, process_err, mix5, source)
 
 # We run a model with uninformative priors
-jags.pike.0 <- run_model(run="test", mix0, source, discr.df, model0_filename, alpha.prior = 1)
-jags.pike.1 <- run_model(run="test", mix1, source, discr.df, model1_filename, alpha.prior = 1)
-jags.pike.2 <- run_model(run="test", mix2, source, discr.df, model2_filename, alpha.prior = 1)
-jags.pike.3 <- run_model(run="test", mix3, source, discr.df, model3_filename, alpha.prior = 1)
-jags.pike.4 <- run_model(run="test", mix4, source, discr.df, model4_filename, alpha.prior = 1)
+jags.pike.0 <- run_model(run="normal", mix0, source, discr.df, model0_filename, alpha.prior = 1)
+jags.pike.1 <- run_model(run="normal", mix1, source, discr.df, model1_filename, alpha.prior = 1)
+jags.pike.2 <- run_model(run="normal", mix2, source, discr.df, model2_filename, alpha.prior = 1)
+jags.pike.3 <- run_model(run="normal", mix3, source, discr.df, model3_filename, alpha.prior = 1)
+jags.pike.4 <- run_model(run="normal", mix4, source, discr.df, model4_filename, alpha.prior = 1)
+jags.pike.5 <- run_model(run="normal", mix5, source, discr.df, model5_filename, alpha.prior = 1)
 
-saveRDS(jags.pike.0, "Data/Mixing models/Output/Mixing.model-test-run-NULL.rds")
-saveRDS(jags.pike.1, "Data/Mixing models/Output/Mixing.model-test-run-ecotype_TL.rds")
-saveRDS(jags.pike.2, "Data/Mixing models/Output/Mixing.model-test-run-TL.rds")
-saveRDS(jags.pike.3, "Data/Mixing models/Output/Mixing.model-test-run-ecotype.rds")
-saveRDS(jags.pike.4, "Data/Mixing models/Output/Mixing.model-test-run-area_TL.rds")
+saveRDS(jags.pike.0, "Data/Mixing models/Output/Mixing.model-normal-run-NULL.rds")
+saveRDS(jags.pike.1, "Data/Mixing models/Output/Mixing.model-normal-run-ecotype_TL.rds")
+saveRDS(jags.pike.2, "Data/Mixing models/Output/Mixing.model-normal-run-TL.rds")
+saveRDS(jags.pike.3, "Data/Mixing models/Output/Mixing.model-normal-run-ecotype.rds")
+saveRDS(jags.pike.4, "Data/Mixing models/Output/Mixing.model-normal-run-area_TL.rds")
+saveRDS(jags.pike.5, "Data/Mixing models/Output/Mixing.model-normal-run-ecotyp_area_TL.rds")
+
+jags.pike.5$BUGSoutput$sims.matrix[,"ilr.fac1"]
 ```
 
 ```{r mixing model comparison, include=FALSE, eval=FALSE}
 rm(list = ls())
 
-jags.pike.0 <- readRDS("Data/Mixing models/Output/Mixing.model-test-run-NULL.rds")
-jags.pike.1 <- readRDS("Data/Mixing models/Output/Mixing.model-test-run-ecotype_TL.rds")
-jags.pike.2 <- readRDS("Data/Mixing models/Output/Mixing.model-test-run-TL.rds")
-jags.pike.3 <- readRDS("Data/Mixing models/Output/Mixing.model-test-run-ecotype.rds")
-jags.pike.4 <- readRDS("Data/Mixing models/Output/Mixing.model-test-run-area_TL.rds")
+jags.pike.0 <- readRDS("Data/Mixing models/Output/Mixing.model-normal-run-NULL.rds")
+jags.pike.1 <- readRDS("Data/Mixing models/Output/Mixing.model-normal-run-ecotype_TL.rds")
+jags.pike.2 <- readRDS("Data/Mixing models/Output/Mixing.model-normal-run-TL.rds")
+jags.pike.3 <- readRDS("Data/Mixing models/Output/Mixing.model-normal-run-ecotype.rds")
+jags.pike.4 <- readRDS("Data/Mixing models/Output/Mixing.model-normal-run-area_TL.rds")
+jags.pike.5 <- readRDS("Data/Mixing models/Output/Mixing.model-normal-run-ecotyp_area_TL.rds")
 
 # 1 We create a list with our models
-mcomp<-list(jags.pike.0, jags.pike.1, jags.pike.2, jags.pike.3, jags.pike.4)
+mcomp<-list(jags.pike.0, jags.pike.1, jags.pike.2, jags.pike.3, jags.pike.4, jags.pike.5)
+names(mcomp) <- c("NULL", "ecotype|body length", "body length", "ecotype", "capture location|body length", "capt|ecotype|length")
 # Model comparison
 compare_models(mcomp, loo = TRUE)
 ```
@@ -1845,7 +1952,7 @@ output_options <- list(summary_save = TRUE,
 diag <- output_diagnostics(jags.pike, mix, source, output_options)
 df.stats <- output_stats(jags.pike, mix, source, output_options)
 rownames(df.stats)
-g.post2 <- output_posteriors(jags.pike, mix, source, output_options)
+g.post2 <- output_posteriors(jags.pike.5, mix5, source, output_options)
 
 names(g.post2)
 
@@ -3390,6 +3497,10 @@ pikeages_final2 <- pikeages_final%>%
   ungroup()%>%
   distinct()
 
+ggplot(pikeages_final2, aes(waterbody, inc_mm))+
+  geom_boxplot()+
+  theme_minimal()
+
 fwrite(pikeages_final2, "Data/Pike/Transmitter-pike-ages-with-TL.csv")
 ```
 
@@ -3536,6 +3647,9 @@ Pike.scales.Si2 <- Pike.scales.SI%>%
             d34S_scale=scale(d34S),
             CN_scale=scale(CN_ratio))%>%
   drop_na(growth_index)
+
+ggplot(Pike.scales.Si2, aes(waterbody,growth_index))+
+  geom_boxplot()
 
 Pikemodel.1 <- lmer(growth_index~sex+age+pisc_scale+d15N_scale+d13C_scale+d34S_scale+CN_scale+d15N_scale*d13C_scale*d34S_scale+(1|waterbody), REML = T, data = Pike.scales.Si2)
 

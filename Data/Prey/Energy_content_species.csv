@@ -1,0 +1,65 @@
+ID,Number,Caloric_value_mJ_per_kg,Species,SL exact [mm],SL size class,Weight [g],Heigth [mm],Sample type,Waterbody,Date,Method,Haul #,Sample wwt [g],Long,Lat,Dried,Homogenized,Prepared,Analyzed,comment,V20,V21,species,order
+BF-016,BF-016,25.1469,Herring,272,"",191.81,54,Muscle,ST,2019-2020,"","","","","",,,,,"",,"",Clupea harengus,1
+BF-017,BF-017,25.5253,Herring,259,"",151.04,45,Muscle,ST,2019-2020,"","","","","",,,,,"",,"",Clupea harengus,1
+BF-019,BF-019,24.75355,Herring,266,"",188.9,50,Muscle,ST,2019-2020,"","","","","",,,,,"",,"",Clupea harengus,1
+BF-020,BF-020,24.83315,Herring,257,"",169.14,49,Muscle,ST,2019-2020,"","","","","",,,,,"",,"",Clupea harengus,1
+BF-022,BF-022,23.7031,Herring,258,"",167.95,48,Muscle,ST,2019-2020,"","","","","",,,,,"",,"",Clupea harengus,1
+BF-026,BF-026,20.5838,Roach,135,"",34.76,35,Muscle,GJB,2019-2020,"","","","","",1,1,,1,"",,"",Rutilus rutilus,2
+BF-027,BF-027,20.515,Roach,138,"",30.74,32,Muscle,GJB,2019-2020,"","","","","",1,1,,1,"",,"",Rutilus rutilus,2
+BF-058,BF-058,20.39945,Perch,129,"",33.42,32,Muscle,Barthe,31.10.2019,"","","","","",1,1,,1,"",,"",Perca fluviatilis,3
+BF-073,BF-073,20.96915,Roach,177,"",81.34,47,Muscle,Barthe,31.10.2019,"","","","","",1,1,,1,"",,"",Rutilus rutilus,2
+BF-082,BF-082,21.9008,Herring,229,"",98.44,37,Muscle,NRB,2019-2020,"","","","","",,,,,"",,"",Clupea harengus,1
+BF-083,BF-083,20.1875,Herring,237,"",95.2,35,Muscle,NRB,2019-2020,"","","","","",,,,,"",,"",Clupea harengus,1
+BF-084,BF-084,20.74345,Herring,244,"",96.35,37,Muscle,NRB,2019-2020,"","","","","",,,,,"",,"",Clupea harengus,1
+BF-103,BF-103,20.48015,Roach,136,"",52.84,39,Muscle,WRB,2019-2020,"","","","","",1,1,,1,"",,"",Rutilus rutilus,2
+BF-106,BF-106,20.9027,Roach,95,"",16.83,24,Muscle,WRB,2019-2020,"","","","","",1,1,,1,"",,"",Rutilus rutilus,2
+BF-124,BF-124,20.156,P. fluviatilis,10-12.5,"","","","",WRB,30.03.2021,Gill net,"","","","",1,1,1,,"",,"",Perca fluviatilis,3
+BF-125,BF-125,20.4222,P. fluviatilis,10-12.5,"","","","",WRB,30.03.2021,Gill net,"","","","",1,1,1,,"",,"",Perca fluviatilis,3
+BF-127,BF-127,20.3813,P. fluviatilis,7.5-10,"","","","",WRB,30.03.2021,Gill net,"","","","",1,1,1,,"",,"",Perca fluviatilis,3
+BF-128,BF-128,20.3859,P. fluviatilis,7.5-10,"","","","",WRB,30.03.2021,Gill net,"","","","",1,1,1,,"",,"",Perca fluviatilis,3
+BF-145,BF-145,21.0976,R.rutilus,27.5-30,"","","","",WRB,30.03.2021,Gill net,"","","","",1,1,1,,"",,"",Rutilus rutilus,2
+BF-146,BF-146,20.1062,P. fluviatilis,10-12.5,"","","","",WRB,30.03.2021,Gill net,"","","","",1,1,1,,"",,"",Perca fluviatilis,3
+BF-147,BF-147,20.6123,P. fluviatilis,10-12.5,"","","","",WRB,30.03.2021,Gill net,"","","","",1,1,1,,"",,"",Perca fluviatilis,3
+BF-149,BF-149,20.088,P. fluviatilis,20-22.5,"","","","",WRB,30.03.2021,Gill net,"","","","",1,1,1,,"",,"",Perca fluviatilis,3
+BF-150,BF-150,20.2766,P. fluviatilis,35-37.5,"","","","",WRB,30.03.2021,Gill net,"","","","",1,1,1,,"",,"",Perca fluviatilis,3
+BF-153,BF-153,20.6499,R.rutilus,10-12.5,"","","","",WRB,30.03.2021,Gill net,"","","","",1,1,1,,"",,"",Rutilus rutilus,2
+BF-155,BF-155,20.4668,R.rutilus,10-12.5,"","","","",WRB,30.03.2021,Gill net,"","","","",1,1,1,,"",,"",Rutilus rutilus,2
+BF-157,BF-157,20.3404,R.rutilus,10-12.5,"","","","",WRB,30.03.2021,Gill net,"","","","",1,1,1,,"",,"",Rutilus rutilus,2
+BF-162,BF-162,20.114,R.rutilus,22.5-25,"","","","",WRB,30.03.2021,Gill net,"","","","",1,1,1,,"",,"",Rutilus rutilus,2
+BF-174,BF-174,22.5867,R.rutilus,5-7.5,"",3.4,"","",WRB,30.03.2021,Gill net,"","","","",1,1,1,,"",,"",Rutilus rutilus,2
+BF-189,BF-189,20.4066,G. aculeatus,48,"",1.41,"","",WRB,30.03.2021,Gill net,"","","","",1,1,1,,"",,"",other,6
+BF-192,BF-192,19.4248,G. aculeatus,52,"",1.8,"","",WRB,30.03.2021,Gill net,"","","","",1,1,1,,"",,"",other,6
+BF-195,BF-195,19.16,G. aculeatus,53,"",2.51,"","",WRB,30.03.2021,Gill net,"","","","",1,1,1,,"",,"",other,6
+BF-241,BF-241,20.0443,White bream,77,"",10.2,25,Muscle,Ziese,18.03.2021,"","","","","",,,,,"",,"",other,6
+BF-241,BF-241,20.0443,Flounder,181,"","","",Muscle,Baltic,24.02.2021,23,"","","","",,,,,"",,"",Platichthys flesus,5
+BF-242,BF-242,19.8486,Flounder,209,"","","",Muscle,Baltic,24.02.2021,23,"","","","",1,1,,,"",,"",Platichthys flesus,5
+BF-244,BF-244,19.8247,Flounder,183,"","","",Muscle,Baltic,24.02.2021,23,"","","","",1,1,,,"",,"",Platichthys flesus,5
+BF-245,BF-245,19.9449,Flounder,204,"","","",Muscle,Baltic,24.02.2021,23,"","","","",1,1,,,"",,"",Platichthys flesus,5
+BF-298,BF-298,20.7273,Three-spined stickleback,53,"",2,12,Whole fish,Duwenbeek,03.02.2021,"","","","","",,,,,"",,"",other,6
+BF-411,BF-411,19.9198,P. flesus,125-150,"",-,-,Muscle,WRB,31.03.2021,Net 1-5,"",0.56,"","",1,1,,,"",,"",Platichthys flesus,5
+BF-413,BF-413,21.0242,P. flesus,225-250,"",-,-,Muscle,WRB,31.03.2021,Net 1-5,"",0.69,"","",1,1,,,"",,"",Platichthys flesus,5
+BF-464,BF-464,16.8484,G. aculeatus,47,"",1.4,11,Whole fish,Beck,03.04.2021,Electro,"",0.57,"","",,,,,"",,"",other,6
+BF-470,BF-470,17.5656,G. aculeatus,37,"",0.68,9,Whole fish,BAT,01.01.2021,-,"",0.22,"","",,,,,Only 2021 stated on label.,,"",other,6
+BF-471,BF-471,15.8248,G. aculeatus,39,"",0.85,9,Whole fish,BAT,01.01.2021,-,"",0.42,"","",,,,,Only 2021 stated on label.,,"",other,6
+BF-472,BF-472,17.891,G. aculeatus,42,"",0.9,9,Whole fish,BAT,01.01.2021,-,"",0.45,"","",,,,,Only 2021 stated on label.,,"",other,6
+BF-473,BF-473,20.0812,G. aculeatus,40,"",0.8,9,Whole fish,BAT,01.01.2021,-,"",0.4,"","",,,,,Only 2021 stated on label.,,"",other,6
+BF-502,BF-502,20.2897,P. fluviatilis,113,"",29.8,29,Muscle,Barthe,01.01.2021,-,"",0.8,"","",,,,,Only 2021 stated on label.,,"",Perca fluviatilis,3
+BF-624,BF-624,26.0348,,,,,,,,,,,,,,,,,,,,,Clupea harengus,1
+BF-625,BF-625,24.9902,,,,,,,,,,,,,,,,,,,,,Clupea harengus,1
+BF-626,BF-626,25.5746,,,,,,,,,,,,,,,,,,,,,Clupea harengus,1
+BF-627,BF-627,21.7228,,,,,,,,,,,,,,,,,,,,,Clupea harengus,1
+BF-667,BF-667,20.1639,N. melanostomus,120,"",54.62,29,Muscle,WRB,23.04.2023,Fyke,"","","","",,,,,"",,"",Neogobius melanostomus,4
+BF-670,BF-670,20.5463,N. melanostomus,133,"",58.1,23,Muscle,WRB,23.04.2023,Fyke,"","","","",,,,,"",,"",Neogobius melanostomus,4
+BF-672,BF-672,20.0838,N. melanostomus,98,"",27.71,19,Muscle,WRB,23.04.2023,Fyke,"","","","",,,,,"",,"",Neogobius melanostomus,4
+BF-673,BF-673,20.1845,N. melanostomus,115,"",44.86,23,Muscle,WRB,23.04.2023,Fyke,"","","","",,,,,"",,"",Neogobius melanostomus,4
+BF-675,BF-675,20.7621,N. melanostomus,121,"",63.5,28,Muscle,WRB,23.04.2023,Fyke,"","","","",,,,,"",,"",Neogobius melanostomus,4
+BF-676,BF-676,20.6782,N. melanostomus,108,"",40.33,23,Muscle,WRB,23.04.2023,Fyke,"","","","",,,,,"",,"",Neogobius melanostomus,4
+BF-677,BF-677,21.0441,N. melanostomus,103,"",29.31,21,Muscle,WRB,23.04.2023,Fyke,"","","","",,,,,"",,"",Neogobius melanostomus,4
+BF-678,BF-678,20.995,N. melanostomus,127,"",45.68,23,Muscle,WRB,23.04.2023,Fyke,"","","","",,,,,"",,"",Neogobius melanostomus,4
+BF-680,BF-680,20.1829,N. melanostomus,114,"",35.85,22,Muscle,WRB,23.04.2023,Fyke,"","","","",,,,,"",,"",Neogobius melanostomus,4
+BF-681,BF-681,20.8001,N. melanostomus,152,"",96.84,33,Muscle,WRB,23.04.2023,Fyke,"","","","",,,,,"",,"",Neogobius melanostomus,4
+BF-683,BF-683,20.1036,N. melanostomus,105,"",33.04,18,Muscle,WRB,23.04.2023,Fyke,"","","","",,,,,"",,"",Neogobius melanostomus,4
+BF-745,BF-745,19.7725,P. flesus,150,"",66.13,73,Muscle,Cruise 789 #24182,03.03.2021,Trawl,"","","","",,,,,"",,"",Platichthys flesus,5
+BF-746,BF-746,19.6571,P. flesus,122,"",38.02,59,Muscle,Cruise 789 #24182,03.03.2021,Trawl,"","","","",,,,,"",,"",Platichthys flesus,5
+BF-747,BF-747,19.4865,P. flesus,159,"",74.09,78,Muscle,Cruise 789 #24071,03.03.2021,Trawl,"","","","",,,,,"",,"",Platichthys flesus,5
+BF-748,BF-748,19.5334,P. flesus,117,"",33.71,60,Muscle,Cruise 789 #24071,03.03.2021,Trawl,"","","","",,,,,"",,"",Platichthys flesus,5
