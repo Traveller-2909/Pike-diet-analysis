@@ -1805,6 +1805,13 @@ mix5 <- load_mix_data(filename=mix.filename,
                      fac_nested=c(FALSE,FALSE),
                      cont_effects="Length")
 
+mix6 <- load_mix_data(filename=mix.filename, 
+                     iso_names=c("d15N", "d13C", "d34S"),
+                     factors=c("area"),
+                     fac_random=FALSE,
+                     fac_nested=FALSE,
+                     cont_effects=NULL)
+
 # Prepare source data
 m_by_sp<-aggregate(cbind(d15N, d13C, d34S)~group, data=Prey1, FUN=mean)
 
@@ -1852,6 +1859,7 @@ model2_filename <- "Data/Mixing models/MixSIAR_model_pike-TL.txt"
 model3_filename <- "Data/Mixing models/MixSIAR_model_pike-ecotype.txt"
 model4_filename <- "Data/Mixing models/MixSIAR_model_pike-area-TL.txt"
 model5_filename <- "Data/Mixing models/MixSIAR_model_pike-ecotype-area-TL.txt"
+model6_filename <- "Data/Mixing models/MixSIAR_model_pike-area.txt"
 
 # Include residual error; appropriate in situations where, for instance, each mixture data point was 
 # generated through the combination of many samples from the source population
@@ -1868,6 +1876,7 @@ write_JAGS_model(model2_filename, resid_err, process_err, mix2, source)
 write_JAGS_model(model3_filename, resid_err, process_err, mix3, source)
 write_JAGS_model(model4_filename, resid_err, process_err, mix4, source)
 write_JAGS_model(model5_filename, resid_err, process_err, mix5, source)
+write_JAGS_model(model6_filename, resid_err, process_err, mix6, source)
 
 # We run a model with uninformative priors
 jags.pike.0 <- run_model(run="normal", mix0, source, discr.df, model0_filename, alpha.prior = 1)
@@ -1876,6 +1885,7 @@ jags.pike.2 <- run_model(run="normal", mix2, source, discr.df, model2_filename, 
 jags.pike.3 <- run_model(run="normal", mix3, source, discr.df, model3_filename, alpha.prior = 1)
 jags.pike.4 <- run_model(run="normal", mix4, source, discr.df, model4_filename, alpha.prior = 1)
 jags.pike.5 <- run_model(run="normal", mix5, source, discr.df, model5_filename, alpha.prior = 1)
+jags.pike.6 <- run_model(run="normal", mix6, source, discr.df, model6_filename, alpha.prior = 1)
 
 saveRDS(jags.pike.0, "Data/Mixing models/Output/Mixing.model-normal-run-NULL.rds")
 saveRDS(jags.pike.1, "Data/Mixing models/Output/Mixing.model-normal-run-ecotype_TL.rds")
@@ -1883,8 +1893,7 @@ saveRDS(jags.pike.2, "Data/Mixing models/Output/Mixing.model-normal-run-TL.rds")
 saveRDS(jags.pike.3, "Data/Mixing models/Output/Mixing.model-normal-run-ecotype.rds")
 saveRDS(jags.pike.4, "Data/Mixing models/Output/Mixing.model-normal-run-area_TL.rds")
 saveRDS(jags.pike.5, "Data/Mixing models/Output/Mixing.model-normal-run-ecotyp_area_TL.rds")
-
-jags.pike.5$BUGSoutput$sims.matrix[,"ilr.fac1"]
+saveRDS(jags.pike.6, "Data/Mixing models/Output/Mixing.model-normal-run-area.rds")
 ```
 
 ```{r mixing model comparison, include=FALSE, eval=FALSE}
@@ -1896,10 +1905,11 @@ jags.pike.2 <- readRDS("Data/Mixing models/Output/Mixing.model-normal-run-TL.rds
 jags.pike.3 <- readRDS("Data/Mixing models/Output/Mixing.model-normal-run-ecotype.rds")
 jags.pike.4 <- readRDS("Data/Mixing models/Output/Mixing.model-normal-run-area_TL.rds")
 jags.pike.5 <- readRDS("Data/Mixing models/Output/Mixing.model-normal-run-ecotyp_area_TL.rds")
+jags.pike.6 <- readRDS("Data/Mixing models/Output/Mixing.model-normal-run-area.rds")
 
 # 1 We create a list with our models
-mcomp<-list(jags.pike.0, jags.pike.1, jags.pike.2, jags.pike.3, jags.pike.4, jags.pike.5)
-names(mcomp) <- c("NULL", "ecotype|body length", "body length", "ecotype", "capture location|body length", "capt|ecotype|length")
+mcomp<-list(jags.pike.0, jags.pike.1, jags.pike.2, jags.pike.3, jags.pike.4, jags.pike.5, jags.pike.6)
+names(mcomp) <- c("NULL", "ecotype|body length", "body length", "ecotype", "capture location|body length", "capt|ecotype|length", "capt")
 # Model comparison
 compare_models(mcomp, loo = TRUE)
 ```
@@ -3086,6 +3096,43 @@ Eyeplot1 <- annotate_figure(Eyeplot, bottom = text_grob("Backcalculated length (
 
 ggsave("Figures/Eyelens-data-ecotypes.png", Eyeplot1, width = 15, height = 7, units = "cm", bg = "white")
 ```
+
+```{r specialization metrics, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+Ecopike <- fread("Data/Pike/Lens-muscle-SI-eco-clean-cbackcalculated.csv")
+
+Ecopike <- as.data.frame(Ecopike)
+Ecopike$fish_ID <- as.factor(Ecopike$fish_ID)
+
+#Get individual stats
+Ecopike2 <- Ecopike%>%
+  group_by(fish_ID)%>%
+  reframe(mean_C = mean(d13C, na.rm = T),
+            mean_N = mean(d15N, na.rm = T),
+            mean_S = mean(d34S, na.rm = T),
+            sd_C = sd(d13C, na.rm = T),
+            sd_N = sd(d15N, na.rm = T),
+            sd_S = sd(d34S, na.rm = T))%>%
+  drop_na(sd_C)
+
+#merge
+Isodata <- merge(Ecopike, Ecopike2, by = "fish_ID", suffixes = c("", "_mean_sd"))
+
+#Calculate WIC and BIC for each isotope
+Isodata2 <- Isodata%>%
+  mutate(WIC_d13C = (d13C - mean_C)/sd_C,
+         WIC_d15N = (d15N - mean_N)/sd_N,
+         WIC_d34S = (d34S - mean_S)/sd_S,
+         BIC_d13C = (d13C - mean(d13C, na.rm = T))/sd(d13C, na.rm = T),
+         BIC_d15N = (d15N - mean(d15N, na.rm = T))/sd(d15N, na.rm = T),
+         BIC_d34S = (d34S - mean(d34S, na.rm = T))/sd(d34S, na.rm = T))%>%
+  transmute(fish_ID, TL_mm, sex, area, phenotype, WIC_d13C, WIC_d15N, WIC_d34S, BIC_d13C, BIC_d15N, BIC_d34S)%>%
+  drop_na(WIC_d13C, WIC_d15N, WIC_d34S)%>%
+  distinct()
+
+```
+
 
 # Lifelong growth
 ```{r data prep, include=FALSE, eval=FALSE}
