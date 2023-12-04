@@ -541,17 +541,12 @@ Save_anadrom_loc <- Save_anadrom%>%
   transmute(ID, ecotype, waterbody)%>%
   distinct()
 
-Save_anadrom_loc_geno <- Save_anadrom_loc%>%
-  left_join(Pike_geno, by = "ID")%>%
-  transmute(ID, ecotype, 
-            genotype = case_when(hardclust == "1" ~ "freshwater genotype",
-                                 hardclust == "2" ~ "brackish genotype",
-                                 hardclust == "3" ~ "anadromous genotype",
-                                 hardclust == "U" ~ "unassigned genotype"),
-            waterbody=waterbody.x)
+Save_anadrom_loc_geno <- Save_anadrom_tele%>%
+  left_join(PikeDB, by = "ID")%>%
+  transmute(ID, ecotype,
+            waterbody=waterbody)
 
-fwrite(Save_anadrom_loc_geno, "Data/Pike/Ecotypes/certain-anadromous.csv")
-
+fwrite(Save_anadrom_loc_geno, "Data/Pike/Ecotypes/certain-anadromous-telemetry.csv")
 #Reformat Otopike
 Otopike2 <- Otopike%>%
   transmute(ID = ID,
@@ -614,6 +609,15 @@ TeleSI <- Allpike%>%
 Ecotypes_SI <- rbind(Otopike2, TeleSI)
 
 fwrite(Ecotypes_SI, "Data/Pike/Ecotypes-Oto-Tele_SI_clean.csv")
+
+#Transloc
+Trans <- fread("Data/Pike/Ecotypes/230512_overview.txt")
+
+Trans_suc <- Trans%>%
+  filter(Origin == "SB" & success==1)%>%
+  transmute(ID, Origin)
+
+fwrite(Trans_suc, "Data/Pike/Ecotypes/Translocation-returns.csv")
 ```
 
 ```{r pike eye lens data cleanup, include=FALSE, eval=FALSE}
