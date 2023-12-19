@@ -32,6 +32,7 @@ library(RColorBrewer)
 library(lme4)
 library(nlme)
 library(lmerTest)
+library(MCMCglmm)
 library(sjPlot)
 library(emmeans)
 library(MuMIn)
@@ -3103,34 +3104,52 @@ rm(list = ls())
 Ecopike <- fread("Data/Pike/Lens-muscle-SI-eco-clean-cbackcalculated.csv")
 
 Ecopike <- as.data.frame(Ecopike)
-Ecopike$fish_ID <- as.factor(Ecopike$fish_ID)
-
-#Get individual stats
 Ecopike2 <- Ecopike%>%
-  group_by(fish_ID)%>%
-  reframe(mean_C = mean(d13C, na.rm = T),
-            mean_N = mean(d15N, na.rm = T),
-            mean_S = mean(d34S, na.rm = T),
-            sd_C = sd(d13C, na.rm = T),
-            sd_N = sd(d15N, na.rm = T),
-            sd_S = sd(d34S, na.rm = T))%>%
-  drop_na(sd_C)
+  drop_na(diameter_mm)
+Ecopike2$fish_ID <- factor(Ecopike2$fish_ID)
 
-#merge
-Isodata <- merge(Ecopike, Ecopike2, by = "fish_ID", suffixes = c("", "_mean_sd"))
+mod1 <- MCMCglmm(cbind(d13C, d15N, d34S)~trait-1, random = ~fish_ID, data = Ecopike2, family = c("gaussian", "gaussian", "gaussian"), rcov = ~us(trait):units, pr = TRUE, verbose = FALSE, nitt = 100000, burnin = 50000, thin = 50)
 
-#Calculate WIC and BIC for each isotope
-Isodata2 <- Isodata%>%
-  mutate(WIC_d13C = (d13C - mean_C)/sd_C,
-         WIC_d15N = (d15N - mean_N)/sd_N,
-         WIC_d34S = (d34S - mean_S)/sd_S,
-         BIC_d13C = (d13C - mean(d13C, na.rm = T))/sd(d13C, na.rm = T),
-         BIC_d15N = (d15N - mean(d15N, na.rm = T))/sd(d15N, na.rm = T),
-         BIC_d34S = (d34S - mean(d34S, na.rm = T))/sd(d34S, na.rm = T))%>%
-  transmute(fish_ID, TL_mm, sex, area, phenotype, WIC_d13C, WIC_d15N, WIC_d34S, BIC_d13C, BIC_d15N, BIC_d34S)%>%
-  drop_na(WIC_d13C, WIC_d15N, WIC_d34S)%>%
-  distinct()
+summary(mod1)
 
+BICmat <- mod1$VCV[, "fish_ID"]
+WICmat <- mod1$VCV[, grep("trait", colnames(mod1$VCV))]
+
+mean(WICmat[,1])
+
+TNWmat <- BICmat + WICmat
+
+WICmat/TNWmat
+
+#Individual covariance matrices
+n_samples <- 1000
+n_individuals <- length(unique(Ecopike2$fish_ID))
+n_levels <- levels(Ecopike2$fish_ID)
+
+random_effects <- mod1$Sol[, grep("^fish_ID", colnames(mod1$Sol))]
+
+cov(mod1$)
+
+random_effects_reshaped <- array(0, dim = c(1000 * 49, 49))
+for (i in 1:49) {
+  start_idx <- (i - 1) * 1000 + 1
+  end_idx <- i * 1000
+  random_effects_reshaped[start_idx:end_idx, ] <- random_effects[, i]
+}
+
+# Compute covariance matrix for each individual
+cov_matrices <- lapply(1:49, function(i) {
+  start_idx <- (i - 1) * 1000 + 1
+  end_idx <- i * 1000
+  
+  # Subset random effects for the current individual
+  random_effects_ind <- random_effects_reshaped[start_idx:end_idx, , drop = FALSE]
+  
+  # Compute covariance matrix for the individual
+  cov(random_effects_ind)
+})
+
+eigen(cov_matrices[,1])
 ```
 
 
@@ -3250,7 +3269,7 @@ colnames(tab) = c("Parameter", "Posterior median", "90% CI")
 knitr::kable(tab)
 ```
 
-```{r compare models}
+```{r compare models, include=FALSE, eval=FALSE}
 rm(list = ls())
 
 base <- readRDS("Data/pike/fit_gamma_diet_base.rds")
@@ -3554,7 +3573,31 @@ fwrite(pikeages_final2, "Data/Pike/Transmitter-pike-ages-with-TL.csv")
 ```{r combine scale data with isotopes, include=FALSE, eval=FALSE}
 rm(list = ls())
 
-Pike <- fread("Data/Pike/Pike_SI_all_clean_average_lipid-corrected.csv")
+Pike1 <- fread("C:/Users/timor/Nextcloud2/Boddenhecht/Data/Pike Data/1.pike_data_base_FOR_USERS/1Pike_Latest_Version.txt")
+
+Pike2 <- Pike1%>%
+  transmute(ID=Fish_ID,
+            waterbody=Waterbody,
+            sex=Sex,
+            date=Date,
+            weight=Weight,
+            TL_mm=Total_Length_mm,
+            Recap=MarkorRecap,
+            Tele=case_when(is.na(Transmitter_Num)==FALSE~"Yes",
+                           TRUE~"NA"))%>%
+  filter(Tele == "Yes")%>%
+  distinct()
+
+PikeSI <- fread("Data/Pike/Pike_SI_all_clean_average_lipid-corrected.csv")
+
+Transcheck <- Pike2 %>%
+  left_join(PikeSI, by = "ID")%>%
+  transmute(ID, Tele, d13C, d15N, d34S)%>%
+  drop_na(d13C)%>%
+  distinct()
+
+length(unique(Transcheck$ID))
+
 Pikescales <- fread("Data/Pike/Transmitter-pike-ages-with-TL.csv")
 
 #Check for which fish both data are there
