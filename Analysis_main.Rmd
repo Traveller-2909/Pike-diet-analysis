@@ -3108,48 +3108,99 @@ Ecopike2 <- Ecopike%>%
   drop_na(diameter_mm)
 Ecopike2$fish_ID <- factor(Ecopike2$fish_ID)
 
+#model (include ecotype, length etc.)
 mod1 <- MCMCglmm(cbind(d13C, d15N, d34S)~trait-1, random = ~fish_ID, data = Ecopike2, family = c("gaussian", "gaussian", "gaussian"), rcov = ~us(trait):units, pr = TRUE, verbose = FALSE, nitt = 100000, burnin = 50000, thin = 50)
 
 summary(mod1)
+str(mod1$VCV)
 
+#Extract between individual component
 BICmat <- mod1$VCV[, "fish_ID"]
+BIC <- mean(BICmat)
+
+#Extract within individual component
 WICmat <- mod1$VCV[, grep("trait", colnames(mod1$VCV))]
 
-mean(WICmat[,1])
+#Convert into matrix
+CC <- mean(WICmat[,1])
+NC <- mean(WICmat[,2])
+SC <- mean(WICmat[,3])
+CN <- mean(WICmat[,4])
+NN <- mean(WICmat[,5])
+SN <- mean(WICmat[,6])
+CS <- mean(WICmat[,7])
+NS <- mean(WICmat[,8])
+SS <- mean(WICmat[,9])
 
-TNWmat <- BICmat + WICmat
+WICmat <- matrix(0, nrow = 3, ncol = 3)
+
+#fill diagonals with variance
+WICmat[1,1] <- CC
+WICmat[2,2] <- NN
+WICmat[3,3] <- SS
+
+#fill off-diagonals with covariance
+WICmat[1,2] <- CN
+WICmat[1,3] <- CS
+WICmat[2,1] <- NC
+WICmat[2,3] <- NS
+WICmat[3,1] <- SC
+WICmat[3,2] <- SN
+
+row.names(WICmat) <- c("C", "N", "S")
+colnames(WICmat) <- c("C", "N", "S")
+
+TNWmat <- BIC + WICmat
 
 WICmat/TNWmat
 
 #Individual covariance matrices
-n_samples <- 1000
-n_individuals <- length(unique(Ecopike2$fish_ID))
-n_levels <- levels(Ecopike2$fish_ID)
+# Initialize an empty list to store covariance matrices from raw data
+raw_cov_matrices_list <- vector("list", length = num_fish)
 
-random_effects <- mod1$Sol[, grep("^fish_ID", colnames(mod1$Sol))]
-
-cov(mod1$)
-
-random_effects_reshaped <- array(0, dim = c(1000 * 49, 49))
-for (i in 1:49) {
-  start_idx <- (i - 1) * 1000 + 1
-  end_idx <- i * 1000
-  random_effects_reshaped[start_idx:end_idx, ] <- random_effects[, i]
+# Loop through each fish_ID and calculate the covariance matrices from raw data
+for (i in 1:num_fish) {
+  fish_data <- subset(Ecopike2, fish_ID == unique(Ecopike2$fish_ID)[i])
+  raw_cov_matrix <- cov(fish_data[, c("d13C", "d15N", "d34S")])
+  raw_cov_matrices_list[[i]] <- raw_cov_matrix
 }
 
-# Compute covariance matrix for each individual
-cov_matrices <- lapply(1:49, function(i) {
-  start_idx <- (i - 1) * 1000 + 1
-  end_idx <- i * 1000
-  
-  # Subset random effects for the current individual
-  random_effects_ind <- random_effects_reshaped[start_idx:end_idx, , drop = FALSE]
-  
-  # Compute covariance matrix for the individual
-  cov(random_effects_ind)
-})
+names(raw_cov_matrices_list) <- unique(Ecopike2$fish_ID)
 
-eigen(cov_matrices[,1])
+#eliminate NA
+raw_cov_matrices_list <- na.omit(raw_cov_matrices_list)
+
+# Function to calculate normalized eigenvalues
+eigenval <- function(fish_matrix, population_matrix) {
+  if (any(is.na(fish_matrix))) {
+    return(NA)
+  }
+  eigenvalues_fish <- eigen(fish_matrix)$values
+  if (any(is.na(eigenvalues_fish))) {
+    return(NA)
+  }
+  #population matrix
+  eigenvalues_population <- eigen(population_matrix)$values
+  normalized_eigenvalues <- eigenvalues_fish / eigenvalues_population
+  return(mean(normalized_eigenvalues))
+}
+
+# Initialize an empty list to store results
+normalized_eigenvalues_list <- numeric(num_fish)
+
+for (i in 1:num_fish) {
+  fish_matrix <- raw_cov_matrices_list[[i]]  # Use the raw data covariance matrix
+  normalized_eigenvalues_list[i] <- eigenval(fish_matrix, TNWmat)
+}
+
+Spec_index <- tibble(fish_ID = unique(Ecopike2$fish_ID), s_index = normalized_eigenvalues_list)
+
+Ecopike_spec <- Ecopike2%>%
+  left_join(Spec_index, by = "fish_ID")
+
+ggplot(Ecopike_spec)+
+  geom_boxplot(aes(x = phenotype, y = s_index))+
+  theme_bw()
 ```
 
 
