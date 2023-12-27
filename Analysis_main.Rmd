@@ -3098,7 +3098,7 @@ Eyeplot1 <- annotate_figure(Eyeplot, bottom = text_grob("Backcalculated length (
 ggsave("Figures/Eyelens-data-ecotypes.png", Eyeplot1, width = 15, height = 7, units = "cm", bg = "white")
 ```
 
-```{r specialization metrics, include=FALSE, eval=FALSE}
+```{r multi-response modelling, include=FALSE, eval=FALSE}
 rm(list = ls())
 
 Ecopike <- fread("Data/Pike/Lens-muscle-SI-eco-clean-cbackcalculated.csv")
@@ -3111,8 +3111,14 @@ Ecopike2$fish_ID <- factor(Ecopike2$fish_ID)
 #model (include ecotype, length etc.)
 mod1 <- MCMCglmm(cbind(d13C, d15N, d34S)~trait-1, random = ~fish_ID, data = Ecopike2, family = c("gaussian", "gaussian", "gaussian"), rcov = ~us(trait):units, pr = TRUE, verbose = FALSE, nitt = 100000, burnin = 50000, thin = 50)
 
-summary(mod1)
-str(mod1$VCV)
+saveRDS(mod1, "Data/Pike/Variance-components.rds")
+fwrite(Ecopike2, "Data/Pike/Lens-SI-eco-clean-cbackcalculated.csv")
+```
+
+
+```{r population niche width, include=FALSE, eval=FALSE}
+rm(list = ls())
+mod1 <- readRDS("Data/Pike/Variance-components.rds")
 
 #Extract between individual component
 BICmat <- mod1$VCV[, "fish_ID"]
@@ -3154,8 +3160,21 @@ TNWmat <- BIC + WICmat
 
 WICmat/TNWmat
 
+write.table(TNWmat, "Data/Pike/Total-niche-width_matrix.txt")
+write.table(WICmat, "Data/Pike/Within-individual-variance_matrix.txt")
+```
+
+
+```{r individual niche width, include=FALSE, eval=FALSE}
+rm(list = ls())
+mod1 <- readRDS("Data/Pike/Variance-components.rds")
+Ecopike2 <- fread("Data/Pike/Lens-SI-eco-clean-cbackcalculated.csv")
+TNWmat <- read.table("Data/Pike/Total-niche-width_matrix.txt")
+WICmat <- read.table("Data/Pike/Within-individual-variance_matrix.txt")
+
 #Individual covariance matrices
 # Initialize an empty list to store covariance matrices from raw data
+num_fish <- length(unique(Ecopike2$fish_ID))
 raw_cov_matrices_list <- vector("list", length = num_fish)
 
 # Loop through each fish_ID and calculate the covariance matrices from raw data
@@ -3167,8 +3186,7 @@ for (i in 1:num_fish) {
 
 names(raw_cov_matrices_list) <- unique(Ecopike2$fish_ID)
 
-#eliminate NA
-raw_cov_matrices_list <- na.omit(raw_cov_matrices_list)
+saveRDS(raw_cov_matrices_list, file = "Data/Pike/individual-varcov-CNS.RData")
 
 # Function to calculate normalized eigenvalues
 eigenval <- function(fish_matrix, population_matrix) {
@@ -3201,7 +3219,313 @@ Ecopike_spec <- Ecopike2%>%
 ggplot(Ecopike_spec)+
   geom_boxplot(aes(x = phenotype, y = s_index))+
   theme_bw()
+
+fwrite(Ecopike_spec, "Data/Pike/Pike_eco-clean-cbackcalculated_s-metric.csv")
 ```
+
+```{r individual overlap metrics, include=FALSE, eval=FALSE}
+rm(list = ls())
+mod1 <- readRDS("Data/Pike/Variance-components.rds")
+Ecopike2 <- fread("Data/Pike/Lens-SI-eco-clean-cbackcalculated.csv")
+TNWmat <- read.table("Data/Pike/Total-niche-width_matrix.txt")
+WICmat <- read.table("Data/Pike/Within-individual-variance_matrix.txt")
+Individuals <- readRDS("Data/Pike/individual-varcov-CNS.RData")
+
+TNWmat <- as.matrix(TNWmat)
+diag(TNWmat)
+
+diag(Individuals["BH-00385"]$`BH-00385`)
+
+overlap<-matrix(NA, nrow=length(Individuals), ncol=1)
+overlap.SEV<-array(1, dim=c(ngroups,ngroups,nrow(mus)))
+for(i in 1:nrow(pairs)){
+  for(j in 1:nrow(mus)){
+    overlap<-CubeCount3D(c(-21.4, 15.1, 6.3),
+                         c(-18.68436, 15.17482, 9.606432),
+                         Individuals["BH-90928"]$`BH-90928`,
+                         TNWmat)
+  }
+  overlap.SEV<-overlap/SEV.function(Individuals["BH-90928"]$`BH-90928`)
+  overlap.SEV[pairs[i,2],pairs[i,1],]<-overlap[,i]/SEV[,pairs[i,2]]
+}
+
+#Overlap kinda works, but needs to be looped properly
+```
+
+```{r playaround}
+library(MASS) # for mvrnorm
+library(jagsUI) # to run jags
+
+
+getcov<-function(SEV){
+  options(warn=-1)
+  Sigma<-matrix(rep(NA,9),ncol=3)
+  while(is.na(Sigma[1,1]==TRUE)){
+    if (((3*SEV)/(4*pi))^2/3 < 1){
+      lambda1<-runif(1,1,((3*SEV)/(4*pi))^2)
+    }else {
+      lambda1<-runif(1,((3*SEV)/(4*pi))^2/3,((3*SEV)/(4*pi))^2)
+    }
+    lambda2<-runif(1,(((3*SEV)/(4*pi))^2)/lambda1,((3*SEV)/(4*pi)))
+    lambda3<-(((3*SEV)/(4*pi))^2)/(lambda1*lambda2)
+    u<-diag(c(lambda1,lambda2,lambda3))
+    Q<-qr.Q(qr(runif(3,-0.8,.8)),complete=TRUE)
+    Sigma <- Q %*% u %*% t(Q)
+  }
+  options(warn=0)
+  return(Sigma)
+}
+
+SEV.function<-function(sigma) {
+  if (eigen(sigma)$values[3] > 0)
+    {
+  axises<-sqrt(eigen(sigma)$values)
+  }
+  else {
+  axises<-NA
+  }
+  out<-list()
+  out$a<-axises[1]
+  out$b<-axises[2]
+  out$c<-axises[3]
+  out$SEV<-prod(axises,pi,4/3)
+  return(out$SEV)
+}
+
+overlap<-function(mu1, mu2, sigma1, sigma2){
+  axises<-sqrt(eigen(sigma1)$values)
+  
+}
+
+pairwise<-function(ngroups){
+  groups<-seq(1,ngroups)
+  max.compare<-((ngroups-1)*ngroups)/2
+  i=0
+  counter=ngroups
+  pairs<-c(0,0)
+  while (counter>0){
+    i=1+i
+    counter=counter-1
+    if (counter!=0){
+      temp1<-rep(groups[i],counter)
+      temp2<-seq(i+1,ngroups)
+      pairs<-rbind(pairs,cbind(temp1,temp2))
+      if (i==1){
+        pairs<-pairs[-1,]
+      }
+    }}
+  colnames(pairs)<-c('group1','group2')
+  return(pairs)
+}
+
+CubeCount3D <- function(mu1,mu2,S1,S2,HowFine=1.3,ShowProgress=FALSE){
+  # set-up stuff:
+  MVNdist <- function(mu,S){function(x){t(x-mu)%*%solve(S)%*%(x-mu)}}
+  OneStep <- 10^(-HowFine);
+  CubeVol <- OneStep^3;
+  CubeCt <- 0;
+  A1  <- eigen(S1)$vect
+  dD1 <- eigen(S1)$val
+  MVNdist2 <- MVNdist(mu2,S2);
+    # the loops:
+  zlist <- seq(from=0,to=dD1[3]^.5,by=OneStep)
+  zlist <- if(length(zlist)>1){c(rev(-zlist),zlist[2:length(zlist)])}
+  for(Z in zlist){
+    yBd <- (dD1[2]*(1-Z^2/dD1[3]))^.5
+    ylist <- seq(from=0,to=yBd,by=OneStep)
+    ylist <- if(length(ylist)>1){c(rev(-ylist),ylist[2:length(ylist)])}
+    for(Y in ylist){
+      xBd <- (dD1[1]*(1-Y^2/dD1[2]-Z^2/dD1[3]))^.5
+      xlist <- seq(from=0,to=xBd,by=OneStep)
+      xlist <- if(length(xlist)>1){c(rev(-xlist),xlist[2:length(xlist)])}
+      for(X in xlist){
+        if(MVNdist2(A1%*%c(X,Y,Z)+mu1)<1){CubeCt=CubeCt+1}
+      }
+    }
+    # This will show a "progress report" in the console window as this script is running:
+    # (0=start, 1=end)
+    if(ShowProgress){print((.5*(Z+dD1[3]^.5))/dD1[3]^.5)}
+  }
+  return(CubeCt*CubeVol)
+} 
+
+
+sink("ellipsoid_example.txt")
+cat("
+model{
+  
+  #priors
+    for (k in 1:ngroups){
+    mu[k,1] ~ dnorm(0,0.001)
+    mu[k,2] ~ dnorm(0,0.001)
+    mu[k,3] ~ dnorm(0,0.001)
+    prec[1:3,1:3,k] ~ dwish(S3,4)
+    cov[1:3,1:3,k] <- inverse(prec[1:3,1:3,k])
+    #likelihood
+    for (i in 1:maxn){
+    y[i,1:3,k] ~ dmnorm(mu[k,],prec[,,k])
+    }#i
+    }
+    }
+    
+    
+    ",fill = TRUE)
+sink()
+
+
+ngroups<-4
+n<-20
+TrueSEV<-c(5,7.5,10,20)
+S<-array(NA, dim=c(3,3,ngroups))
+for (i in 1:ngroups){
+  S[,,i]<-getcov(TrueSEV[i])
+}
+TrueMu<-rbind(c(0,0,0),c(1,1,1),c(2,2,2),c(3,3,3))
+thedata<-array(NA, dim=c(n,4,ngroups))
+for (i in 1:ngroups){
+  thedata[,,i]<-cbind(rep(paste("group",i),n),mvrnorm(n,TrueMu[i,],S[,,i]))
+}
+thedata<-as.data.frame(apply(thedata,2,c))
+colnames(thedata)<-c("groups","isotope1","isotope2","isotope3")
+
+#generate list names of each group
+groupnames<-levels(as.factor(thedata[,1]))
+
+#generate list of isotope names and number of isotopes
+isotope_names<-colnames(thedata)[2:4]
+isotopes<-3
+
+#convert group names to numeric factors
+thedata[,1]<-as.numeric(as.factor(thedata[,1]))
+ngroups<-max(thedata[,1])
+
+#find the groups with the largest n and the n per group
+nstart<-c(NA)
+nend<-c(NA)
+for (i in 1:ngroups){
+nstart[i]<-min(as.numeric(rownames(thedata[thedata[,1]==i,])))
+nend[i]<-max(as.numeric(rownames(thedata[thedata[,1]==i,])))
+}
+maxn<-max(nend+1-nstart)
+npergroup<-nend+1-nstart
+
+# create an array where nrow = the n of the largest group, for groups with smaller n's 
+# some rows will have NA's to account for uneven replication
+
+y<-array(NA,dim=c(maxn,3,ngroups), dimnames=list(NULL,isotope_names,groupnames))
+for (i in 1:ngroups){
+  y[1:nrow(thedata[thedata[,1]==i,2:4]),,i]<-as.matrix(thedata[thedata[,1]==i,2:4])
+}
+#ensure y is a completely numeric array
+y<-array(as.numeric(y),dim=dim(y))
+
+#objects passed to jags
+data=list(y=y,ngroups=ngroups, maxn=maxn, S3=(diag(3)*3))
+  
+#initial values
+mu0<-matrix(NA, nrow=ngroups, ncol=3)
+prec0<-array(0,dim=c(3,3,ngroups))
+for (k in 1:ngroups){
+mu0[k,]<-mvrnorm(1,c(0,0,0),diag(3)*100)
+prec0[,,k]<-getcov(runif(1,5,30))
+}
+inits=function(){list( mu=mu0, prec=prec0)}
+
+# parameters to moniter
+params<-c("mu","cov")
+
+# MCMC settings
+nt <- 1
+nb <- 1000
+nc <- 3
+na<-1000
+ni <- 5000 
+
+
+
+out <- jagsUI::jags(data = data,
+            inits = inits,
+            parameters.to.save = params,
+            model.file = 'ellipsoid_example.txt',
+            n.chains = nc,
+            n.iter = ni,
+            n.adapt = 1000,
+            n.burnin = nb,
+            n.thin = nt)
+
+#plot(out)
+summary(out,digits=2)
+
+# a list to index pairwise comparisons
+pl<-cbind(sort(rep(seq(1:ngroups),ngroups)),rep(seq(1:ngroups),ngroups))
+# probabilities to posterior distrobutions
+probs<-c(0.025,0.5,0.975)
+# Calculate an estimate of SEV from each posterior estimate of sigma and summarize
+SEV<-matrix(NA,ncol=ngroups,nrow=nrow(out$sims.list$cov))
+SEV.summary<-matrix(NA,nrow=ngroups,ncol=3+length(probs))
+for (k in 1:ngroups){
+  SEV[,k]<-apply(out$sims.list$cov[,,,k],1,SEV.function)
+  SEV.summary[k,]<-c(nend[k]+1-nstart[k],quantile(SEV[,k],probs=probs),mode(SEV[,k]), mean(SEV[,k]))
+}
+rownames(SEV.summary)<-groupnames
+colnames(SEV.summary)<-c("n",paste(probs,"%",sep=""),"mode","mean")
+
+#Compare each posterior SEV estimate to those of other groups
+SEV.diff<-array(NA,dim=c(ngroups,ngroups,nrow(SEV)))
+for(i in 1:(ngroups*ngroups)){
+  SEV.diff[pl[i,1],pl[i,2],]<-SEV[,pl[i,1]]-SEV[,pl[i,2]]
+}
+p.table<-matrix(NA,nrow=ngroups,ncol=ngroups)
+colnames(p.table)<-paste(">",groupnames, sep="")
+rownames(p.table)<-groupnames
+for (i in 1:(ngroups*ngroups)){
+    p.table[pl[i,1],pl[i,2]]<-sum(SEV.diff[pl[i,1],pl[i,2],]>0)/nrow(SEV)
+}
+
+# define objects for mu and sigma values from the posterior
+mus<-out$sims.list$mu
+sigmas<-out$sims.list$cov
+
+#create a matrix of all pair-wise comparisons
+pairs<-pairwise(ngroups)
+
+TNWmat <- as.matrix(TNWmat)
+diag(TNWmat)
+
+overlap<-matrix(NA, nrow=nrow(mus), ncol=nrow(pairs))
+overlap.SEV<-array(1, dim=c(ngroups,ngroups,nrow(mus)))
+for(i in 1:nrow(pairs)){
+  for(j in 1:nrow(mus)){
+    overlap[j,i]<-CubeCount3D(mus[j,pairs[i,1],],
+                              mus[j,pairs[i,2],],
+                              sigmas[j,,,pairs[i,1]],
+                              sigmas[j,,,pairs[i,2]])
+  }
+  overlap.SEV[pairs[i,1],pairs[i,2],]<-overlap[,i]/SEV[,pairs[i,1]]
+  overlap.SEV[pairs[i,2],pairs[i,1],]<-overlap[,i]/SEV[,pairs[i,2]]
+}
+
+#summarize results
+overlap.2.5<-matrix(NA, nrow=ngroups, ncol=ngroups)
+overlap.50<-matrix(NA, nrow=ngroups, ncol=ngroups)
+overlap.975<-matrix(NA, nrow=ngroups, ncol=ngroups)
+for (i in 1:nrow(pairs)){
+    overlap.2.5[pairs[i,1],pairs[i,2]]<-quantile(overlap.SEV[pairs[i,1],pairs[i,2],], probs=0.025)
+    overlap.50[pairs[i,1],pairs[i,2]]<-quantile(overlap.SEV[pairs[i,1],pairs[i,2],], probs=0.5)
+    overlap.975[pairs[i,1],pairs[i,2]]<-quantile(overlap.SEV[pairs[i,1],pairs[i,2],], probs=0.75)
+  }
+
+# Print results
+print(SEV.summary,digits=2)
+print(p.table, digits=2)
+print(mu.p,digits=2)
+print(dist.sum,digits=2)
+print(pdist,digits=2)
+print(overlap.2.5,digits=2)
+print(overlap.50,digits=2)
+print(overlap.975,digits=2)
+```
+
 
 
 # Lifelong growth
