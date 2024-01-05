@@ -5,13 +5,14 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
-brackish resident --> "#004643", anadromous --> "#00BFB2", cross-habitat --> "#F1C40F", freshwater resident --> "#C5D86D"
+brackish resident --\> "#004643", anadromous --\> "#00BFB2", cross-habitat --\> "#F1C40F", freshwater resident --\> "#C5D86D"
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Packages
+
 ```{r packages, include=FALSE}
 library(ggplot2)
 library(tidyverse)
@@ -38,10 +39,13 @@ library(emmeans)
 library(MuMIn)
 library(visreg)
 library(car)
+library(MASS)
+library(jagsUI)
 library(rstan)
 options(mc.cores = parallel::detectCores())
 rstan_options(auto_write = TRUE)
 ```
+
 # Stomach contents
 
 ```{r stomach content cleanup, include=FALSE, eval=FALSE}
@@ -394,6 +398,7 @@ ggsave("Figures/Stomach-contents-all_months.png", Pies, width = 8, height = 15, 
 ```
 
 # SI Cleanup
+
 ```{r pike muscle data cleanup, include=FALSE, eval=FALSE}
 rm(list = ls())
 
@@ -1179,6 +1184,7 @@ ggplot(data=Pikeprey, aes(x=Species, y=d34S, group=Species, colour=Species))+geo
 ```
 
 # SI basic visuals
+
 ```{r biplots whole sample, include=FALSE, eval=FALSE}
 rm(list = ls())
 descriptive <- fread("Data/Pike/Descriptive-whole-sample.csv")
@@ -1540,6 +1546,7 @@ dev.off()
 ```
 
 # Mixing models
+
 ```{r mixing models pike capture location, include=FALSE, eval=FALSE}
 rm(list = ls())
 Prey <- fread("Data/Prey/Preyfish_SI_clean_average_lipid-corrected.csv")
@@ -1909,8 +1916,8 @@ jags.pike.5 <- readRDS("Data/Mixing models/Output/Mixing.model-normal-run-ecotyp
 jags.pike.6 <- readRDS("Data/Mixing models/Output/Mixing.model-normal-run-area.rds")
 
 # 1 We create a list with our models
-mcomp<-list(jags.pike.0, jags.pike.1, jags.pike.2, jags.pike.3, jags.pike.4, jags.pike.5, jags.pike.6)
-names(mcomp) <- c("NULL", "ecotype|body length", "body length", "ecotype", "capture location|body length", "capt|ecotype|length", "capt")
+mcomp<-list(jags.pike.0, jags.pike.1, jags.pike.2, jags.pike.3, jags.pike.4, jags.pike.6)
+names(mcomp) <- c("NULL", "ecotype|body length", "body length", "ecotype", "capture location|body length", "capt")
 # Model comparison
 compare_models(mcomp, loo = TRUE)
 ```
@@ -1980,7 +1987,8 @@ Brackish <- g.post2$fac1[[2]]
 Cross <- g.post2$fac1[[3]]
 Fresh <- g.post2$fac1[[4]]
 
-pl.theme <- theme(panel.grid.major = element_line(),
+pl.theme <- theme(panel.grid.major = element_line(color = "grey", linetype = "solid", size = 0.5),
+                  panel.grid.minor = element_line(color = "lightgrey", linetype = "dashed", size = 0.5),
                   legend.background = element_blank(),
                   legend.box.background = element_blank(),
                   axis.line = element_line(linewidth = .5, colour = "black", linetype = 1),
@@ -2057,6 +2065,7 @@ ggsave("Figures/pike-diet-ecotypes.png", Allplot2, width = 15, height = 15, unit
 rm(list = ls())
 
 g.post2 <- readRDS("Data/Mixing models/Output/graphics.rds")
+pike <- fread("Data/Mixing models/Pikemix-ecotypes.csv")
 
 Ana_cont_all <- g.post2$cont[[1]]
 Ana_cont <- Ana_cont_all[[1]]
@@ -2067,6 +2076,29 @@ Cross_cont <- Cross_cont_all[[1]]
 FW_cont_all <- g.post2$cont[[4]]
 FW_cont <- FW_cont_all[[1]]
 
+pl.theme <- theme(panel.grid.major = element_line(color = "grey", linetype = "solid"),
+                  panel.grid.minor = element_line(color = "lightgrey", linetype = "dashed"),
+                  legend.background = element_blank(),
+                  legend.box.background = element_blank(),
+                  axis.line = element_line(linewidth = .5, colour = "black", linetype = 1),
+                  axis.ticks = element_line(linewidth = .5, colour = "black"),
+                  axis.text = element_text(size = 12, colour = "black"),
+                  axis.text.y = element_text(size = 12, colour = "black"),
+                  axis.title.x = element_blank(),
+                  axis.title.y = element_blank(),
+                  legend.position = "bottom",
+                  legend.text = element_text(size = 12),
+                  legend.title = element_text(size = 12),
+                  legend.key.size = unit(.8,"line"),
+                  plot.title = element_text(size = 12, colour = "black"))
+
+pl.color <- scale_color_manual(breaks = c("marine", "lagoon", "freshwater"),
+                              values = c("#29B6F6", "#00796B","#B71C1C"),
+                              labels = c("marine food web", "lagoon food web", "freshwater food web"))
+pl.fill <- scale_fill_manual(breaks = c("marine", "lagoon", "freshwater"),
+                              values = c("#29B6F6", "#00796B","#B71C1C"),
+                              labels = c("marine food web", "lagoon food web", "freshwater food web"))
+
 scaley2 <- scale_y_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1),
                              labels = c("0", "25", "50", "75", "100"))
 
@@ -2075,9 +2107,9 @@ Ana.plot <- Ana_cont+
   pl.theme+
   pl.color+
   pl.fill+
-  scale_x_continuous(breaks = c(0, 250, 500, 750, 1000),
-                   labels = c("0", "25", "50", "75", "100"),
-                   limits = c(min(pike[pike$ecotype=="Anadromous",]$Length),
+  scale_x_continuous(breaks = seq(0, 1000, 100),
+                     labels = seq(0,100,10),
+                     limits = c(min(pike[pike$ecotype=="Anadromous",]$Length),
                               max(pike[pike$ecotype=="Anadromous",]$Length)))+
   scaley2
 
@@ -2086,9 +2118,9 @@ BW.plot <- BW_cont+
   pl.theme+
   pl.color+
   pl.fill+
-  scale_x_continuous(breaks = c(0, 250, 500, 750, 1000),
-                   labels = c("0", "25", "50", "75", "100"),
-                   limits = c(min(pike[pike$ecotype=="BW-resident",]$Length),
+  scale_x_continuous(breaks = seq(0, 1000, 100),
+                     labels = seq(0,100,10),
+                     limits = c(min(pike[pike$ecotype=="BW-resident",]$Length),
                               max(pike[pike$ecotype=="BW-resident",]$Length)))+
   scaley2
 
@@ -2097,9 +2129,9 @@ Cross.plot <- Cross_cont+
   pl.theme+
   pl.color+
   pl.fill+
-  scale_x_continuous(breaks = c(0, 250, 500, 750, 1000),
-                   labels = c("0", "25", "50", "75", "100"),
-                   limits = c(min(pike[pike$ecotype=="Cross-habitat",]$Length),
+  scale_x_continuous(breaks = seq(0, 1000, 100),
+                     labels = seq(0,100,10),
+                     limits = c(min(pike[pike$ecotype=="Cross-habitat",]$Length),
                               max(pike[pike$ecotype=="Cross-habitat",]$Length)))+
   scaley2
 
@@ -2108,9 +2140,9 @@ FW.plot <- FW_cont+
   pl.theme+
   pl.color+
   pl.fill+
-  scale_x_continuous(breaks = c(0, 250, 500, 750, 1000),
-                   labels = c("0", "25", "50", "75", "100"),
-                   limits = c(min(pike[pike$ecotype=="Anadromous",]$Length),
+  scale_x_continuous(breaks = seq(0, 1000, 100),
+                     labels = seq(0,100,10),
+                     limits = c(min(pike[pike$ecotype=="Anadromous",]$Length),
                               max(pike[pike$ecotype=="Anadromous",]$Length)))+
   scaley2
 
@@ -2307,7 +2339,7 @@ Pike.length <- ggplot(Pike.contrib)+
 ggsave("Figures/diet-per-length_global.png", Pike.length, width = 15, height = 9, units = "cm", dpi = 600)
 
 global <- ggplot(global.contrib2)+
-  geom_bar(aes(ecotype, median, fill=species), stat="identity")+
+  geom_bar(aes(ecotype, median+sd, fill=species), stat="identity")+
   labs(x = "area", y = "pike diet proportion")+
   scale_x_discrete(breaks = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"),
                    labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
@@ -2346,6 +2378,7 @@ ggplot(Pikediet, aes(p.C.harengus, condition))+
 ```
 
 # Eye lens analysis
+
 ```{r eye lens inner diameters, include=FALSE, eval=FALSE}
 rm(list = ls())
 
@@ -2852,78 +2885,6 @@ r.squaredGLMM(pikemodel_no34S)
 r.squaredGLMM(pikemodel_nofat)
 ```
 
-```{r alternative models, include=FALSE, eval=FALSE}
-#Alternative model
-pikemodel2 <- lmer(length_back~lifeyear+sex+phenotype*d13C+phenotype*d15N+phenotype*d34S+CN+(1|ID), 
-                   data = Data2, REML = T)
-
-rand(pikemodel2)
-
-#Test sex effect
-pikemodel_nosex <- update(pikemodel2, ~. -sex)
-anova(pikemodel2, pikemodel_nosex)
-
-#Test d13C
-pikemodel_no13C <- update(pikemodel2, ~. -phenotype*d13C)
-anova(pikemodel2, pikemodel_no13C)
-
-#Test d15N
-pikemodel_no15N <- update(pikemodel2, ~. -phenotype*d15N)
-anova(pikemodel2, pikemodel_no15N)
-
-#test d34S
-pikemodel_no34S <- update(pikemodel2, ~. -phenotype*d34S)
-anova(pikemodel2, pikemodel_no34S)
-
-#test CN ratio
-pikemodel_nofat <- update(pikemodel2, ~. -CN)
-anova(pikemodel2, pikemodel_nofat)
-
-anova(pikemodel2, pikemodel_nosex, pikemodel_no13C, pikemodel_no15N, pikemodel_no34S, pikemodel_nofat)
-
-r.squaredGLMM(pikemodel2)
-r.squaredGLMM(pikemodel_nosex)
-r.squaredGLMM(pikemodel_no13C)
-r.squaredGLMM(pikemodel_no15N)
-r.squaredGLMM(pikemodel_no34S)
-r.squaredGLMM(pikemodel_nofat)
-
-#age interaction
-pikemodel3 <- lmer(length_back~sex+lifeyear*d13C+lifeyear*d15N+lifeyear*d34S+CN+(1|ID), 
-                   data = Data2, REML = T)
-
-#Test sex effect
-pikemodel_nosex <- update(pikemodel3, ~. -sex)
-
-#Test d13C
-pikemodel_no13C <- update(pikemodel3, ~. -lifeyear*d13C)
-anova(pikemodel3, pikemodel_no13C)
-
-#Test d15N
-pikemodel_no15N <- update(pikemodel3, ~. -lifeyear*d15N)
-anova(pikemodel3, pikemodel_no15N)
-
-#test d34S
-pikemodel_no34S <- update(pikemodel3, ~. -lifeyear*d34S)
-anova(pikemodel3, pikemodel_no34S)
-
-#test CN ratio
-pikemodel_nofat <- update(pikemodel3, ~. -CN)
-
-anova(pikemodel3, pikemodel_nosex, pikemodel_no13C, pikemodel_no15N, pikemodel_no34S, pikemodel_nofat)
-
-r.squaredGLMM(pikemodel3)
-r.squaredGLMM(pikemodel_nosex)
-r.squaredGLMM(pikemodel_no13C)
-r.squaredGLMM(pikemodel_no15N)
-r.squaredGLMM(pikemodel_no34S)
-r.squaredGLMM(pikemodel_nofat)
-
-summary(pikemodel1)
-summary(pikemodel2)
-summary(pikemodel3)
-```
-
 ```{r model eval, include=FALSE, eval=FALSE}
 Data2 <- fread("Data/Pike/Pikedata-model.csv")
 
@@ -2996,9 +2957,11 @@ pikes$agefact2 <- factor(pikes$agefact,levels = c(2,1,3),
 mypallette <- viridis::viridis(4, direction = -1)
 
 #Isotope effects growth
-d34S <- ggplot(pikes, aes(d34S,length_back))+
+d34S <- ggplot(pikes, aes(d34S,log(length_back)))+
   geom_point(size=.5)+
   scale_x_continuous(limits = c(-2,2))+
+  #scale_y_continuous(limits = c(0,500),
+                     #breaks = c(0, 50, 100, 150, 200, 250))+
   stat_smooth(method = "lm", fill="#440154FF", color = "#FDE725FF", fullrange = T, lwd=.8)+
   labs(x=expression("scaled"~delta^34*"S"~("z-score")), 
        y="yearly growth increment (mm)")+
@@ -3010,16 +2973,11 @@ d34S <- ggplot(pikes, aes(d34S,length_back))+
         legend.box.background = element_rect(),
         axis.line = element_line(linewidth = .5, colour = "black", linetype = 1),
         axis.ticks = element_line(linewidth = .5, colour = "black"),
-        axis.text = element_text(size = 10, colour = "black"),
         axis.title.x = element_text(size = 10, margin = margin(t=15), colour = "black"),
-        axis.title.y = element_text(size = 10, margin = margin(t=15), colour = "black"),
+        axis.title.y = element_text(size = 10, margin = margin(t=30), colour = "black"),
         legend.text = element_text(size = 10),
         legend.title = element_text(size = 10, colour = "black"),
         legend.key.size = unit(.8,"line"))
-
-Isogrowth <- ggarrange(d34S, CN, nrow = 1, labels = c("A", "B"), 
-                       hjust = 1, common.legend = T, legend = "bottom")
-Isogrowth2 <- annotate_figure(Isogrowth, left = text_grob("Annual growth (mm)", rot = 90))
 
 ggsave("Figures/Iso-effect-growth.png", d34S, width = 15, height = 9, units = "cm", dpi = 600, bg = "white")
 ```
@@ -3115,7 +3073,6 @@ saveRDS(mod1, "Data/Pike/Variance-components.rds")
 fwrite(Ecopike2, "Data/Pike/Lens-SI-eco-clean-cbackcalculated.csv")
 ```
 
-
 ```{r population niche width, include=FALSE, eval=FALSE}
 rm(list = ls())
 mod1 <- readRDS("Data/Pike/Variance-components.rds")
@@ -3158,12 +3115,11 @@ colnames(WICmat) <- c("C", "N", "S")
 
 TNWmat <- BIC + WICmat
 
-WICmat/TNWmat
+mean(eigen(WICmat)$value/eigen(TNWmat)$value)
 
 write.table(TNWmat, "Data/Pike/Total-niche-width_matrix.txt")
 write.table(WICmat, "Data/Pike/Within-individual-variance_matrix.txt")
 ```
-
 
 ```{r individual niche width, include=FALSE, eval=FALSE}
 rm(list = ls())
@@ -3180,7 +3136,7 @@ raw_cov_matrices_list <- vector("list", length = num_fish)
 # Loop through each fish_ID and calculate the covariance matrices from raw data
 for (i in 1:num_fish) {
   fish_data <- subset(Ecopike2, fish_ID == unique(Ecopike2$fish_ID)[i])
-  raw_cov_matrix <- cov(fish_data[, c("d13C", "d15N", "d34S")])
+  raw_cov_matrix <- cov(fish_data[, c("d13C", "d15N", "d34S")], use = "complete.obs")
   raw_cov_matrices_list[[i]] <- raw_cov_matrix
 }
 
@@ -3214,141 +3170,213 @@ for (i in 1:num_fish) {
 Spec_index <- tibble(fish_ID = unique(Ecopike2$fish_ID), s_index = normalized_eigenvalues_list)
 
 Ecopike_spec <- Ecopike2%>%
-  left_join(Spec_index, by = "fish_ID")
+  left_join(Spec_index, by = "fish_ID")%>%
+  mutate(phenotype = fct_relevel(phenotype,
+                                 "FW_resident",
+                                 "Anadromous", 
+                                 "Trans-habitat",
+                                 "BW-resident"))
 
-ggplot(Ecopike_spec)+
-  geom_boxplot(aes(x = phenotype, y = s_index))+
-  theme_bw()
+Specplot <- ggplot(Ecopike_spec)+
+  geom_violin(aes(x = phenotype, y = s_index, fill = phenotype), width = 1)+
+  geom_boxplot(aes(x = phenotype, y = s_index), width = 0.07, size = .5, color = "black", fill = "transparent")+
+  scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                    values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
+                    labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
+  scale_x_discrete(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                   labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
+  labs(x = "behavioral phenotype",
+       y = "specialization index")+
+  theme_bw()+
+  theme(legend.position = "none",
+        axis.text = element_text(size = 10, color = "black"),
+        axis.title = element_text(size = 15, color = "black"))
 
+ggsave("Figures/S-index-individual.png", Specplot, height = 15, width = 15, units = "cm", dpi = 600, bg = "white")
 fwrite(Ecopike_spec, "Data/Pike/Pike_eco-clean-cbackcalculated_s-metric.csv")
 ```
 
 ```{r individual overlap metrics, include=FALSE, eval=FALSE}
 rm(list = ls())
 mod1 <- readRDS("Data/Pike/Variance-components.rds")
-Ecopike2 <- fread("Data/Pike/Lens-SI-eco-clean-cbackcalculated.csv")
+Ecopike2 <- fread( "Data/Pike/Pike_eco-clean-cbackcalculated_s-metric.csv")
 TNWmat <- read.table("Data/Pike/Total-niche-width_matrix.txt")
 WICmat <- read.table("Data/Pike/Within-individual-variance_matrix.txt")
 Individuals <- readRDS("Data/Pike/individual-varcov-CNS.RData")
 
+source("funcs.R")
+
 TNWmat <- as.matrix(TNWmat)
-diag(TNWmat)
 
-diag(Individuals["BH-00385"]$`BH-00385`)
+mus <- Ecopike2%>%
+  group_by(fish_ID)%>%
+  reframe(fish_ID,
+          d13C = mean(d13C, na.rm = T),
+          d15N = mean(d15N, na.rm = T),
+          d34S = mean(d34S, na.rm = T))%>%
+  drop_na(d13C, d15N, d34S)%>%
+  distinct()
 
-overlap<-matrix(NA, nrow=length(Individuals), ncol=1)
-overlap.SEV<-array(1, dim=c(ngroups,ngroups,nrow(mus)))
-for(i in 1:nrow(pairs)){
-  for(j in 1:nrow(mus)){
-    overlap<-CubeCount3D(c(-21.4, 15.1, 6.3),
-                         c(-18.68436, 15.17482, 9.606432),
-                         Individuals["BH-90928"]$`BH-90928`,
+PikeID <- unique(mus$fish_ID)
+
+overlap <- data.frame(fish_ID = NA, overlap = NA)
+
+
+for(i in 1:length(Individuals)){{
+    over<-CubeCount3D(c(mus[mus$fish_ID == PikeID[i],]$d13C, mus[mus$fish_ID == PikeID[i],]$d15N, mus[mus$fish_ID == PikeID[i],]$d34S),
+                         c(-18.7, 15.2, 9.6),
+                         Individuals[[PikeID[i]]],
                          TNWmat)
   }
-  overlap.SEV<-overlap/SEV.function(Individuals["BH-90928"]$`BH-90928`)
-  overlap.SEV[pairs[i,2],pairs[i,1],]<-overlap[,i]/SEV[,pairs[i,2]]
+  overlap[i,1] <- PikeID[i]
+  overlap[i,2] <- over/SEV.function(TNWmat)
 }
 
-#Overlap kinda works, but needs to be looped properly
+Ecopike3 <- Ecopike2%>%
+  left_join(overlap, by = "fish_ID")
+
+ggplot(Ecopike3, aes(phenotype, overlap))+
+  geom_boxplot()+
+  theme_bw()
+
+fwrite(Ecopike3, "Data/Pike/Pike_eco-clean-cbackcalculated_so-metric.csv")
 ```
 
-```{r playaround}
-library(MASS) # for mvrnorm
-library(jagsUI) # to run jags
+```{r plot individual overlap, include=FALSE, eval=FALSE}
+rm(list = ls())
+mod1 <- readRDS("Data/Pike/Variance-components.rds")
+Ecopike2 <- fread("Data/Pike/Pike_eco-clean-cbackcalculated_so-metric.csv")
+TNWmat <- as.matrix(read.table("Data/Pike/Total-niche-width_matrix.txt"))
+WICmat <- as.matrix(read.table("Data/Pike/Within-individual-variance_matrix.txt"))
+Individuals <- readRDS("Data/Pike/individual-varcov-CNS.RData")
+
+means <- Ecopike2%>%reframe(d13C = mean(d13C, na.rm = T), d15N = mean(d15N, na.rm = T), d34S = mean(d34S, na.rm = T))
+means <- as.matrix(means)
+
+TNWmatCN <- TNWmat[1:2, 1:2]
+TNWmatCS <- matrix(c(TNWmat[1,1], TNWmat[1,3], TNWmat[3,1], TNWmat[3,3]), nrow = 2, ncol = 2, dimnames = list(c("C", "S"), c("C", "S")))
+TNWmatNS <- matrix(c(TNWmat[2,2], TNWmat[2,3], TNWmat[3,2], TNWmat[3,3]), nrow = 2, ncol = 2, dimnames = list(c("N", "S"), c("N", "S")))
+
+WICmatCN <- WICmat[1:2, 1:2]
+WICmatCS <- matrix(c(WICmat[1,1], WICmat[1,3], WICmat[3,1], WICmat[3,3]), nrow = 2, ncol = 2, dimnames = list(c("C", "S"), c("C", "S")))
+WICmatNS <- matrix(c(WICmat[2,2], WICmat[2,3], WICmat[3,2], WICmat[3,3]), nrow = 2, ncol = 2, dimnames = list(c("N", "S"), c("N", "S")))
+
+BICmat <- TNWmat - WICmat
 
 
-getcov<-function(SEV){
-  options(warn=-1)
-  Sigma<-matrix(rep(NA,9),ncol=3)
-  while(is.na(Sigma[1,1]==TRUE)){
-    if (((3*SEV)/(4*pi))^2/3 < 1){
-      lambda1<-runif(1,1,((3*SEV)/(4*pi))^2)
-    }else {
-      lambda1<-runif(1,((3*SEV)/(4*pi))^2/3,((3*SEV)/(4*pi))^2)
-    }
-    lambda2<-runif(1,(((3*SEV)/(4*pi))^2)/lambda1,((3*SEV)/(4*pi)))
-    lambda3<-(((3*SEV)/(4*pi))^2)/(lambda1*lambda2)
-    u<-diag(c(lambda1,lambda2,lambda3))
-    Q<-qr.Q(qr(runif(3,-0.8,.8)),complete=TRUE)
-    Sigma <- Q %*% u %*% t(Q)
-  }
-  options(warn=0)
-  return(Sigma)
-}
+TNWCN <- data.frame(ellipse(TNWmatCN, level = 0.4, npoints = 100, centre = c(means[1], means[2])))
+TNWCS <- data.frame(ellipse(TNWmatCS, level = 0.4, npoints = 100, centre = c(means[1], means[3])))
+TNWNS <- data.frame(ellipse(TNWmatNS, level = 0.4, npoints = 100, centre = c(means[2], means[3])))
 
-SEV.function<-function(sigma) {
-  if (eigen(sigma)$values[3] > 0)
-    {
-  axises<-sqrt(eigen(sigma)$values)
-  }
-  else {
-  axises<-NA
-  }
-  out<-list()
-  out$a<-axises[1]
-  out$b<-axises[2]
-  out$c<-axises[3]
-  out$SEV<-prod(axises,pi,4/3)
-  return(out$SEV)
-}
+WICCN <- data.frame(ellipse(WICmatCN, level = 0.4, npoints = 100, centre = c(means[1], means[2])))
+WICCS <- data.frame(ellipse(WICmatCS, level = 0.4, npoints = 100, centre = c(means[1], means[3])))
+WICNS <- data.frame(ellipse(WICmatNS, level = 0.4, npoints = 100, centre = c(means[2], means[3])))
 
-overlap<-function(mu1, mu2, sigma1, sigma2){
-  axises<-sqrt(eigen(sigma1)$values)
-  
-}
+BICCN <- data.frame(C = means[1], N = means[2], varC = 1.18, varN = 1.18)
+BICCS <- data.frame(C = means[1], S = means[3], varC = 1.18, varS = 1.18)
+BICNS <- data.frame(N = means[2], S = means[3], varN = 1.18, varS = 1.18)
 
-pairwise<-function(ngroups){
-  groups<-seq(1,ngroups)
-  max.compare<-((ngroups-1)*ngroups)/2
-  i=0
-  counter=ngroups
-  pairs<-c(0,0)
-  while (counter>0){
-    i=1+i
-    counter=counter-1
-    if (counter!=0){
-      temp1<-rep(groups[i],counter)
-      temp2<-seq(i+1,ngroups)
-      pairs<-rbind(pairs,cbind(temp1,temp2))
-      if (i==1){
-        pairs<-pairs[-1,]
-      }
-    }}
-  colnames(pairs)<-c('group1','group2')
-  return(pairs)
-}
+pl_theme <- theme(legend.position = "none",
+                  axis.text = element_text(size = 10, color = "black"))
 
-CubeCount3D <- function(mu1,mu2,S1,S2,HowFine=1.3,ShowProgress=FALSE){
-  # set-up stuff:
-  MVNdist <- function(mu,S){function(x){t(x-mu)%*%solve(S)%*%(x-mu)}}
-  OneStep <- 10^(-HowFine);
-  CubeVol <- OneStep^3;
-  CubeCt <- 0;
-  A1  <- eigen(S1)$vect
-  dD1 <- eigen(S1)$val
-  MVNdist2 <- MVNdist(mu2,S2);
-    # the loops:
-  zlist <- seq(from=0,to=dD1[3]^.5,by=OneStep)
-  zlist <- if(length(zlist)>1){c(rev(-zlist),zlist[2:length(zlist)])}
-  for(Z in zlist){
-    yBd <- (dD1[2]*(1-Z^2/dD1[3]))^.5
-    ylist <- seq(from=0,to=yBd,by=OneStep)
-    ylist <- if(length(ylist)>1){c(rev(-ylist),ylist[2:length(ylist)])}
-    for(Y in ylist){
-      xBd <- (dD1[1]*(1-Y^2/dD1[2]-Z^2/dD1[3]))^.5
-      xlist <- seq(from=0,to=xBd,by=OneStep)
-      xlist <- if(length(xlist)>1){c(rev(-xlist),xlist[2:length(xlist)])}
-      for(X in xlist){
-        if(MVNdist2(A1%*%c(X,Y,Z)+mu1)<1){CubeCt=CubeCt+1}
-      }
-    }
-    # This will show a "progress report" in the console window as this script is running:
-    # (0=start, 1=end)
-    if(ShowProgress){print((.5*(Z+dD1[3]^.5))/dD1[3]^.5)}
-  }
-  return(CubeCt*CubeVol)
-} 
+CN <- ggplot()+
+  geom_point(data = Ecopike2, aes(x = d13C, y = d15N, colour = phenotype), size = 0.5)+
+  stat_ellipse(data = Ecopike2, aes(x = d13C, y = d15N, group = fish_ID, fill = phenotype), level = 0.4,
+               alpha = 0.3, geom = "polygon", color = "darkgrey", linewidth = 0.2)+
+  stat_ellipse(data = TNWCN, aes(x = C, y = N, color = "TNW"), level = 0.4, linewidth = 1.5)+
+  stat_ellipse(data = WICCN, aes(x = C, y = N, color = "WIC"), level = 0.4, linewidth = 1.5)+
+  geom_ellipse(data = BICCN, aes(x0 = C, y0 = N, a = 0.4*varC, b = 0.4*varN, angle = C/N, color = "BIC"), linewidth = 1)+
+  labs(x = expression(delta^13~"C"~("\u2030 VPDB")),
+       y = expression(delta^15~"N"~("\u2030 Atm")),
+       color = "niche component",
+       fill = "behavioral phenotype")+
+  scale_color_manual(values = c("TNW" = "black", "WIC" = "orange", "BIC" = "red", "FW_resident" = "#C5D86D",
+                                "BW-resident" = "#004643", "Anadromous" = "#00BFB2", "Trans-habitat" = "#F1C40F"),
+                     breaks = c("TNW", "WIC", "BIC"),
+                     labels = c(expression("TNW"["Pop"]), expression("WIC"["Pop"]), expression("BIC"["Pop"])))+
+  scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                    values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
+                    labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
+  theme_bw()+
+  pl_theme
 
+CS <- ggplot()+
+  geom_point(data = Ecopike2, aes(x = d13C, y = d34S, colour = phenotype), size = 0.5)+
+  stat_ellipse(data = Ecopike2, aes(x = d13C, y = d34S, group = fish_ID, fill = phenotype), level = 0.4,
+               alpha = 0.3, geom = "polygon", color = "darkgrey", linewidth = 0.2)+
+  stat_ellipse(data = TNWCS, aes(x = C, y = S, color = "TNW"), level = 0.4, linewidth = 1.5)+
+  stat_ellipse(data = WICCS, aes(x = C, y = S, color = "WIC"), level = 0.4, linewidth = 1.5)+
+  geom_ellipse(data = BICCS, aes(x0 = C, y0 = S, a = 0.4*varC, b = 0.4*varS, angle = C/S, color = "BIC"), linewidth = 1)+
+  labs(x = expression(delta^13~"C"~("\u2030 VPDB")),
+       y = expression(delta^34~"S"~("\u2030 CDT")),
+       color = "niche component",
+       fill = "behavioral phenotype")+
+  scale_color_manual(values = c("TNW" = "black", "WIC" = "orange", "BIC" = "red", "FW_resident" = "#C5D86D",
+                                "BW-resident" = "#004643", "Anadromous" = "#00BFB2", "Trans-habitat" = "#F1C40F"),
+                     breaks = c("TNW", "WIC", "BIC"),
+                     labels = c(expression("TNW"["Pop"]), expression("WIC"["Pop"]), expression("BIC"["Pop"])))+
+  scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                    values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
+                    labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
+  theme_bw()+
+  pl_theme
+
+NS <- ggplot()+
+  geom_point(data = Ecopike2, aes(x = d15N, y = d34S, colour = phenotype), size = 0.5)+
+  stat_ellipse(data = Ecopike2, aes(x = d15N, y = d34S, group = fish_ID, fill = phenotype), level = 0.4,
+               alpha = 0.3, geom = "polygon", color = "darkgrey", linewidth = 0.2)+
+  stat_ellipse(data = TNWNS, aes(x = N, y = S, color = "TNW"), level = 0.4, linewidth = 1.5)+
+  stat_ellipse(data = WICNS, aes(x = N, y = S, color = "WIC"), level = 0.4, linewidth = 1.5)+
+  geom_ellipse(data = BICNS, aes(x0 = N, y0 = S, a = 0.4*varN, b = 0.4*varS, angle = N/S, color = "BIC"), linewidth = 1)+
+  labs(x = expression(delta^15~"N"~("\u2030 Atm")),
+       y = expression(delta^34~"S"~("\u2030 CDT")),
+       color = "niche component",
+       fill = "behavioral phenotype")+
+  scale_color_manual(values = c("TNW" = "black", "WIC" = "orange", "BIC" = "red", "FW_resident" = "#C5D86D",
+                                "BW-resident" = "#004643", "Anadromous" = "#00BFB2", "Trans-habitat" = "#F1C40F"),
+                     breaks = c("TNW", "WIC", "BIC"),
+                     labels = c(expression("TNW"["Pop"]), expression("WIC"["Pop"]), expression("BIC"["Pop"])))+
+  scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                    values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
+                    labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
+  theme_bw()+
+  pl_theme
+
+empty <- ggplot()+
+  geom_point(data = Ecopike2, aes(x = d15N, y = d34S, colour = phenotype), alpha = 0)+
+  stat_ellipse(data = Ecopike2, aes(x = d15N, y = d34S, group = fish_ID, fill = phenotype), level = 0.4,
+               alpha = 0, geom = "polygon", linewidth = 0)+
+  stat_ellipse(data = TNWNS, aes(x = N, y = S, color = "TNW"), level = 0.4, linewidth = 0, alpha = 0)+
+  stat_ellipse(data = WICNS, aes(x = N, y = S, color = "WIC"), level = 0.4, linewidth = 0, alpha = 0)+
+  geom_ellipse(data = BICNS, aes(x0 = -1, y0 = -1, a = 0, b = 0, angle = N/S, color = "BIC"), alpha = 0, lwd = 0)+
+  labs(x = "",
+       y = "",
+       color = "niche component",
+       fill = "behavioral phenotype")+
+  scale_color_manual(values = c("TNW" = "black", "WIC" = "orange", "BIC" = "red", "FW_resident" = "#C5D86D",
+                                "BW-resident" = "#004643", "Anadromous" = "#00BFB2", "Trans-habitat" = "#F1C40F"),
+                     breaks = c("TNW", "WIC", "BIC"),
+                     labels = c(expression("TNW"["Pop"]), expression("WIC"["Pop"]), expression("BIC"["Pop"])),
+                     drop = FALSE)+
+  scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                    values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
+                    labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"),
+                    drop = FALSE)+
+  guides(color = guide_legend(override.aes = list(shape = 21, size = 8, linetype = c(0,0,0), alpha = 1)),
+         fill = guide_legend(override.aes = list(alpha = 0.3)))+
+  theme_void()+
+  theme(legend.position = c(.5,.5),
+        legend.key.size = unit(0.7, "cm"),
+        legend.text = element_text(size = 10, color = "black"),
+        legend.title = element_text(size = 10, color = "black"))
+
+combined <- ggarrange(CN, CS, NS, empty, nrow = 2, ncol = 2, common.legend = F, labels = c("A", "B", "C"))
+
+ggsave("Figures/Overlap_individuals.png", combined, width = 15, height = 15, units = "cm", dpi = 600, bg = "white")
+```
+
+```{r phenotype overlap, include=FALSE, eval=FALSE}
+source("funcs.R")
 
 sink("ellipsoid_example.txt")
 cat("
@@ -3526,9 +3554,77 @@ print(overlap.50,digits=2)
 print(overlap.975,digits=2)
 ```
 
+```{r model s- and o-metrics, include=FALSE, eval=FALSE}
+rm(list = ls())
+Ecopike <- fread("Data/Pike/Pike_eco-clean-cbackcalculated_so-metric.csv")
 
+Ecopike2 <- Ecopike%>%
+  drop_na(s_index, overlap)%>%
+  group_by(fish_ID)%>%
+  transmute(fish_ID, 
+            length = max(length_back),
+            sex = case_when(fish_ID == "BH-90307" ~ "f",
+                            TRUE ~ sex),
+            area,
+            phenotype,
+            s_index,
+            overlap)%>%
+  distinct()
+
+par(mfrow = c(2,2))
+plot(Ecopike2$s_index~Ecopike2$length)
+boxplot(Ecopike2$s_index~Ecopike2$sex)
+boxplot(Ecopike2$s_index~Ecopike2$area)
+boxplot(Ecopike2$s_index~Ecopike2$phenotype)
+
+par(mfrow = c(2,2))
+plot(Ecopike2$overlap~Ecopike2$length)
+boxplot(Ecopike2$overlap~Ecopike2$sex)
+boxplot(Ecopike2$overlap~Ecopike2$area)
+boxplot(Ecopike2$overlap~Ecopike2$phenotype)
+
+Smod1 <- lm(s_index~length+sex+area+phenotype, data = Ecopike2)
+summary(Smod1)
+
+Smod_nolength <- update(Smod1, ~.-length)
+anova(Smod1, Smod_nolength)
+
+Smod_nosex <- update(Smod1, ~.-sex)
+anova(Smod1, Smod_nosex)
+
+Smod_noarea <- update(Smod1, ~.-area)
+anova(Smod1, Smod_noarea)
+
+Smod_nopheno <- update(Smod1, ~.-phenotype)
+anova(Smod1, Smod_nopheno)
+
+Smod_final <- lm(s_index~length+sex+area+phenotype, data = Ecopike2)
+tab_model(Smod_final)
+
+Omod1 <- lm(overlap~length+sex+area+phenotype, data = Ecopike2)
+summary(Omod1)
+
+Omod_nolength <- update(Omod1, ~.-length)
+anova(Omod1, Omod_nolength)
+
+Omod_nosex <- update(Omod1, ~.-sex)
+anova(Omod1, Omod_nosex)
+
+Omod_noarea <- update(Omod1, ~.-area)
+anova(Omod1, Omod_noarea)
+
+Omod_nopheno <- update(Omod1, ~.-phenotype)
+anova(Omod1, Omod_nopheno)
+
+Omod_0 <- lm(overlap~1, data = Ecopike2)
+anova(Omod_0, Omod1)
+
+Omod_final <- lm(overlap~length+sex+area+phenotype, data = Ecopike2)
+tab_model(Omod_final)
+```
 
 # Lifelong growth
+
 ```{r data prep, include=FALSE, eval=FALSE}
 rm(list = ls())
 
@@ -3666,6 +3762,7 @@ round(rbind(looic = looics, dlooic = delta_looic, weight = wi), 2)
 ```
 
 #Other stuff
+
 ```{r age length key from pike scales and otoliths, include=FALSE, eval=FALSE}
 rm(list = ls())
 
@@ -3789,6 +3886,7 @@ LenspikeBaby <- Lenspike%>%
 ```
 
 ## Model growth of scale data with muscle isotopes?
+
 ```{r cleanup scale data, include=FALSE, eval=FALSE}
 rm(list = ls())
 
@@ -4287,10 +4385,3 @@ CNS <- ggarrange(C, N, S, nrow = 1)
 
 ggsave("Figures/CNS-plot-predicted.png", CNS, width = 15, height = 5, units = "cm", dpi = 600, bg = "white")
 ```
-
-
-
-
-
-
-
