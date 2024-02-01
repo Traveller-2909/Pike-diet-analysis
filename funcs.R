@@ -59,7 +59,7 @@ pairwise<-function(ngroups){
   return(pairs)
 }
 
-CubeCount3D <- function(mu1,mu2,S1,S2,HowFine=1.3,ShowProgress=TRUE){
+CubeCount3D <- function(mu1,mu2,S1,S2,HowFine=1,ShowProgress=FALSE){
   # set-up stuff:
   MVNdist <- function(mu,S){function(x){t(x-mu)%*%solve(S)%*%(x-mu)}}
   OneStep <- 10^(-HowFine);
@@ -89,3 +89,15 @@ CubeCount3D <- function(mu1,mu2,S1,S2,HowFine=1.3,ShowProgress=TRUE){
   }
   return(CubeCt*CubeVol)
 } 
+
+#Calculate euclidian distance between two 3 demensional points
+distance<-function(a,b){
+  l<-sqrt((a[,1]-b[,1])^2+(a[,2]-b[,2])^2+(a[,3]-b[,3])^2)
+  return(l)
+}
+
+#calculate the mode of a posterior distrobution
+mode <- function(s) {
+  d <- density(s,na.rm=TRUE)
+  d$x[which.max(d$y)]
+}

@@ -3,7 +3,7 @@
 # random effects: 0
 # fixed effects: 2
 # nested factors: FALSE FALSE
-# factors: area ecotype
+# factors: ecotype area
 # continuous effects: 1
 # error structure: Residual * Process
 # source$conc_dep: FALSE
