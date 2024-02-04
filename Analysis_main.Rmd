@@ -2572,8 +2572,6 @@ dev.off()
 ```
 
 ```{r GLMM model figures, include=FALSE, eval=FALSE}
-# need to use predict
-
 rm(list = ls())
 
 pikes <- fread("Data/Pike/Pikedata-model.csv")
@@ -2604,12 +2602,12 @@ pikes$agefact2 <- factor(pikes$agefact,levels = c(2,1,3),
 mypallette <- viridis::viridis(4, direction = -1)
 
 #Isotope effects growth
-d34S <- ggplot(pikes, aes(d34S, length_back, fill = agefact2))+
+d34S <- ggplot(pikes, aes(d34S,log(length_back)))+
   geom_point(size=.5)+
   scale_x_continuous(limits = c(-2,2))+
   #scale_y_continuous(limits = c(0,500),
                      #breaks = c(0, 50, 100, 150, 200, 250))+
-  stat_smooth(method = "lm", color = "#FDE725FF", fullrange = T, lwd=.8)+
+  stat_smooth(method = "lm", fill="#440154FF", color = "#FDE725FF", fullrange = T, lwd=.8)+
   labs(x=expression("scaled"~delta^34*"S"~("z-score")), 
        y="yearly growth increment (mm)")+
   scale_color_viridis_d()+
@@ -2636,6 +2634,8 @@ Allpike <- fread("Data/Pike/Lens-SI-all-clean-TL-backcalculated.csv")
 Ecopike <- fread("Data/Pike/Lens-muscle-SI-eco-clean-cbackcalculated.csv")
 Ecopike_plus_muscle <- fread("Data/Pike/Lens-muscle-SI-eco-clean-cbackcalculated.csv")
 
+Ecopike <- Ecopike%>%
+  drop_na(length_back)
 #Plot mean lifelong signal
 
 pl_theme <- theme(axis.title.x = element_blank(),
@@ -2703,7 +2703,7 @@ Eyeplot1 <- annotate_figure(Eyeplot, bottom = text_grob("Backcalculated length (
 ggsave("Figures/Eyelens-data-ecotypes.png", Eyeplot1, width = 15, height = 7, units = "cm", bg = "white")
 ```
 
-```{r multi-response modelling, include=FALSE, eval=FALSE}
+```{r population niches whole population level, include=FALSE, eval=FALSE}
 rm(list = ls())
 
 Ecopike <- fread("Data/Pike/Lens-muscle-SI-eco-clean-cbackcalculated.csv")
@@ -2713,25 +2713,18 @@ Ecopike2 <- Ecopike%>%
   drop_na(diameter_mm)
 Ecopike2$fish_ID <- factor(Ecopike2$fish_ID)
 
-#model (include ecotype, length etc.)
-mod1 <- MCMCglmm(cbind(d13C, d15N, d34S)~trait-1, random = ~fish_ID, data = Ecopike2, family = c("gaussian", "gaussian", "gaussian"), rcov = ~us(trait):units, pr = TRUE, verbose = FALSE, nitt = 100000, burnin = 50000, thin = 50)
+#multi-response model population-level
+mod1 <- MCMCglmm(cbind(d13C, d15N, d34S)~trait-1, random = ~fish_ID, data = Ecopike2, family = c("gaussian", "gaussian", "gaussian"), 
+                 rcov = ~us(trait):units, pr = TRUE, verbose = FALSE, nitt = 100000, burnin = 50000, thin = 50)
 
-saveRDS(mod1, "Data/Pike/Variance-components.rds")
-fwrite(Ecopike2, "Data/Pike/Lens-SI-eco-clean-cbackcalculated.csv")
-```
-
-```{r population niche width, include=FALSE, eval=FALSE}
-rm(list = ls())
-mod1 <- readRDS("Data/Pike/Variance-components.rds")
-
-#Extract between individual component
+#Extract between individual component model 1
 BICmat <- mod1$VCV[, "fish_ID"]
 BIC <- mean(BICmat)
 
-#Extract within individual component
+#Extract within individual component model 1
 WICmat <- mod1$VCV[, grep("trait", colnames(mod1$VCV))]
 
-#Convert into matrix
+#Convert whole population residual variance into matrix
 CC <- mean(WICmat[,1])
 NC <- mean(WICmat[,2])
 SC <- mean(WICmat[,3])
@@ -2744,12 +2737,12 @@ SS <- mean(WICmat[,9])
 
 WICmat <- matrix(0, nrow = 3, ncol = 3)
 
-#fill diagonals with variance
+#fill diagonals with residual variance
 WICmat[1,1] <- CC
 WICmat[2,2] <- NN
 WICmat[3,3] <- SS
 
-#fill off-diagonals with covariance
+#fill off-diagonals with residual covariance
 WICmat[1,2] <- CN
 WICmat[1,3] <- CS
 WICmat[2,1] <- NC
@@ -2766,6 +2759,176 @@ mean(eigen(WICmat)$value/eigen(TNWmat)$value)
 
 write.table(TNWmat, "Data/Pike/Total-niche-width_matrix.txt")
 write.table(WICmat, "Data/Pike/Within-individual-variance_matrix.txt")
+```
+```{r population niches phenotype specific, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+Ecopike <- fread("Data/Pike/Lens-muscle-SI-eco-clean-cbackcalculated.csv")
+
+Ecopike <- as.data.frame(Ecopike)
+Ecopike2 <- Ecopike%>%
+  drop_na(diameter_mm)
+Ecopike2$fish_ID <- factor(Ecopike2$fish_ID)
+
+Freshwater <- subset(Ecopike2, phenotype == "FW_resident")
+Anadromous <- subset(Ecopike2, phenotype == "Anadromous")
+Crosshabitat <- subset(Ecopike2, phenotype == "Trans-habitat")
+Brackish <- subset(Ecopike2, phenotype == "BW-resident")
+
+#multi-response models phenotype-level
+mod_FW <- MCMCglmm(cbind(d13C, d15N, d34S)~trait-1, random = ~fish_ID, data = Freshwater, family = c("gaussian", "gaussian", "gaussian"), 
+                 rcov = ~us(trait):units, pr = TRUE, verbose = FALSE, nitt = 100000, burnin = 50000, thin = 50)
+
+mod_Ana <- MCMCglmm(cbind(d13C, d15N, d34S)~trait-1, random = ~fish_ID, data = Anadromous, family = c("gaussian", "gaussian", "gaussian"), 
+                 rcov = ~us(trait):units, pr = TRUE, verbose = FALSE, nitt = 100000, burnin = 50000, thin = 50)
+
+mod_cross <- MCMCglmm(cbind(d13C, d15N, d34S)~trait-1, random = ~fish_ID, data = Crosshabitat, family = c("gaussian", "gaussian", "gaussian"), 
+                 rcov = ~us(trait):units, pr = TRUE, verbose = FALSE, nitt = 100000, burnin = 50000, thin = 50)
+
+mod_BW <- MCMCglmm(cbind(d13C, d15N, d34S)~trait-1, random = ~fish_ID, data = Brackish, family = c("gaussian", "gaussian", "gaussian"), 
+                 rcov = ~us(trait):units, pr = TRUE, verbose = FALSE, nitt = 100000, burnin = 50000, thin = 50)
+
+#Extract between individual components
+BIC_FW_post <- mod_FW$VCV[, "fish_ID"]
+BIC_FW <- mean(BIC_FW_post)
+
+BIC_Ana_post <- mod_Ana$VCV[, "fish_ID"]
+BIC_Ana <- mean(BIC_Ana_post)
+
+BIC_Cross_post <- mod_cross$VCV[, "fish_ID"]
+BIC_Cross <- mean(BIC_Cross_post)
+
+BIC_BW_post <- mod_BW$VCV[, "fish_ID"]
+BIC_BW <- mean(BIC_BW_post)
+
+#Extract within individual components
+WICmat_FW <- mod_FW$VCV[, grep("trait", colnames(mod_FW$VCV))]
+WICmat_Ana <- mod_Ana$VCV[, grep("trait", colnames(mod_Ana$VCV))]
+WICmat_Cross <- mod_cross$VCV[, grep("trait", colnames(mod_cross$VCV))]
+WICmat_BW <- mod_BW$VCV[, grep("trait", colnames(mod_BW$VCV))]
+
+#Convert phenotype-specific residual variances into matrix
+CC_FW <- mean(WICmat_FW[,1])
+NC_FW <- mean(WICmat_FW[,2])
+SC_FW <- mean(WICmat_FW[,3])
+CN_FW <- mean(WICmat_FW[,4])
+NN_FW <- mean(WICmat_FW[,5])
+SN_FW <- mean(WICmat_FW[,6])
+CS_FW <- mean(WICmat_FW[,7])
+NS_FW <- mean(WICmat_FW[,8])
+SS_FW <- mean(WICmat_FW[,9])
+
+CC_Ana <- mean(WICmat_Ana[,1])
+NC_Ana <- mean(WICmat_Ana[,2])
+SC_Ana <- mean(WICmat_Ana[,3])
+CN_Ana <- mean(WICmat_Ana[,4])
+NN_Ana <- mean(WICmat_Ana[,5])
+SN_Ana <- mean(WICmat_Ana[,6])
+CS_Ana <- mean(WICmat_Ana[,7])
+NS_Ana <- mean(WICmat_Ana[,8])
+SS_Ana <- mean(WICmat_Ana[,9])
+
+CC_Cross <- mean(WICmat_Cross[,1])
+NC_Cross <- mean(WICmat_Cross[,2])
+SC_Cross <- mean(WICmat_Cross[,3])
+CN_Cross <- mean(WICmat_Cross[,4])
+NN_Cross <- mean(WICmat_Cross[,5])
+SN_Cross <- mean(WICmat_Cross[,6])
+CS_Cross <- mean(WICmat_Cross[,7])
+NS_Cross <- mean(WICmat_Cross[,8])
+SS_Cross <- mean(WICmat_Cross[,9])
+
+CC_BW <- mean(WICmat_BW[,1])
+NC_BW <- mean(WICmat_BW[,2])
+SC_BW <- mean(WICmat_BW[,3])
+CN_BW <- mean(WICmat_BW[,4])
+NN_BW <- mean(WICmat_BW[,5])
+SN_BW <- mean(WICmat_BW[,6])
+CS_BW <- mean(WICmat_BW[,7])
+NS_BW <- mean(WICmat_BW[,8])
+SS_BW <- mean(WICmat_BW[,9])
+
+WICmat_FW <- matrix(0, nrow = 3, ncol = 3)
+WICmat_Ana <- matrix(0, nrow = 3, ncol = 3)
+WICmat_Cross <- matrix(0, nrow = 3, ncol = 3)
+WICmat_BW <- matrix(0, nrow = 3, ncol = 3)
+
+#fill diagonals with residual variance
+WICmat_FW[1,1] <- CC_FW
+WICmat_FW[2,2] <- NN_FW
+WICmat_FW[3,3] <- SS_FW
+
+WICmat_Ana[1,1] <- CC_Ana
+WICmat_Ana[2,2] <- NN_Ana
+WICmat_Ana[3,3] <- SS_Ana
+
+WICmat_Cross[1,1] <- CC_Cross
+WICmat_Cross[2,2] <- NN_Cross
+WICmat_Cross[3,3] <- SS_Cross
+
+WICmat_BW[1,1] <- CC_BW
+WICmat_BW[2,2] <- NN_BW
+WICmat_BW[3,3] <- SS_BW
+
+#fill off-diagonals with residual covariance
+WICmat_FW[1,2] <- CN_FW
+WICmat_FW[1,3] <- CS_FW
+WICmat_FW[2,1] <- NC_FW
+WICmat_FW[2,3] <- NS_FW
+WICmat_FW[3,1] <- SC_FW
+WICmat_FW[3,2] <- SN_FW
+
+WICmat_Ana[1,2] <- CN_Ana
+WICmat_Ana[1,3] <- CS_Ana
+WICmat_Ana[2,1] <- NC_Ana
+WICmat_Ana[2,3] <- NS_Ana
+WICmat_Ana[3,1] <- SC_Ana
+WICmat_Ana[3,2] <- SN_Ana
+
+WICmat_Cross[1,2] <- CN_Cross
+WICmat_Cross[1,3] <- CS_Cross
+WICmat_Cross[2,1] <- NC_Cross
+WICmat_Cross[2,3] <- NS_Cross
+WICmat_Cross[3,1] <- SC_Cross
+WICmat_Cross[3,2] <- SN_Cross
+
+WICmat_BW[1,2] <- CN_BW
+WICmat_BW[1,3] <- CS_BW
+WICmat_BW[2,1] <- NC_BW
+WICmat_BW[2,3] <- NS_BW
+WICmat_BW[3,1] <- SC_BW
+WICmat_BW[3,2] <- SN_BW
+
+row.names(WICmat_FW) <- c("C", "N", "S")
+colnames(WICmat_FW) <- c("C", "N", "S")
+
+row.names(WICmat_Ana) <- c("C", "N", "S")
+colnames(WICmat_Ana) <- c("C", "N", "S")
+
+row.names(WICmat_Cross) <- c("C", "N", "S")
+colnames(WICmat_Cross) <- c("C", "N", "S")
+
+row.names(WICmat_BW) <- c("C", "N", "S")
+colnames(WICmat_BW) <- c("C", "N", "S")
+
+TNWmat_FW <- BIC_FW + WICmat_FW
+TNWmat_Ana <- BIC_Ana + WICmat_Ana
+TNWmat_Cross <- BIC_Cross + WICmat_Cross
+TNWmat_BW <- BIC_BW + WICmat_BW
+
+(mean(eigen(WICmat_FW)$value/eigen(TNWmat_FW)$value))
+(mean(eigen(WICmat_Ana)$value/eigen(TNWmat_Ana)$value))
+(mean(eigen(WICmat_Cross)$value/eigen(TNWmat_Cross)$value))
+(mean(eigen(WICmat_BW)$value/eigen(TNWmat_BW)$value))
+
+write.table(TNWmat_FW, "Data/Pike/Total-niche-width_freshwater_matrix.txt")
+write.table(WICmat_FW, "Data/Pike/Within-individual-variance_freshwater_matrix.txt")
+write.table(TNWmat_Ana, "Data/Pike/Total-niche-width_anadromous_matrix.txt")
+write.table(WICmat_Ana, "Data/Pike/Within-individual-variance_anadromous_matrix.txt")
+write.table(TNWmat_Cross, "Data/Pike/Total-niche-width_cross-habitat_matrix.txt")
+write.table(WICmat_Cross, "Data/Pike/Within-individual-variance_cross-habitat_matrix.txt")
+write.table(TNWmat_FW, "Data/Pike/Total-niche-width_brackish_matrix.txt")
+write.table(WICmat_FW, "Data/Pike/Within-individual-variance_brackish_matrix.txt")
 ```
 
 ```{r individual niche width, include=FALSE, eval=FALSE}
@@ -2825,13 +2988,15 @@ Ecopike_spec <- Ecopike2%>%
                                  "BW-resident"))
 
 Specplot <- ggplot(Ecopike_spec)+
-  geom_violin(aes(x = phenotype, y = s_index, fill = phenotype), width = 1)+
-  geom_boxplot(aes(x = phenotype, y = s_index), width = 0.07, size = .5, color = "black", fill = "transparent")+
+  geom_violin(aes(x = phenotype, y = 1-s_index, fill = phenotype), width = 1)+
+  geom_boxplot(aes(x = phenotype, y = 1-s_index), width = 0.07, size = .5, color = "black", fill = "transparent")+
   scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
                     values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
                     labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
   scale_x_discrete(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
                    labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
+  scale_y_continuous(limits = c(-0.1, 1),
+                     breaks = seq(0,1, 0.25))+
   labs(x = "behavioral phenotype",
        y = "specialization index")+
   theme_bw()+
@@ -2841,6 +3006,151 @@ Specplot <- ggplot(Ecopike_spec)+
 
 ggsave("Figures/S-index-individual.png", Specplot, height = 15, width = 15, units = "cm", dpi = 600, bg = "white")
 fwrite(Ecopike_spec, "Data/Pike/Pike_eco-clean-cbackcalculated_s-metric.csv")
+```
+
+```{r individual niche width phenotype level, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+Ecopike2 <- fread("Data/Pike/Lens-SI-eco-clean-cbackcalculated.csv")
+Ecopike2[Ecopike2$fish_ID == "BH-92993",]$phenotype <- "Anadromous"
+
+Freshwater <- subset(Ecopike2, phenotype == "FW_resident")
+Anadromous <- subset(Ecopike2, phenotype == "Anadromous")
+Crosshabitat <- subset(Ecopike2, phenotype == "Trans-habitat")
+Brackish <- subset(Ecopike2, phenotype == "BW-resident")
+
+TNWmat_FW <- read.table("Data/Pike/Total-niche-width_freshwater_matrix.txt")
+WICmat_FW <- read.table("Data/Pike/Within-individual-variance_freshwater_matrix.txt")
+TNWmat_Ana <- read.table("Data/Pike/Total-niche-width_anadromous_matrix.txt")
+WICmat_Ana <- read.table("Data/Pike/Within-individual-variance_anadromous_matrix.txt")
+TNWmat_Cross <- read.table("Data/Pike/Total-niche-width_cross-habitat_matrix.txt")
+WICmat_Cross <- read.table("Data/Pike/Within-individual-variance_cross-habitat_matrix.txt")
+TNWmat_BW <- read.table("Data/Pike/Total-niche-width_brackish_matrix.txt")
+WICmat_BW <- read.table("Data/Pike/Within-individual-variance_brackish_matrix.txt")
+
+#Individual covariance matrices
+# Initialize an empty list to store covariance matrices from raw data
+num_fish_FW <- length(unique(Freshwater$fish_ID))
+raw_cov_matrices_list_FW <- vector("list", length = num_fish_FW)
+
+# Loop through each fish_ID per phenotype and calculate the covariance matrices from raw data
+for (i in 1:num_fish_FW) {
+  fish_data <- subset(Freshwater, fish_ID == unique(Freshwater$fish_ID)[i])
+  raw_cov_matrix <- cov(fish_data[, c("d13C", "d15N", "d34S")], use = "complete.obs")
+  raw_cov_matrices_list_FW[[i]] <- raw_cov_matrix
+}
+
+names(raw_cov_matrices_list_FW) <- unique(Freshwater$fish_ID)
+
+num_fish_Ana <- length(unique(Anadromous$fish_ID))
+raw_cov_matrices_list_Ana <- vector("list", length = num_fish_Ana)
+
+for (i in 1:num_fish_Ana) {
+  fish_data <- subset(Anadromous, fish_ID == unique(Anadromous$fish_ID)[i])
+  raw_cov_matrix <- cov(fish_data[, c("d13C", "d15N", "d34S")], use = "complete.obs")
+  raw_cov_matrices_list_Ana[[i]] <- raw_cov_matrix
+}
+
+names(raw_cov_matrices_list_Ana) <- unique(Anadromous$fish_ID)
+
+num_fish_Cross <- length(unique(Crosshabitat$fish_ID))
+raw_cov_matrices_list_Cross <- vector("list", length = num_fish_Cross)
+
+for (i in 1:num_fish_Cross) {
+  fish_data <- subset(Crosshabitat, fish_ID == unique(Crosshabitat$fish_ID)[i])
+  raw_cov_matrix <- cov(fish_data[, c("d13C", "d15N", "d34S")], use = "complete.obs")
+  raw_cov_matrices_list_Cross[[i]] <- raw_cov_matrix
+}
+
+names(raw_cov_matrices_list_Cross) <- unique(Crosshabitat$fish_ID)
+
+num_fish_BW <- length(unique(Brackish$fish_ID))
+raw_cov_matrices_list_BW <- vector("list", length = num_fish_BW)
+
+for (i in 1:num_fish_BW) {
+  fish_data <- subset(Brackish, fish_ID == unique(Brackish$fish_ID)[i])
+  raw_cov_matrix <- cov(fish_data[, c("d13C", "d15N", "d34S")], use = "complete.obs")
+  raw_cov_matrices_list_BW[[i]] <- raw_cov_matrix
+}
+
+names(raw_cov_matrices_list_BW) <- unique(Brackish$fish_ID)
+
+eigenval <- function(fish_matrix, population_matrix) {
+  if (any(is.na(fish_matrix))) {
+    return(NA)
+  }
+  eigenvalues_fish <- eigen(fish_matrix)$values
+  if (any(is.na(eigenvalues_fish))) {
+    return(NA)
+  }
+  
+#population matrix
+  eigenvalues_population <- eigen(population_matrix)$values
+  normalized_eigenvalues <- eigenvalues_fish / eigenvalues_population
+  return(mean(normalized_eigenvalues))
+}
+
+# Initialize an empty list to store results
+normalized_eigenvalues_list_FW <- rep(0, length(raw_cov_matrices_list_FW))
+normalized_eigenvalues_list_Ana <- rep(0, length(raw_cov_matrices_list_Ana))
+normalized_eigenvalues_list_Cross <- rep(0, length(raw_cov_matrices_list_Cross))
+normalized_eigenvalues_list_BW <- rep(0, length(raw_cov_matrices_list_BW))
+
+for (i in 1:num_fish_FW) {
+  fish_matrix <- raw_cov_matrices_list_FW[[i]]  # Use the raw data covariance matrix
+  normalized_eigenvalues_list_FW[i] <- eigenval(fish_matrix, TNWmat_FW)
+}
+
+for (i in 1:num_fish_Ana) {
+  fish_matrix <- raw_cov_matrices_list_Ana[[i]]  # Use the raw data covariance matrix
+  normalized_eigenvalues_list_Ana[i] <- eigenval(fish_matrix, TNWmat_Ana)
+}
+
+for (i in 1:num_fish_Cross) {
+  fish_matrix <- raw_cov_matrices_list_Cross[[i]]  # Use the raw data covariance matrix
+  normalized_eigenvalues_list_Cross[i] <- eigenval(fish_matrix, TNWmat_Cross)
+}
+
+for (i in 1:num_fish_BW) {
+  fish_matrix <- raw_cov_matrices_list_BW[[i]]  # Use the raw data covariance matrix
+  normalized_eigenvalues_list_BW[i] <- eigenval(fish_matrix, TNWmat_BW)
+}
+
+
+Spec_index_FW <- tibble(fish_ID = unique(Freshwater$fish_ID), s_index = normalized_eigenvalues_list_FW)
+Spec_index_Ana <- tibble(fish_ID = unique(Anadromous$fish_ID), s_index = normalized_eigenvalues_list_Ana)
+Spec_index_Cross <- tibble(fish_ID = unique(Crosshabitat$fish_ID), s_index = normalized_eigenvalues_list_Cross)
+Spec_index_BW <- tibble(fish_ID = unique(Brackish$fish_ID), s_index = normalized_eigenvalues_list_BW)
+
+Spec_index_all <- rbind(Spec_index_FW, Spec_index_Ana, Spec_index_Cross, Spec_index_BW)
+
+Ecopike_spec <- Ecopike2%>%
+  left_join(Spec_index_all, by = "fish_ID")%>%
+  mutate(phenotype = fct_relevel(phenotype,
+                                 "FW_resident",
+                                 "Anadromous", 
+                                 "Trans-habitat",
+                                 "BW-resident"))
+
+Specplot <- ggplot(Ecopike_spec, aes(x = phenotype, y = 1-s_index, fill = phenotype))+
+  geom_violin(width = 1)+
+  geom_boxplot(aes(x = phenotype, y = 1-s_index), width = 0.07, size = .5, color = "black", fill = "transparent")+
+  scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                    values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
+                    labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
+  scale_x_discrete(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                   labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
+  scale_y_continuous(limits = c(-0.1, 1),
+                     breaks = seq(0,1, 0.25))+
+  labs(x = "behavioral phenotype",
+       y = "specialization index")+
+  theme_bw()+
+  theme(legend.position = "none",
+        axis.text = element_text(size = 10, color = "black"),
+        axis.title = element_text(size = 15, color = "black"))
+
+ggsave("Figures/S-index-individual-phenotype-level.png", Specplot, height = 15, width = 15, units = "cm", dpi = 600, bg = "white")
+fwrite(Ecopike_spec, "Data/Pike/Pike_eco-clean-cbackcalculated_s-metric-phenotypes.csv")
 ```
 
 ```{r individual overlap metrics, include=FALSE, eval=FALSE}
