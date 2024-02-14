@@ -3153,7 +3153,7 @@ ggsave("Figures/S-index-individual-phenotype-level.png", Specplot, height = 15, 
 fwrite(Ecopike_spec, "Data/Pike/Pike_eco-clean-cbackcalculated_s-metric-phenotypes.csv")
 ```
 
-```{r individual overlap metrics, include=FALSE, eval=FALSE}
+```{r individual overlap metrics population-level, include=FALSE, eval=FALSE}
 rm(list = ls())
 mod1 <- readRDS("Data/Pike/Variance-components.rds")
 Ecopike2 <- fread( "Data/Pike/Pike_eco-clean-cbackcalculated_s-metric.csv")
@@ -3199,7 +3199,7 @@ ggplot(Ecopike3, aes(phenotype, overlap))+
 fwrite(Ecopike3, "Data/Pike/Pike_eco-clean-cbackcalculated_so-metric.csv")
 ```
 
-```{r plot individual overlap, include=FALSE, eval=FALSE}
+```{r plot individual overlap population-level, include=FALSE, eval=FALSE}
 rm(list = ls())
 mod1 <- readRDS("Data/Pike/Variance-components.rds")
 Ecopike2 <- fread("Data/Pike/Pike_eco-clean-cbackcalculated_so-metric.csv")
@@ -3371,53 +3371,53 @@ model{
 sink()
 
 #generate list names of each group
-groupnames<-levels(as.factor(thedata[,1]))
+groupnames <- levels(as.factor(thedata[,1]))
 
 #generate list of isotope names and number of isotopes
-isotope_names<-colnames(thedata)[2:4]
+isotope_names <- colnames(thedata)[2:4]
 isotopes<-3
 
 #convert group names to numeric factors
-thedata[,1]<-as.numeric(as.factor(thedata[,1]))
-ngroups<-max(thedata[,1])
+thedata[,1] <- as.numeric(as.factor(thedata[,1]))
+ngroups <- max(thedata[,1])
 
 #find the groups with the largest n and the n per group
-nstart<-c(NA)
-nend<-c(NA)
+nstart <- c(NA)
+nend <- c(NA)
 for (i in 1:ngroups){
-nstart[i]<-min(as.numeric(rownames(thedata[thedata[,1]==i,])))
-nend[i]<-max(as.numeric(rownames(thedata[thedata[,1]==i,])))
+nstart[i] <- min(as.numeric(rownames(thedata[thedata[,1]==i,])))
+nend[i] <- max(as.numeric(rownames(thedata[thedata[,1]==i,])))
 }
-maxn<-max(nend+1-nstart)
-npergroup<-nend+1-nstart
+maxn <- max(nend+1-nstart)
+npergroup <- nend+1-nstart
 
 # create an array where nrow = the n of the largest group, for groups with smaller n's 
 # some rows will have NA's to account for uneven replication
 
-y<-array(NA,dim=c(maxn,3,ngroups), dimnames=list(NULL,isotope_names,groupnames))
+y <- array(NA,dim = c(maxn,3,ngroups), dimnames = list(NULL,isotope_names,groupnames))
 for (i in 1:ngroups){
-  y[1:nrow(thedata[thedata[,1]==i,2:4]),,i]<-as.matrix(thedata[thedata[,1]==i,2:4])
+  y[1:nrow(thedata[thedata[,1]==i,2:4]),,i] <- as.matrix(thedata[thedata[,1]==i,2:4])
 }
 #ensure y is a completely numeric array
-y<-array(as.numeric(y),dim=dim(y))
+y <- array(as.numeric(y),dim = dim(y))
 
 #objects passed to jags
-data=list(y=y,ngroups=ngroups, maxn=maxn, S3=(diag(3)*3))
+data = list(y = y,ngroups = ngroups, maxn = maxn, S3 = (diag(3)*3))
   
 #initial values
-mu0<-matrix(NA, nrow=ngroups, ncol=3)
-prec0<-array(0,dim=c(3,3,ngroups))
+mu0 <- matrix(NA, nrow = ngroups, ncol=3)
+prec0 <- array(0,dim = c(3,3,ngroups))
 for (k in 1:ngroups){
-mu0[k,]<-mvrnorm(1,c(0,0,0),diag(3)*100)
-prec0[,,k]<-getcov(runif(1,5,30))
+mu0[k,] <- mvrnorm(1,c(0,0,0),diag(3)*100)
+prec0[,,k] <- getcov(runif(1,5,30))
 }
-inits=function(){list( mu=mu0, prec=prec0)}
+inits = function(){list( mu = mu0, prec = prec0)}
 
-# parameters to moniter
-params<-c("mu","cov")
+# parameters to monitor
+params <- c("mu","cov")
 
 # MCMC settings
-nt <- 1
+nt <- 50
 nb <- 1000
 nc <- 3
 na<-1000
@@ -3428,7 +3428,7 @@ ni <- 5000
 out <- jagsUI::jags(data = data,
             inits = inits,
             parameters.to.save = params,
-            model.file = 'ellipsoid_example.txt',
+            model.file = 'ellipsoid_pheno.txt',
             n.chains = nc,
             n.iter = ni,
             n.adapt = 1000,
@@ -3439,245 +3439,261 @@ out <- jagsUI::jags(data = data,
 summary(out,digits=2)
 
 # a list to index pairwise comparisons
-pl<-cbind(sort(rep(seq(1:ngroups),ngroups)),rep(seq(1:ngroups),ngroups))
+pl <- cbind(sort(rep(seq(1:ngroups),ngroups)),rep(seq(1:ngroups),ngroups))
 # probabilities to posterior distrobutions
-probs<-c(0.025,0.5,0.975)
+probs <- c(0.025,0.5,0.975)
 # Calculate an estimate of SEV from each posterior estimate of sigma and summarize
-SEV<-matrix(NA,ncol=ngroups,nrow=nrow(out$sims.list$cov))
-SEV.summary<-matrix(NA,nrow=ngroups,ncol=3+length(probs))
+SEV <- matrix(NA,ncol = ngroups,nrow = nrow(out$sims.list$cov))
+SEV.summary <- matrix(NA,nrow = ngroups,ncol = 3+length(probs))
+
 for (k in 1:ngroups){
-  SEV[,k]<-apply(out$sims.list$cov[,,,k],1,SEV.function)
-  SEV.summary[k,]<-c(nend[k]+1-nstart[k],quantile(SEV[,k],probs=probs),mode(SEV[,k]), mean(SEV[,k]))
+  SEV[,k] <- apply(out$sims.list$cov[,,,k],1,SEV.function)
+  SEV.summary[k,] <- c(nend[k]+1-nstart[k],quantile(SEV[,k],probs=probs),mode(SEV[,k]), mean(SEV[,k]))
 }
-rownames(SEV.summary)<-groupnames
-colnames(SEV.summary)<-c("n",paste(probs,"%",sep=""),"mode","mean")
+rownames(SEV.summary) <- groupnames
+colnames(SEV.summary) <- c("n",paste(probs,"%",sep=""),"mode","mean")
 
 #Compare each posterior SEV estimate to those of other groups
-SEV.diff<-array(NA,dim=c(ngroups,ngroups,nrow(SEV)))
+SEV.diff <- array(NA,dim = c(ngroups,ngroups,nrow(SEV)))
 for(i in 1:(ngroups*ngroups)){
-  SEV.diff[pl[i,1],pl[i,2],]<-SEV[,pl[i,1]]-SEV[,pl[i,2]]
+  SEV.diff[pl[i,1],pl[i,2],] <- SEV[,pl[i,1]]-SEV[,pl[i,2]]
 }
-p.table<-matrix(NA,nrow=ngroups,ncol=ngroups)
-colnames(p.table)<-paste(">",groupnames, sep="")
-rownames(p.table)<-groupnames
+p.table <- matrix(NA,nrow = ngroups,ncol = ngroups)
+colnames(p.table) <- paste(">",groupnames, sep="")
+rownames(p.table) <- groupnames
 for (i in 1:(ngroups*ngroups)){
-    p.table[pl[i,1],pl[i,2]]<-sum(SEV.diff[pl[i,1],pl[i,2],]>0)/nrow(SEV)
+    p.table[pl[i,1],pl[i,2]] <- sum(SEV.diff[pl[i,1],pl[i,2],]>0)/nrow(SEV)
 }
 
 # define objects for mu and sigma values from the posterior
-mus<-out$sims.list$mu
-sigmas<-out$sims.list$cov
+mus <- out$sims.list$mu
+sigmas <- out$sims.list$cov
 
 #create a matrix of all pair-wise comparisons
-pairs<-pairwise(ngroups)
+pairs <- pairwise(ngroups)
 
-overlap<-matrix(NA, nrow=nrow(mus), ncol=nrow(pairs))
-overlap.SEV<-array(1, dim=c(ngroups,ngroups,nrow(mus)))
+overlap <- matrix(NA, nrow = nrow(mus), ncol = nrow(pairs))
+overlap.SEV <- array(1, dim = c(ngroups,ngroups,nrow(mus)))
 for(i in 1:nrow(pairs)){
   for(j in 1:nrow(mus)){
-    overlap[j,i]<-CubeCount3D(mus[j,pairs[i,1],],
-                              mus[j,pairs[i,2],],
-                              sigmas[j,,,pairs[i,1]],
-                              sigmas[j,,,pairs[i,2]])
+    overlap[j,i] <- CubeCount3D(mus[j,pairs[i,1],],
+                                mus[j,pairs[i,2],],
+                                sigmas[j,,,pairs[i,1]],
+                                sigmas[j,,,pairs[i,2]])
   }
-  overlap.SEV[pairs[i,1],pairs[i,2],]<-overlap[,i]/SEV[,pairs[i,1]]
-  overlap.SEV[pairs[i,2],pairs[i,1],]<-overlap[,i]/SEV[,pairs[i,2]]
+  overlap.SEV[pairs[i,1],pairs[i,2],] <- overlap[,i]/SEV[,pairs[i,1]]
+  overlap.SEV[pairs[i,2],pairs[i,1],] <- overlap[,i]/SEV[,pairs[i,2]]
 }
 
 #summarize results
 overlap.2.5<-matrix(NA, nrow=ngroups, ncol=ngroups)
 overlap.40<-matrix(NA, nrow=ngroups, ncol=ngroups)
 overlap.975<-matrix(NA, nrow=ngroups, ncol=ngroups)
+
 for (i in 1:nrow(pairs)){
     overlap.2.5[pairs[i,1],pairs[i,2]]<-quantile(overlap.SEV[pairs[i,1],pairs[i,2],], probs=0.025)
     overlap.40[pairs[i,1],pairs[i,2]]<-quantile(overlap.SEV[pairs[i,1],pairs[i,2],], probs=0.4)
     overlap.975[pairs[i,1],pairs[i,2]]<-quantile(overlap.SEV[pairs[i,1],pairs[i,2],], probs=0.75)
   }
 
-overlap.SEV[, , 1]
+rownames(overlap.2.5) <- groupnames
+colnames(overlap.2.5) <- groupnames
+rownames(overlap.40) <- groupnames
+colnames(overlap.40) <- groupnames
+rownames(overlap.975) <- groupnames
+colnames(overlap.975) <- groupnames
 
-# Print results
-print(SEV.summary,digits=2)
-print(p.table, digits=2)
-print(mu.p,digits=2)
-print(dist.sum,digits=2)
-print(pdist,digits=2)
-print(overlap.2.5,digits=2)
-print(overlap.40,digits=2)
-print(overlap.975,digits=2)
+overlap.2.5
+overlap.40
+overlap.975
+
+write.table(overlap.2.5, file = "Data/Pike/Niche-overlap2.5-phenotypes.txt")
+write.table(overlap.40, file = "Data/Pike/Niche-overlap40-phenotypes.txt")
+write.table(overlap.975, file = "Data/Pike/Niche-overlap97.5-phenotypes.txt")
+
+overlap.2.5 <- read.table("Data/Pike/Niche-overlap2.5-phenotypes.txt")
+overlap.40 <-  read.table("Data/Pike/Niche-overlap40-phenotypes.txt")
+overlap.975 <- read.table("Data/Pike/Niche-overlap97.5-phenotypes.txt")
 ```
 
-```{r}
-sink("ellipsoid_example.txt")
-cat("
-model{
-  
-  #priors
-    for (k in 1:ngroups){
-    mu[k,1] ~ dnorm(0,0.001)
-    mu[k,2] ~ dnorm(0,0.001)
-    mu[k,3] ~ dnorm(0,0.001)
-    prec[1:3,1:3,k] ~ dwish(S3,4)
-    cov[1:3,1:3,k] <- inverse(prec[1:3,1:3,k])
-    #likelihood
-    for (i in 1:maxn){
-    y[i,1:3,k] ~ dmnorm(mu[k,],prec[,,k])
-    }#i
-    }
-    }
-    
-    
-    ",fill = TRUE)
-sink()
+```{r individual overlap metrics phenotype-level, include=FALSE, eval=FALSE}
+rm(list = ls())
 
-##############################################################################
-# Generate Data
-##############################################################################
-# Data should be supplied as a four column table, the fist column is a grouping
-# variable which can be catagorical or numeric
+Ecopike2 <- fread("Data/Pike/Pike_eco-clean-cbackcalculated_s-metric-phenotypes.csv")
+Ecopike2[Ecopike2$fish_ID == "BH-92993",]$phenotype <- "Anadromous"
 
-ngroups<-4
-n<-20
-TrueSEV<-c(5,7.5,10,20)
-S<-array(NA, dim=c(3,3,ngroups))
-for (i in 1:ngroups){
-  S[,,i]<-getcov(TrueSEV[i])
-}
-TrueMu<-rbind(c(0,0,0),c(1,1,1),c(2,2,2),c(3,3,3))
-thedata<-array(NA, dim=c(n,4,ngroups))
-for (i in 1:ngroups){
-  thedata[,,i]<-cbind(rep(paste("group",i),n),mvrnorm(n,TrueMu[i,],S[,,i]))
-}
-thedata<-as.data.frame(apply(thedata,2,c))
-colnames(thedata)<-c("groups","isotope1","isotope2","isotope3")
+Freshwater <- subset(Ecopike2, phenotype == "FW_resident")
+Anadromous <- subset(Ecopike2, phenotype == "Anadromous")
+Crosshabitat <- subset(Ecopike2, phenotype == "Trans-habitat")
+Brackish <- subset(Ecopike2, phenotype == "BW-resident")
 
-##############################################################################
-# Preparing the data
-##############################################################################
+Individuals <- readRDS("Data/Pike/individual-varcov-CNS.RData")
 
-#generate list names of each group
-groupnames<-levels(as.factor(thedata[,1]))
+TNWmat_FW <- as.matrix(read.table("Data/Pike/Total-niche-width_freshwater_matrix.txt"))
+TNWmat_Ana <- as.matrix(read.table("Data/Pike/Total-niche-width_anadromous_matrix.txt"))
+TNWmat_Cross <- as.matrix(read.table("Data/Pike/Total-niche-width_cross-habitat_matrix.txt"))
+TNWmat_BW <- as.matrix(read.table("Data/Pike/Total-niche-width_brackish_matrix.txt"))
 
-#generate list of isotope names and number of isotopes
-isotope_names<-colnames(thedata)[2:4]
-isotopes<-3
+source("funcs.R")
 
-#convert group names to numeric factors
-thedata[,1]<-as.numeric(as.factor(thedata[,1]))
-ngroups<-max(thedata[,1])
+mus_FW <- Freshwater%>%
+  group_by(fish_ID)%>%
+  reframe(fish_ID,
+          d13C = mean(d13C, na.rm = T),
+          d15N = mean(d15N, na.rm = T),
+          d34S = mean(d34S, na.rm = T))%>%
+  drop_na(d13C, d15N, d34S)%>%
+  distinct()
 
-#find the groups with the largest n and the n per group
-nstart<-c(NA)
-nend<-c(NA)
-for (i in 1:ngroups){
-nstart[i]<-min(as.numeric(rownames(thedata[thedata[,1]==i,])))
-nend[i]<-max(as.numeric(rownames(thedata[thedata[,1]==i,])))
-}
-maxn<-max(nend+1-nstart)
-npergroup<-nend+1-nstart
+mus_Ana <- Anadromous%>%
+  group_by(fish_ID)%>%
+  reframe(fish_ID,
+          d13C = mean(d13C, na.rm = T),
+          d15N = mean(d15N, na.rm = T),
+          d34S = mean(d34S, na.rm = T))%>%
+  drop_na(d13C, d15N, d34S)%>%
+  distinct()
 
-# create an array where nrow = the n of the largest group, for groups with smaller n's 
-# some rows will have NA's to account for uneven replication
+mus_Cross <- Crosshabitat%>%
+  group_by(fish_ID)%>%
+  reframe(fish_ID,
+          d13C = mean(d13C, na.rm = T),
+          d15N = mean(d15N, na.rm = T),
+          d34S = mean(d34S, na.rm = T))%>%
+  drop_na(d13C, d15N, d34S)%>%
+  distinct()
 
-y<-array(NA,dim=c(maxn,3,ngroups), dimnames=list(NULL, isotope_names,groupnames))
-for (i in 1:ngroups){
-  y[1:nrow(thedata[thedata[,1]==i,2:4]),,i]<-as.matrix(thedata[thedata[,1]==i,2:4])
-}
-#ensure y is a completely numeric array
-y<-array(as.numeric(y),dim=dim(y))
+mus_BW <- Brackish%>%
+  group_by(fish_ID)%>%
+  reframe(fish_ID,
+          d13C = mean(d13C, na.rm = T),
+          d15N = mean(d15N, na.rm = T),
+          d34S = mean(d34S, na.rm = T))%>%
+  drop_na(d13C, d15N, d34S)%>%
+  distinct()
+
+PikeID_FW <- unique(mus_FW$fish_ID)
+PikeID_Ana <- unique(mus_Ana$fish_ID)
+PikeID_Cross <- unique(mus_Cross$fish_ID)
+PikeID_BW <- unique(mus_BW$fish_ID)
+
+overlap_FW <- data.frame(fish_ID = NA, overlap = NA)
+overlap_Ana <- data.frame(fish_ID = NA, overlap = NA)
+overlap_Cross <- data.frame(fish_ID = NA, overlap = NA)
+overlap_BW <- data.frame(fish_ID = NA, overlap = NA)
 
 
-#####################################
-#package the data
-#####################################
-
-#objects passed to jags
-data=list(y=y,ngroups=ngroups, maxn=maxn, S3=(diag(3)*3))
-  
-#initial values
-mu0<-matrix(NA, nrow=ngroups, ncol=3)
-prec0<-array(0,dim=c(3,3,ngroups))
-for (k in 1:ngroups){
-mu0[k,]<-mvrnorm(1,c(0,0,0),diag(3)*100)
-prec0[,,k]<-getcov(runif(1,5,30))
-}
-inits=function(){list( mu=mu0, prec=prec0)}
-
-# parameters to moniter
-params<-c("mu","cov")
-
-# MCMC settings
-nt <- 1
-nb <- 1000
-nc <- 3
-na<-1000
-ni <- 5000 
-
-out <- jagsUI::jags(data = data,
-            inits = inits,
-            parameters.to.save = params,
-            model.file = 'ellipsoid_example.txt',
-            n.chains = nc,
-            n.iter = ni,
-            n.adapt = 1000,
-            n.burnin = nb,
-            n.thin = nt)
-
-#plot(out)
-summary(out,digits=2)
-  
-#################################################
-# Calulate SEV
-###############################################   
-# a list to index pairwise comparisons
-pl<-cbind(sort(rep(seq(1:ngroups),ngroups)),rep(seq(1:ngroups),ngroups))
-# probabilities to posterior distrobutions
-probs<-c(0.025,0.5,0.975)
-# Calculate an estimate of SEV from each posterior estimate of sigma and sumarize
-SEV<-matrix(NA,ncol=ngroups,nrow=nrow(out$sims.list$cov))
-SEV.summary<-matrix(NA,nrow=ngroups,ncol=3+length(probs))
-for (k in 1:ngroups){
-  SEV[,k]<-apply(out$sims.list$cov[,,,k],1,SEV.function)
-  SEV.summary[k,]<-c(nend[k]+1-nstart[k],quantile(SEV[,k],probs=probs),mode(SEV[,k]), mean(SEV[,k]))
-}
-rownames(SEV.summary)<-groupnames
-colnames(SEV.summary)<-c("n",paste(probs,"%",sep=""),"mode","mean")
-
-mus<-out$sims.list$mu
-sigmas<-out$sims.list$cov
-
-#create a matrix of all pair-wise comparisons
-pairs<-pairwise(ngroups)
-
-# Create a loop to 1) calculate the area of over lap for each pair-wise comparison
-# and 2) compare that value to each group's respective SEV value
-
-overlap<-matrix(NA, nrow=nrow(mus), ncol=nrow(pairs))
-overlap.SEV<-array(1, dim=c(ngroups,ngroups,nrow(mus)))
-for(i in 1:nrow(pairs)){
-  for(j in 1:nrow(mus)){
-    overlap[j,i]<-CubeCount3D(mus[j,pairs[i,1],],
-                              mus[j,pairs[i,2],],
-                              sigmas[j,,,pairs[i,1]],
-                              sigmas[j,,,pairs[i,2]])
+for(i in 1:length(PikeID_FW)){{
+    over<-CubeCount3D(c(mus_FW[mus_FW$fish_ID == PikeID_FW[i],]$d13C, 
+                        mus_FW[mus_FW$fish_ID == PikeID_FW[i],]$d15N, 
+                        mus_FW[mus_FW$fish_ID == PikeID_FW[i],]$d34S),
+                         c(mean(Freshwater$d13C, na.rm = TRUE),
+                           mean(Freshwater$d15N, na.rm = TRUE),
+                           mean(Freshwater$d34S, na.rm = TRUE)),
+                      Individuals[[PikeID_FW[i]]],
+                      TNWmat_FW)
   }
-  overlap.SEV[pairs[i,1],pairs[i,2],]<-overlap[,i]/SEV[,pairs[i,1]]
-  overlap.SEV[pairs[i,2],pairs[i,1],]<-overlap[,i]/SEV[,pairs[i,2]]
+  overlap_FW[i,1] <- PikeID_FW[i]
+  overlap_FW[i,2] <- over/SEV.function(TNWmat_FW)
 }
 
-#summarize results
-overlap.2.5<-matrix(NA, nrow=ngroups, ncol=ngroups)
-overlap.50<-matrix(NA, nrow=ngroups, ncol=ngroups)
-overlap.975<-matrix(NA, nrow=ngroups, ncol=ngroups)
-for (i in 1:nrow(pairs)){
-    overlap.2.5[pairs[i,1],pairs[i,2]]<-quantile(overlap.SEV[pairs[i,1],pairs[i,2],], probs=0.025)
-    overlap.50[pairs[i,1],pairs[i,2]]<-quantile(overlap.SEV[pairs[i,1],pairs[i,2],], probs=0.5)
-    overlap.975[pairs[i,1],pairs[i,2]]<-quantile(overlap.SEV[pairs[i,1],pairs[i,2],], probs=0.75)
+for(i in 1:length(PikeID_Ana)){{
+    over<-CubeCount3D(c(mus_Ana[mus_Ana$fish_ID == PikeID_Ana[i],]$d13C, 
+                        mus_Ana[mus_Ana$fish_ID == PikeID_Ana[i],]$d15N, 
+                        mus_Ana[mus_Ana$fish_ID == PikeID_Ana[i],]$d34S),
+                         c(mean(Freshwater$d13C, na.rm = TRUE),
+                           mean(Freshwater$d15N, na.rm = TRUE),
+                           mean(Freshwater$d34S, na.rm = TRUE)),
+                      Individuals[[PikeID_Ana[i]]],
+                      TNWmat_Ana)
   }
+  overlap_Ana[i,1] <- PikeID_Ana[i]
+  overlap_Ana[i,2] <- over/SEV.function(TNWmat_Ana)
+}
+
+for(i in 1:length(PikeID_Cross)){{
+    over<-CubeCount3D(c(mus_Cross[mus_Cross$fish_ID == PikeID_Cross[i],]$d13C, 
+                        mus_Cross[mus_Cross$fish_ID == PikeID_Cross[i],]$d15N, 
+                        mus_Cross[mus_Cross$fish_ID == PikeID_Cross[i],]$d34S),
+                         c(mean(Freshwater$d13C, na.rm = TRUE),
+                           mean(Freshwater$d15N, na.rm = TRUE),
+                           mean(Freshwater$d34S, na.rm = TRUE)),
+                      Individuals[[PikeID_Cross[i]]],
+                      TNWmat_Cross)
+  }
+  overlap_Cross[i,1] <- PikeID_Cross[i]
+  overlap_Cross[i,2] <- over/SEV.function(TNWmat_Cross)
+}
+
+for(i in 1:length(PikeID_BW)){{
+    over<-CubeCount3D(c(mus_BW[mus_BW$fish_ID == PikeID_BW[i],]$d13C, 
+                        mus_BW[mus_BW$fish_ID == PikeID_BW[i],]$d15N, 
+                        mus_BW[mus_BW$fish_ID == PikeID_BW[i],]$d34S),
+                         c(mean(Freshwater$d13C, na.rm = TRUE),
+                           mean(Freshwater$d15N, na.rm = TRUE),
+                           mean(Freshwater$d34S, na.rm = TRUE)),
+                      Individuals[[PikeID_BW[i]]],
+                      TNWmat_BW)
+  }
+  overlap_BW[i,1] <- PikeID_BW[i]
+  overlap_BW[i,2] <- over/SEV.function(TNWmat_BW)
+}
+
+overlap <- rbind(overlap_FW, overlap_Ana, overlap_Cross, overlap_BW)
+
+Overlap_pheno <- Ecopike2%>%
+  left_join(overlap, by = "fish_ID")
+fwrite(Ecopike3, "Data/Pike/Pike_eco-clean-cbackcalculated_so-metric_phenotypes.csv")
+
+#compare to individual overlap with population TINW
+Overlap_pop <- fread("Data/Pike/Pike_eco-clean-cbackcalculated_so-metric.csv")
+
+Opop <- ggplot(Overlap_pop, aes(phenotype, overlap, fill = phenotype))+
+  geom_boxplot(linewidth = 0.2, outlier.size = 0.2)+
+  scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                    values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
+                    labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
+  scale_x_discrete(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                   labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
+  scale_y_continuous(limits = c(-0.1, 1),
+                     breaks = seq(0,1, 0.25))+
+  labs(title = "overlap with population TINW",
+       fill = "behavioral phenotype")+
+  theme_bw()+
+  theme(legend.position = "none",
+        plot.title = element_text(size = 8, color = "black"),
+        axis.text.x = element_text(size = 8, color = "black", angle = 45, hjust = 1),
+        axis.text.y = element_text(size = 8, color = "black", hjust = 1),
+        axis.title = element_blank())
+
+
+Opheno <- ggplot(overlap_pheno, aes(phenotype, overlap, fill = phenotype))+
+  geom_boxplot(linewidth = 0.1, outlier.size = 0.2)+
+  scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                    values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
+                    labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
+  scale_x_discrete(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                   labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
+  scale_y_continuous(limits = c(-0.1, 1),
+                     breaks = seq(0,1, 0.25))+
+  labs(title = "overlap with phenotype TINW",
+       fill = "behavioral phenotype")+
+  theme_bw()+
+  theme(legend.position = "none",
+        plot.title = element_text(size = 8, color = "black"),
+        axis.text.x = element_text(size = 8, color = "black", angle = 45, hjust = 1),
+        axis.text.y = element_text(size = 8, color = "black", hjust = 1),
+        axis.title = element_blank())
+
+Overlap_compare <- annotate_figure(ggarrange(Opop, Opheno, common.legend = T, legend = "right"), 
+                                   bottom = text_grob("behavioral phenotype", size = 8),
+                                   left = text_grob("overlap index", size = 8, rot = 90, hjust = 0))
+
+ggsave("Figures/supplement/Overlap-comparison-population-phenotype.png", Overlap_compare, 
+       width = 16, height = 8, units = "cm", dpi = 600, bg = "white")
 ```
 
-
-```{r model s- and o-metrics, include=FALSE, eval=FALSE}
+```{r model s- and o-metrics population-level, include=FALSE, eval=FALSE}
 rm(list = ls())
 Ecopike <- fread("Data/Pike/Pike_eco-clean-cbackcalculated_so-metric.csv")
 

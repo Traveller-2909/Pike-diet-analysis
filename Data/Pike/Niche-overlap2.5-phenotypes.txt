@@ -1,0 +1,5 @@
+"Anadromous" "BW-resident" "FW_resident" "Trans-habitat"
+"Anadromous" NA 0.00498721300440617 0.0406562335522237 0
+"BW-resident" NA NA 0 0.451448064637929
+"FW_resident" NA NA NA 0
+"Trans-habitat" NA NA NA NA
