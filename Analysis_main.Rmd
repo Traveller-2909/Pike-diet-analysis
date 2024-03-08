@@ -155,20 +155,28 @@ fwrite(Pike_SC, "Data/Pike/Stomach-contents-Database-clean.csv")
 
 Marlon_SC <- fread("Data/Pike/SC_Marlon-MA.csv")
 
+Pikesex <- Pike%>%
+  transmute(fish_ID = Fish_ID,
+            sex = Sex)
+
 Marlon_SC2 <- Marlon_SC%>%
   transmute(Date = Date.x,
             fish_ID = Fish_ID,
             species = Species,
-            sex = NA,
             pike_weight_g = Weight,
             pike_TL_mm = Total_Length_mm,
             prey_length_mm = length,
             prey_weight_g = weight,
             area = case_when(Comparison_Area_Name == "Werderbucht" ~ "BAT",
                              Comparison_Area_Name == "Ummanz" ~ "SB",
-                             Comparison_Area_Name == "Neuensiener_Selliner_See" ~ "GB"))
+                             Comparison_Area_Name == "Neuensiener_Selliner_See" ~ "GB"))%>%
+  left_join(Pikesex, by = "fish_ID")
 
 SC_all <- rbind(Pike_SC, Marlon_SC2)
+
+SC_over <- SC_all%>%
+  transmute(fish_ID, sex, area)%>%
+  distinct()
 
 fwrite(SC_all, "Data/Pike/Stomach-contents-all-clean.csv")
 ```
@@ -1820,8 +1828,8 @@ plot_data(filename="isospace_plotn",
           return_obj = T,
           mix0,source,discr.df)
 
-##### 3. Writing the mode ######
-# Name of the model
+
+# name models
 model0.0_filename <- "Data/Mixing models/MixSIAR_model_pike-NULL_tele.txt"
 model1.1_filename <- "Data/Mixing models/MixSIAR_model_pike-ecotype-area-TL_tele.txt"
 model1.2_filename <- "Data/Mixing models/MixSIAR_model_pike-ecotype-area-hr95.txt"
@@ -1844,7 +1852,7 @@ resid_err <- TRUE
 # Analyst provides a single mixture value for each of the j tracers considered
 process_err <- TRUE
 
-# Save it
+# Write ans save models
 write_JAGS_model(model0.0_filename, resid_err, process_err, mix0.0, source)
 write_JAGS_model(model1.1_filename, resid_err, process_err, mix1.1, source)
 write_JAGS_model(model1.2_filename, resid_err, process_err, mix1.2, source)
@@ -1859,7 +1867,7 @@ write_JAGS_model(model4_filename, resid_err, process_err, mix4, source)
 write_JAGS_model(model5_filename, resid_err, process_err, mix5, source)
 write_JAGS_model(model6_filename, resid_err, process_err, mix6, source)
 
-# We run a model with uninformative priors
+# run a model with uninformative priors
 jags.pike.0.0 <- run_model(run="normal", mix0.0, source, discr.df, model0.0_filename, alpha.prior = 1)
 jags.pike.1.1 <- run_model(run="normal", mix1.1, source, discr.df, model1.1_filename, alpha.prior = 1)
 jags.pike.1.2 <- run_model(run="normal", mix1.2, source, discr.df, model1.2_filename, alpha.prior = 1)
@@ -1986,8 +1994,8 @@ jags.pike.5 <- readRDS("Data/Mixing models/Output/Mixing.model-normal-run-ecotyp
 jags.pike.6 <- readRDS("Data/Mixing models/Output/Mixing.model-normal-run-area.rds")
 
 #create model list
-mcomp<-list(jags.pike.0, jags.pike.1, jags.pike.2, jags.pike.3, jags.pike.4, jags.pike.6)
-names(mcomp) <- c("NULL", "ecotype|body length", "body length", "ecotype", "capture location|body length", "capt")
+mcomp<-list(jags.pike.0, jags.pike.1, jags.pike.2, jags.pike.3, jags.pike.4, jags.pike.5, jags.pike.6)
+names(mcomp) <- c("NULL", "ecotype|body length", "body length", "ecotype", "capture location|body length", "ecotype|capt|body length", "capt")
 # Model comparison
 compare_models(mcomp, loo = TRUE)
 ```
@@ -2696,7 +2704,7 @@ d13C <- ggplot(Ecopike[Ecopike$lens_layer>1,], aes(length_back, d13C))+
   ggtitle("d13C")+
   pl_theme
 
-Eyeplot <- ggarrange(d34S, d15N, d13C, nrow = 1, common.legend = T)
+Eyeplot <- ggarrange(d13C, d15N, d34S, nrow = 1, common.legend = T, labels = c("A", "B", "C"))
 
 Eyeplot1 <- annotate_figure(Eyeplot, bottom = text_grob("Backcalculated length (mm)", size = 10, color = "black"))
 
@@ -2760,6 +2768,7 @@ mean(eigen(WICmat)$value/eigen(TNWmat)$value)
 write.table(TNWmat, "Data/Pike/Total-niche-width_matrix.txt")
 write.table(WICmat, "Data/Pike/Within-individual-variance_matrix.txt")
 ```
+
 ```{r population niches phenotype specific, include=FALSE, eval=FALSE}
 rm(list = ls())
 
@@ -2776,6 +2785,11 @@ Crosshabitat <- subset(Ecopike2, phenotype == "Trans-habitat")
 Brackish <- subset(Ecopike2, phenotype == "BW-resident")
 
 #multi-response models phenotype-level
+mod_pheno <- MCMCglmm(cbind(d13C, d15N, d34S)~phenotype, random = ~fish_ID, data = Ecopike2, family = c("gaussian", "gaussian", "gaussian"), 
+                 rcov = ~us(trait):units, pr = TRUE, verbose = FALSE, nitt = 100000, burnin = 50000, thin = 50)
+
+summary.MCMCglmm(mod_pheno)
+
 mod_FW <- MCMCglmm(cbind(d13C, d15N, d34S)~trait-1, random = ~fish_ID, data = Freshwater, family = c("gaussian", "gaussian", "gaussian"), 
                  rcov = ~us(trait):units, pr = TRUE, verbose = FALSE, nitt = 100000, burnin = 50000, thin = 50)
 
@@ -2931,7 +2945,7 @@ write.table(TNWmat_FW, "Data/Pike/Total-niche-width_brackish_matrix.txt")
 write.table(WICmat_FW, "Data/Pike/Within-individual-variance_brackish_matrix.txt")
 ```
 
-```{r individual niche width, include=FALSE, eval=FALSE}
+```{r individual niche width population level, include=FALSE, eval=FALSE}
 rm(list = ls())
 mod1 <- readRDS("Data/Pike/Variance-components.rds")
 Ecopike2 <- fread("Data/Pike/Lens-SI-eco-clean-cbackcalculated.csv")
@@ -2987,24 +3001,6 @@ Ecopike_spec <- Ecopike2%>%
                                  "Trans-habitat",
                                  "BW-resident"))
 
-Specplot <- ggplot(Ecopike_spec)+
-  geom_violin(aes(x = phenotype, y = 1-s_index, fill = phenotype), width = 1)+
-  geom_boxplot(aes(x = phenotype, y = 1-s_index), width = 0.07, size = .5, color = "black", fill = "transparent")+
-  scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
-                    values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
-                    labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
-  scale_x_discrete(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
-                   labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
-  scale_y_continuous(limits = c(-0.1, 1),
-                     breaks = seq(0,1, 0.25))+
-  labs(x = "behavioral phenotype",
-       y = "specialization index")+
-  theme_bw()+
-  theme(legend.position = "none",
-        axis.text = element_text(size = 10, color = "black"),
-        axis.title = element_text(size = 15, color = "black"))
-
-ggsave("Figures/S-index-individual.png", Specplot, height = 15, width = 15, units = "cm", dpi = 600, bg = "white")
 fwrite(Ecopike_spec, "Data/Pike/Pike_eco-clean-cbackcalculated_s-metric.csv")
 ```
 
@@ -3132,9 +3128,35 @@ Ecopike_spec <- Ecopike2%>%
                                  "Trans-habitat",
                                  "BW-resident"))
 
-Specplot <- ggplot(Ecopike_spec, aes(x = phenotype, y = 1-s_index, fill = phenotype))+
-  geom_violin(width = 1)+
-  geom_boxplot(aes(x = phenotype, y = 1-s_index), width = 0.07, size = .5, color = "black", fill = "transparent")+
+fwrite(Ecopike_spec, "Data/Pike/Pike_eco-clean-cbackcalculated_s-metric-phenotypes.csv")
+```
+
+```{r individual niche width plots, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+#Population-level s-index
+Ecopike_spec_pop <- fread("Data/Pike/Pike_eco-clean-cbackcalculated_s-metric.csv")
+
+Ecopike_spec_pop2 <- Ecopike_spec_pop%>%
+  mutate(phenotype = fct_relevel(phenotype,
+                                 "FW_resident",
+                                 "Anadromous", 
+                                 "Trans-habitat",
+                                 "BW-resident"))
+#Phenotype-level s-index
+Ecopike_spec_pheno <- fread("Data/Pike/Pike_eco-clean-cbackcalculated_s-metric-phenotypes.csv")
+
+Ecopike_spec_pheno2 <- Ecopike_spec_pheno%>%
+  mutate(phenotype = fct_relevel(phenotype,
+                                 "FW_resident",
+                                 "Anadromous", 
+                                 "Trans-habitat",
+                                 "BW-resident"))
+
+Specplot_pop <- ggplot(Ecopike_spec_pop2)+
+  geom_violin(aes(x = phenotype, y = 1-s_index, fill = phenotype), width = 1)+
+  geom_boxplot(aes(x = phenotype, y = 1-s_index), width = 0.07, size = .5, linewidth = 0.3, outlier.size = 0.3, 
+               color = "black", fill = "transparent")+
   scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
                     values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
                     labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
@@ -3142,15 +3164,37 @@ Specplot <- ggplot(Ecopike_spec, aes(x = phenotype, y = 1-s_index, fill = phenot
                    labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
   scale_y_continuous(limits = c(-0.1, 1),
                      breaks = seq(0,1, 0.25))+
-  labs(x = "behavioral phenotype",
-       y = "specialization index")+
+  labs(title = "s-index population-level")+
   theme_bw()+
   theme(legend.position = "none",
-        axis.text = element_text(size = 10, color = "black"),
-        axis.title = element_text(size = 15, color = "black"))
+        axis.text.x = element_text(size = 7, color = "black", angle = 45, hjust = 1),
+        axis.text.y = element_text(size = 7, color = "black"),
+        axis.title = element_blank())
 
-ggsave("Figures/S-index-individual-phenotype-level.png", Specplot, height = 15, width = 15, units = "cm", dpi = 600, bg = "white")
-fwrite(Ecopike_spec, "Data/Pike/Pike_eco-clean-cbackcalculated_s-metric-phenotypes.csv")
+Specplot_pheno <- ggplot(Ecopike_spec_pheno2, aes(x = phenotype, y = 1-s_index, fill = phenotype))+
+  geom_violin(width = 1)+
+  geom_boxplot(aes(x = phenotype, y = 1-s_index), width = 0.07, size = .5, linewidth = 0.3, outlier.size = 0.3,
+               color = "black", fill = "transparent")+
+  scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                    values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
+                    labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
+  scale_x_discrete(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                   labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
+  scale_y_continuous(limits = c(-0.1, 1),
+                     breaks = seq(0,1, 0.25))+
+  labs(title = "s-index phenotype-level")+
+  theme_bw()+
+  theme(legend.position = "none",
+        axis.text.x = element_text(size = 7, color = "black", angle = 45, hjust = 1),
+        axis.text.y = element_text(size = 7, color = "black"),
+        axis.title = element_blank())
+
+Spec <- ggarrange(Specplot_pop, Specplot_pheno, labels = c("A", "B"))
+
+Specplot <- annotate_figure(Spec, bottom = text_grob("behavioral phenotype", color = "black", size = 10), 
+                            left = text_grob("specialization index", color = "black", size = 10, rot = 90, hjust = 0.3))
+
+ggsave("Figures/S-index-individual.png", Specplot, height = 8, width = 16, units = "cm", dpi = 600, bg = "white")
 ```
 
 ```{r individual overlap metrics population-level, include=FALSE, eval=FALSE}
@@ -3643,7 +3687,8 @@ overlap <- rbind(overlap_FW, overlap_Ana, overlap_Cross, overlap_BW)
 
 Overlap_pheno <- Ecopike2%>%
   left_join(overlap, by = "fish_ID")
-fwrite(Ecopike3, "Data/Pike/Pike_eco-clean-cbackcalculated_so-metric_phenotypes.csv")
+
+fwrite(Overlap_pheno, "Data/Pike/Pike_eco-clean-cbackcalculated_so-metric_phenotypes.csv")
 
 #compare to individual overlap with population TINW
 Overlap_pop <- fread("Data/Pike/Pike_eco-clean-cbackcalculated_so-metric.csv")
@@ -3667,7 +3712,7 @@ Opop <- ggplot(Overlap_pop, aes(phenotype, overlap, fill = phenotype))+
         axis.title = element_blank())
 
 
-Opheno <- ggplot(overlap_pheno, aes(phenotype, overlap, fill = phenotype))+
+Opheno <- ggplot(Overlap_pheno, aes(phenotype, overlap, fill = phenotype))+
   geom_boxplot(linewidth = 0.1, outlier.size = 0.2)+
   scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
                     values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
@@ -3685,7 +3730,7 @@ Opheno <- ggplot(overlap_pheno, aes(phenotype, overlap, fill = phenotype))+
         axis.text.y = element_text(size = 8, color = "black", hjust = 1),
         axis.title = element_blank())
 
-Overlap_compare <- annotate_figure(ggarrange(Opop, Opheno, common.legend = T, legend = "right"), 
+Overlap_compare <- annotate_figure(ggarrange(Opop, Opheno, common.legend = T, legend = "right", labels = c("A", "B")), 
                                    bottom = text_grob("behavioral phenotype", size = 8),
                                    left = text_grob("overlap index", size = 8, rot = 90, hjust = 0))
 
@@ -3760,6 +3805,140 @@ anova(Omod_0, Omod1)
 
 Omod_final <- lm(overlap~length+sex+area+phenotype, data = Ecopike2)
 tab_model(Omod_final)
+```
+
+# Thermosaline niche metrics
+
+```{r population niches whole population level, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+Otopike <- fread("Data/pike/elements/Oto_LA-to-d18O_interpolation.csv")
+Pike_lensdata <- fread("Data/pike/pikedata-model.csv")
+
+Pike_lensjoin <- Pike_lensdata%>%
+  transmute(fish_ID = ID, phenotype)
+
+Ecopike <- Otopike%>%
+  inner_join(Pike_lensjoin, by = "fish_ID")%>%
+  distinct()
+
+fwrite(Ecopike, "Data/pike/elements/Ecopike-thermosaline.csv")
+
+#multi-response model population-level
+mod1 <- MCMCglmm(cbind(Sr, d18O)~trait-1, random = ~fish_ID, data = Ecopike, family = c("gaussian", "gaussian"), 
+                 rcov = ~us(trait):units, pr = TRUE, verbose = FALSE, nitt = 100000, burnin = 50000, thin = 50)
+
+#Extract between individual component model 1
+BICmat <- mod1$VCV[, "fish_ID"]
+BIC <- mean(BICmat)
+
+#Extract within individual component model 1
+WICmat <- mod1$VCV[, grep("trait", colnames(mod1$VCV))]
+
+#Convert whole population residual variance into matrix
+SrSr <- mean(WICmat[,1])
+OSr <- mean(WICmat[,2])
+SrO <- mean(WICmat[,3])
+OO <- mean(WICmat[,4])
+
+
+WICmat <- matrix(0, nrow = 2, ncol = 2)
+
+#fill diagonals with residual variance
+WICmat[1,1] <- SrSr
+WICmat[2,2] <- OO
+
+
+#fill off-diagonals with residual covariance
+WICmat[1,2] <- SrO
+WICmat[2,1] <- OSr
+
+
+row.names(WICmat) <- c("Sr", "d18O")
+colnames(WICmat) <- c("Sr", "d18O")
+
+TNWmat <- BIC + WICmat
+
+mean(eigen(WICmat)$value/eigen(TNWmat)$value)
+
+write.table(TNWmat, "Data/Pike/elements/Total-niche-width_matrix.txt")
+write.table(WICmat, "Data/Pike/elements/Within-individual-variance_matrix.txt")
+```
+
+```{r individual niche width population level, include=FALSE, eval=FALSE}
+rm(list = ls())
+Ecopike <- fread("Data/pike/elements/Ecopike-thermosaline.csv")
+TNWmat <- read.table("Data/Pike/elements/Total-niche-width_matrix.txt")
+WICmat <- read.table("Data/Pike/elements/Within-individual-variance_matrix.txt")
+
+#Individual covariance matrices
+# Initialize an empty list to store covariance matrices from raw data
+num_fish <- length(unique(Ecopike$fish_ID))
+raw_cov_matrices_list <- vector("list", length = num_fish)
+
+# Loop through each fish_ID and calculate the covariance matrices from raw data
+for (i in 1:num_fish) {
+  fish_data <- subset(Ecopike, fish_ID == unique(Ecopike$fish_ID)[i])
+  raw_cov_matrix <- cov(fish_data[, c("Sr", "d18O")], use = "complete.obs")
+  raw_cov_matrices_list[[i]] <- raw_cov_matrix
+}
+
+names(raw_cov_matrices_list) <- unique(Ecopike$fish_ID)
+
+saveRDS(raw_cov_matrices_list, file = "Data/Pike/elements/individual-varcov-CNS.RData")
+raw_cov_matrices_list["BH-01922"]
+# Function to calculate normalized eigenvalues
+eigenval <- function(fish_matrix, population_matrix) {
+  if (any(is.na(fish_matrix))) {
+    return(NA)
+  }
+  eigenvalues_fish <- eigen(fish_matrix)$values
+  if (any(is.na(eigenvalues_fish))) {
+    return(NA)
+  }
+  #population matrix
+  eigenvalues_population <- eigen(population_matrix)$values
+  normalized_eigenvalues <- eigenvalues_fish / eigenvalues_population
+  return(mean(normalized_eigenvalues))
+}
+
+# Initialize an empty list to store results
+normalized_eigenvalues_list <- numeric(num_fish)
+
+for (i in 1:num_fish) {
+  fish_matrix <- raw_cov_matrices_list[[i]]  # Use the raw data covariance matrix
+  normalized_eigenvalues_list[i] <- eigenval(fish_matrix, TNWmat)
+}
+
+Spec_index <- tibble(fish_ID = unique(Ecopike$fish_ID), s_index = normalized_eigenvalues_list)
+
+Ecopike_spec <- Ecopike%>%
+  left_join(Spec_index, by = "fish_ID")%>%
+  mutate(phenotype = fct_relevel(phenotype,
+                                 "FW-resident",
+                                 "Anadromous", 
+                                 "Cross-habitat",
+                                 "BW-resident"))
+
+ggplot(Ecopike_spec)+
+  geom_violin(aes(x = phenotype, y = 1-s_index, fill = phenotype), width = 1)+
+  geom_boxplot(aes(x = phenotype, y = 1-s_index), width = 0.07, size = .5, linewidth = 0.3, outlier.size = 0.3, 
+               color = "black", fill = "transparent")+
+  scale_fill_manual(breaks = c("FW-resident", "Anadromous", "Cross-habitat", "BW-resident"),
+                    values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
+                    labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
+  scale_x_discrete(breaks = c("FW-resident", "Anadromous", "Cross-habitat", "BW-resident"),
+                   labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
+  scale_y_continuous(limits = c(-0.1, 1),
+                     breaks = seq(0,1, 0.25))+
+  labs(title = "s-index population-level")+
+  theme_bw()+
+  theme(legend.position = "none",
+        axis.text.x = element_text(size = 7, color = "black", angle = 45, hjust = 1),
+        axis.text.y = element_text(size = 7, color = "black"),
+        axis.title = element_blank())
+
+fwrite(Ecopike_spec, "Data/Pike/Pike_eco-clean-cbackcalculated_s-metric.csv")
 ```
 
 # Lifelong growth
