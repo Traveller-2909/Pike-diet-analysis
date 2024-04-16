@@ -29,6 +29,7 @@ library(tRophicPosition)
 library(MixSIAR)
 library(ellipse)
 library(ggforce)
+library(ggrepel)
 library(reshape2)
 library(plyr)
 library(RColorBrewer)
@@ -178,6 +179,12 @@ rm(list = ls())
 
 SC_data <- fread("Data/Pike/Stomach-contents-all-clean.csv")
 
+SC_data_area <- SC_data%>%
+  transmute(fish_ID, area)%>%
+  distinct()
+
+table(SC_data_area$area)
+
 SC_data2 <- SC_data%>%
   mutate(date = as.Date(lubridate::parse_date_time(Date, "ymd")),
          area2 = as.factor(case_when(area == "GB" ~ "lagoon",
@@ -195,48 +202,31 @@ SC_data2 <- SC_data%>%
 Prey <- fread("Data/Prey/Preyfish_samples.CSV")
 
 Prey_energy <- fread("Data/Prey/Preyfish_energy_content.csv")
-Prey_energy2 <- Prey_energy%>%
-  group_by(ID)%>%
-  reframe(Number = ID,
-          Caloric_value_mJ_per_kg = mean(Caloric_value_mJ_per_kg))%>%
+
+Prey_energy_species2 <- Prey_energy%>%
+  transmute(ID, Date, Caloric_value_mJ_per_kg,
+            Species = case_when(Species == "B. bjoerkna" ~ "other",
+                                Species == "G. aculeatus" ~ "other",
+                                TRUE ~ Species))%>%
+  mutate(order = case_when(Species == "C. harengus" ~ 1,
+                            Species == "R. rutilus" ~ 2,
+                            Species == "P. fluviatilis" ~ 3,
+                            Species == "N. melanostomus" ~ 4,
+                            Species == "P. flesus" ~ 5,
+                            TRUE ~ 6))%>%
   distinct()
 
-Prey_energy_species2 <- Prey_energy2%>%
-  left_join(Prey, by = "Number")%>%
-  mutate(species = case_when(Species == "Flounder" ~ "Platichthys flesus",
-                             Species == "G. aculeatus" ~ "other",
-                             Species == "Herring" ~ "Clupea harengus",
-                             Species == "N. melanostomus" ~ "Neogobius melanostomus",
-                             Species == "P. flesus" ~ "Platichthys flesus",
-                             Species == "P. fluviatilis" ~ "Perca fluviatilis",
-                             Species == "Perch" ~ "Perca fluviatilis",
-                             Species == "R.rutilus" ~ "Rutilus rutilus",
-                             Species == "Roach" ~ "Rutilus rutilus",
-                             Species == "Three-spined stickleback" ~ "other",
-                             Species == "White bream" ~ "other",
-                             ID == "BF-624" ~ "Clupea harengus",
-                             ID == "BF-625" ~ "Clupea harengus",
-                             ID == "BF-626" ~ "Clupea harengus",
-                             ID == "BF-627" ~ "Clupea harengus"),
-         order = case_when(species == "Clupea harengus" ~ 1,
-                            species == "Rutilus rutilus" ~ 2,
-                            species == "Perca fluviatilis" ~ 3,
-                            species == "Neogobius melanostomus" ~ 4,
-                            species == "Platichthys flesus" ~ 5,
-                            species == "other" ~ 6))%>%
-  distinct()
-
-Prey_energy_species2$species <- reorder(Prey_energy_species2$species, Prey_energy_species2$order)
+Prey_energy_species2$Species <- reorder(Prey_energy_species2$Species, Prey_energy_species2$order)
 
 Spec_energy <- Prey_energy_species2%>%
-  group_by(species)%>%
-  reframe(species = species,
+  group_by(Species)%>%
+  reframe(species = Species,
           spec_energy_cont = mean(Caloric_value_mJ_per_kg))%>%
   distinct()
 
-A1 <- aov(Caloric_value_mJ_per_kg~as.factor(species), data = Prey_energy_species2)
+A1 <- aov(Caloric_value_mJ_per_kg~Species, data = Prey_energy_species2)
 summary(A1)
-pairwise.t.test(Prey_energy_species2$Caloric_value_mJ_per_kg, as.factor(Prey_energy_species2$species), p.adj = "bonf")
+pairwise.t.test(Prey_energy$Caloric_value_mJ_per_kg, Prey_energy_species2$Species, p.adj = "bonf")
 
 
 SC_summary <- SC_data2%>%
@@ -275,7 +265,11 @@ SC_summary2 <- SC_summary%>%
 
 SC_months <- SC_data2%>%
   mutate(month = month(date))%>%
-  group_by(month)%>%
+  mutate(season = case_when(month >= 3 & month <= 5 ~ "Mar-May",
+                            month >= 6 & month <= 8 ~ "Jun-Aug",
+                            month >= 9 & month <= 11 ~ "Sep-Nov",
+                            TRUE ~ "Dec-Feb"))%>%
+  group_by(season)%>%
   reframe(species = case_when(species == "Gasteroseus aculeatus" ~ "Gasterosteus aculeatus",
                               species == "Gammerus sp." ~ "Gammarus",
                               species == "P.elegans" ~ "Palaemon adspersus",
@@ -291,7 +285,7 @@ SC_months2 <- SC_months%>%
   mutate(species = case_when(species == "Perca fluviatilis" ~ species,
                               species == "Rutilus rutilus" ~ species,
                               species == "Clupea harengus" ~ species,
-                              species == "Platichtys flesus" ~ species,
+                              species == "Platichthys flesus" ~ species,
                               species == "Neogobius melanostomus" ~ species,
                               TRUE ~ "other"),
          order = case_when(species == "Clupea harengus" ~ 1,
@@ -300,7 +294,7 @@ SC_months2 <- SC_months%>%
                             species == "Neogobius melanostomus" ~ 4,
                             species == "Platichthys flesus" ~ 5,
                             species == "other" ~ 6))%>%
-  group_by(month, species)%>%
+  group_by(season, species)%>%
   reframe(prey_weight_g = sum(prey_weight_g),
           total_biomass_g = total_biomass_g,
           proportion = prey_weight_g/total_biomass_g,
@@ -322,14 +316,13 @@ Prey_energy <- fread("Data/Prey/Energy_content_species.csv")
 
 SC_summary$species <- reorder(SC_summary$species, SC_summary$order)
 SC_months$species <- reorder(SC_months$species, SC_months$order)
-Prey_energy$species <- reorder(Prey_energy$species, Prey_energy$order)
+Prey_energy$species <- reorder(Prey_energy$Species, Prey_energy$order)
 
-monthlabel <- SC_months%>%
-  group_by(month)%>%
-  reframe(month = month,
-          sample = sample,
-          proportion = 1,
-          species = "other")%>%
+Speclabel <- Prey_energy%>%
+  group_by(Species)%>%
+  transmute(species = Species,
+            Caloric_value_mJ_per_kg = 15,
+            N = length(species))%>%
   distinct()
 
 SC_summary2 <- SC_summary%>%
@@ -338,6 +331,16 @@ SC_summary2 <- SC_summary%>%
            pos1 = proportion2/2 + lead(csum, 1),
            pos = case_when(is.na(pos1) == TRUE ~ proportion2/2,
                            TRUE ~ pos1))
+
+monthlabel <- SC_months%>%
+  group_by(season)%>%
+  reframe(season = season,
+          sample = sample,
+          proportion = 1,
+          species = "other")%>%
+  distinct()
+
+SC_months$season <- fct_relevel(SC_months$season, "Mar-May", "Jun-Aug", "Sep-Nov", "Dec-Feb")
 
 Props <- ggplot(SC_summary2, aes(x = "", y = proportion2, fill = species)) +
   geom_bar(stat = "identity") +
@@ -355,18 +358,16 @@ Props <- ggplot(SC_summary2, aes(x = "", y = proportion2, fill = species)) +
         legend.margin = margin(t = 10),
         legend.title = element_blank())
 
-months <- ggplot(SC_months, aes(x = as.factor(month), y = proportion, fill = species)) +
+months <- ggplot(SC_months[SC_months$season != "Dec-Feb",], aes(x = as.factor(season), y = proportion, fill = species)) +
   geom_bar(stat = "identity")+
-  geom_text(data = monthlabel, aes(label = paste0("N = ", sample)), 
+  geom_text(data = monthlabel[monthlabel$season != "Dec-Feb",], aes(label = paste0("N = ", sample)), 
             position = position_stack(vjust = 1), size = 2, vjust = 18) +
-  labs(x = "month", y = "proportion", title = "prey proportions per month", fill = "Species")+
-  scale_y_discrete(breaks = c(unique(SC_months$species)),
-                   labels = c("C. harengus", "R. rutilus", "P. fluviatilis", "other", "P. flesus", "N. melanostomus"))+
+  labs(x = "season", y = "proportion", title = "prey proportions per season", fill = "Species")+
   scale_fill_viridis_d()+
   theme_bw()+
-  theme(axis.title = element_text(size = 10, color = "black"),
-        plot.title = element_text(size = 10, color = "black"),
-        axis.text = element_text(size = 5, color = "black"),
+  theme(axis.title = element_text(size = 8, color = "black"),
+        plot.title = element_text(size = 8, color = "black"),
+        axis.text = element_text(size = 8, color = "black"),
         legend.text = element_text(size = 5.5, color = "black", face = "italic"),
         legend.key.size = unit(0.3, "cm"),
         legend.margin = margin(t = 10),
@@ -375,18 +376,20 @@ months <- ggplot(SC_months, aes(x = as.factor(month), y = proportion, fill = spe
 Energ <- ggplot(Prey_energy, aes(x = species, y = Caloric_value_mJ_per_kg, fill = species))+
   geom_boxplot(alpha = 0.8, width = 0.5, lwd = 0.3)+
   labs(title = "species-specific energy content",
-       y = "Energy (mJ/kg)",
+       y = "Energy (MJ/kg)",
        fill = "Species")+
-  scale_x_discrete(breaks = c(unique(Prey_energy$species)),
-                   labels = c("C. harengus", "R. rutilus", "P. fluviatilis", "other", "P. flesus", "N. melanostomus"))+
+  geom_text(data = Speclabel, aes(label = paste0("N = ", N)), 
+            position = position_stack(), size = 2, vjust = -.5) +
+  scale_y_continuous(limits = c(15, 26.1),
+                     breaks = seq(15, 25, 1))+
   scale_fill_viridis_d()+
   theme_bw()+
   theme(axis.text.x = element_blank(),
-        axis.text.y = element_text(size = 10, color = "black"),
-        axis.title.y = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 8, color = "black"),
+        axis.title.y = element_text(size = 8, color = "black"),
         axis.title.x = element_blank(),
         axis.ticks.x = element_blank(),
-        plot.title = element_text(size = 10, color = "black"),
+        plot.title = element_text(size = 8, color = "black"),
         legend.text = element_text(size = 5.5, color = "black", face = "italic"),
         legend.key.size = unit(0.3, "cm"),
         legend.margin = margin(t = 10),
@@ -1688,9 +1691,9 @@ Pike3 <- Pike2%>%
   left_join(Telepike, by = "ID")%>%
   drop_na(ri_herring, hr_95, ca_50)
 
-fwrite(Pike3, "Data/Mixing models/Pikemix-ecotypes.csv")
+fwrite(Pike3, "Data/Mixing models/Pikemix-ecotypes_cont.csv")
 
-mix.filename <- "Data/Mixing models/Pikemix-ecotypes.csv"
+mix.filename <- "Data/Mixing models/Pikemix-ecotypes_cont.csv"
 
 # Load mixture data
 #Null model continuous effect
@@ -1732,6 +1735,11 @@ mix1.4 <- load_mix_data(filename=mix.filename,
                      fac_random=c(FALSE, FALSE),
                      fac_nested=c(FALSE, FALSE),
                      cont_effects=c("ri_herring"))
+
+#Mixfile with all
+fwrite(Pike2, "Data/Mixing models/Pikemix-ecotypes_all.csv")
+
+mix.filename <- "Data/Mixing models/Pikemix-ecotypes_all.csv"
 
 #delete fixed effects from larger model
 #NULL model
@@ -1995,18 +2003,18 @@ compare_models(mcomp, loo = TRUE)
 ```{r plot results, include=FALSE, eval=FALSE}
 rm(list = ls())
 pike <- fread("Data/Mixing models/Pikemix-ecotypes.csv")
-jags.pike <- readRDS("Data/Mixing models/Output/Mixing.model-test-run-ecotype_TL.rds")
+jags.pike <- readRDS("Data/Mixing models/Output/Mixing.model-normal-run-ecotype_TL.rds")
 
 source.filename <- "Data/Mixing models/Sources.csv"
-mix.filename <- "Data/Mixing models/Pikemix-ecotypes.csv"
+mix.filename <- "Data/Mixing models/Pikemix-ecotypes_all.csv"
 
 # Load mixture data
 mix <- load_mix_data(filename=mix.filename, 
                      iso_names=c("d15N", "d13C", "d34S"),
-                     factors="ecotype",
-                     fac_random=FALSE,
-                     fac_nested=FALSE,
-                     cont_effects="Length")
+                     factors=c("ecotype"),
+                     fac_random=c(FALSE),
+                     fac_nested=c(FALSE),
+                     cont_effects=c("Length"))
 
 # Load source data
 source<- load_source_data(filename=source.filename, source_factors=NULL,
@@ -2040,7 +2048,7 @@ output_options <- list(summary_save = TRUE,
 diag <- output_diagnostics(jags.pike, mix, source, output_options)
 df.stats <- output_stats(jags.pike, mix, source, output_options)
 rownames(df.stats)
-g.post2 <- output_posteriors(jags.pike.5, mix5, source, output_options)
+g.post2 <- output_posteriors(jags.pike, mix, source, output_options)
 
 names(g.post2)
 
@@ -2088,7 +2096,7 @@ scaley <- scale_y_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1),
                              labels = c("0.00", "0.25", "0.50", "0.75", "1.00"))
 
 FW_plot <- Fresh+
-  labs(title = "freshwater resident", fill = "source", color = "source")+
+  labs(title = "freshwater resident (N = 23)", fill = "source", color = "source")+
   pl.theme+
   pl.color+
   pl.fill+
@@ -2097,7 +2105,7 @@ FW_plot <- Fresh+
   guides(color = guide_legend(ncol = 3, nrow = 1))
 
 Ana_plot <- Anadrom+
-  labs(title = "anadromous", fill = "source", color = "source")+
+  labs(title = "anadromous (N = 50)", fill = "source", color = "source")+
   pl.theme+
   pl.color+
   pl.fill+
@@ -2106,7 +2114,7 @@ Ana_plot <- Anadrom+
   guides(color = guide_legend(ncol = 3, nrow = 1))
 
 Cross_plot <- Cross+
-  labs(title = "cross-habitat", fill = "source", color = "source")+
+  labs(title = "cross-habitat (N = 89)", fill = "source", color = "source")+
   pl.theme+
   pl.color+
   pl.fill+
@@ -2115,7 +2123,7 @@ Cross_plot <- Cross+
   guides(color = guide_legend(ncol = 3, nrow = 1))
 
 BW_plot <- Brackish+
-  labs(title = "brackish resident", fill = "source", color = "source")+
+  labs(title = "brackish resident (N = 140)", fill = "source", color = "source")+
   pl.theme+
   pl.color+
   pl.fill+
@@ -2173,7 +2181,7 @@ scaley2 <- scale_y_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1),
                              labels = c("0", "25", "50", "75", "100"))
 
 Ana.plot <- Ana_cont+
-  labs(title = "anadromous", fill = "source", color = "source")+
+  labs(title = "anadromous (N = 50)", fill = "source", color = "source")+
   pl.theme+
   pl.color+
   pl.fill+
@@ -2184,7 +2192,7 @@ Ana.plot <- Ana_cont+
   scaley2
 
 BW.plot <- BW_cont+
-  labs(title = "brackish resident", fill = "source", color = "source")+
+  labs(title = "brackish resident (N = 140)", fill = "source", color = "source")+
   pl.theme+
   pl.color+
   pl.fill+
@@ -2195,7 +2203,7 @@ BW.plot <- BW_cont+
   scaley2
 
 Cross.plot <- Cross_cont+
-  labs(title = "cross-habitat", fill = "source", color = "source")+
+  labs(title = "cross-habitat (N = 89)", fill = "source", color = "source")+
   pl.theme+
   pl.color+
   pl.fill+
@@ -2206,7 +2214,7 @@ Cross.plot <- Cross_cont+
   scaley2
 
 FW.plot <- FW_cont+
-  labs(title = "freshwater resident", fill = "source", color = "source")+
+  labs(title = "freshwater resident (N = 23)", fill = "source", color = "source")+
   pl.theme+
   pl.color+
   pl.fill+
@@ -2279,13 +2287,14 @@ saveRDS(g.post2, "Data/Mixing models/outputs_no-priors_locations.rds")
 
 ```{r graphic mixing models overview simple, eval=FALSE}
 rm(list = ls())
+
 # Create diagnostics, summary statistics, and posterior plots
-jags.pike <- readRDS("Data/Mixing models/Output/Mixing.model-test-run-ecotype_TL.rds")
+jags.pike <- readRDS("Data/Mixing models/Output/Mixing.model-normal-run-ecotype_TL.rds")
 
 Pike2 <- fread("Data/Mixing models/Pikemix-ecotypes.csv")
 
 source.filename <- "Data/Mixing models/Sources.csv"
-mix.filename <- "Data/Mixing models/Pikemix-ecotypes.csv"
+mix.filename <- "Data/Mixing models/Pikemix-ecotypes_all.csv"
 
 # Load mixture data
 mix <- load_mix_data(filename=mix.filename, 
@@ -2491,11 +2500,11 @@ length(unique(Data2$ID))
 
 fwrite(Data2, "Data/Pike/Pikedata-model.csv")
 
-pikemodel1 <- lmer(length_back~I(lifeyear^2)+sex+phenotype+d13C+d15N+d34S+(1|ID), data = Data2, REML = T)
+pikemodel1 <- lmer(length_back~I(lifeyear^2)+sex+d13C+d15N+d34S+(1|ID), data = Data2, REML = T)
 
 pike.vif <- vif(pikemodel1)
 
-barplot(pike.vif[,3], main = "VIF values", horiz = F, col = "darkgreen", ylim = c(0,10),
+barplot(pike.vif, main = "VIF values", horiz = F, col = "darkgreen", ylim = c(0,10),
         las = 2)
 abline(h = 5, lwd = 3, lty = 2, col="red")
 
@@ -2522,8 +2531,6 @@ anova(pikemodel1, pikemodel_no15N)
 #test d34S
 pikemodel_no34S <- update(pikemodel1, ~. -d34S)
 anova(pikemodel1, pikemodel_no34S)
-
-lsmeans(pikemodel1, pairwise~phenotype, adjust = "tukey")
 
 r.squaredGLMM(pikemodel1)
 summary(pikemodel1)
@@ -2638,13 +2645,17 @@ Ecopike <- Ecopike%>%
   drop_na(length_back)
 #Plot mean lifelong signal
 
+Ecopike_summary <- Ecopike%>%
+  transmute(fish_ID, phenotype)%>%
+  distinct()
+
 pl_theme <- theme(axis.title.x = element_blank(),
-                  axis.title.y = element_text(size = 10, color = "black"),
-                  axis.text = element_text(size = 10, color = "black"),
+                  axis.title.y = element_text(size = 8, color = "black"),
+                  axis.text = element_text(size = 8, color = "black"),
                   legend.position = "bottom",
-                  legend.text = element_text(size = 10, color = "black"),
-                  legend.title = element_text(size = 10, color = "black"),
-                  plot.title = element_text(size = 10, color = "black"))
+                  legend.text = element_text(size = 8, color = "black"),
+                  legend.title = element_text(size = 8, color = "black"),
+                  plot.title = element_text(size = 8, color = "black"))
 
 mypallette  <- c("#C5D86D", "#00BFB2", "#F1C40F", "#004643")
 
@@ -2653,12 +2664,12 @@ d34S <- ggplot(Ecopike[Ecopike$lens_layer>1,], aes(length_back, d34S))+
   geom_smooth(aes(color=phenotype, fill= phenotype), lwd = .5)+
   scale_color_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
                      values = mypallette,
-                     labels = c("freshwater", "anadromous", "cross-habitat", "brackish"))+
+                     labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
   scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
                      values = mypallette,
-                     labels = c("freshwater", "anadromous", "cross-habitat", "brackish"))+
+                     labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
   scale_shape_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
-                     labels = c("freshwater", "anadromous", "cross-habitat", "brackish"))+
+                     labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
   theme_bw()+
   labs(y = expression(delta^34~"S"~("\u2030 CDT")))+
   ggtitle("d34S")+
@@ -2669,12 +2680,12 @@ d15N <- ggplot(Ecopike[Ecopike$lens_layer>1,], aes(length_back, d15N))+
   geom_smooth(aes(color=phenotype, fill= phenotype), lwd = .5)+
   scale_color_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
                      values = mypallette,
-                     labels = c("freshwater", "anadromous", "cross-habitat", "brackish"))+
+                     labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
   scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
                      values = mypallette,
-                     labels = c("freshwater", "anadromous", "cross-habitat", "brackish"))+
+                     labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
   scale_shape_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
-                     labels = c("freshwater", "anadromous", "cross-habitat", "brackish"))+
+                     labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
   theme_bw()+
   labs(y = expression(delta^15~"N"~("\u2030"~N^2*"atm")))+
   ggtitle("d15N")+
@@ -2685,18 +2696,18 @@ d13C <- ggplot(Ecopike[Ecopike$lens_layer>1,], aes(length_back, d13C))+
   geom_smooth(aes(color=phenotype, fill= phenotype), lwd = .5)+
   scale_color_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
                      values = mypallette,
-                     labels = c("freshwater", "anadromous", "cross-habitat", "brackish"))+
+                     labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
   scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
                      values = mypallette,
-                     labels = c("freshwater", "anadromous", "cross-habitat", "brackish"))+
+                     labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
   scale_shape_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
-                     labels = c("freshwater", "anadromous", "cross-habitat", "brackish"))+
+                     labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
   theme_bw()+
   labs(y = expression(delta^13~"C"~("\u2030 VPDB")))+
   ggtitle("d13C")+
   pl_theme
 
-Eyeplot <- ggarrange(d34S, d15N, d13C, nrow = 1, common.legend = T)
+Eyeplot <- ggarrange(d13C, d15N, d34S, nrow = 1, common.legend = T)
 
 Eyeplot1 <- annotate_figure(Eyeplot, bottom = text_grob("Backcalculated length (mm)", size = 10, color = "black"))
 
@@ -2760,6 +2771,7 @@ mean(eigen(WICmat)$value/eigen(TNWmat)$value)
 write.table(TNWmat, "Data/Pike/Total-niche-width_matrix.txt")
 write.table(WICmat, "Data/Pike/Within-individual-variance_matrix.txt")
 ```
+
 ```{r population niches phenotype specific, include=FALSE, eval=FALSE}
 rm(list = ls())
 
@@ -2987,24 +2999,6 @@ Ecopike_spec <- Ecopike2%>%
                                  "Trans-habitat",
                                  "BW-resident"))
 
-Specplot <- ggplot(Ecopike_spec)+
-  geom_violin(aes(x = phenotype, y = 1-s_index, fill = phenotype), width = 1)+
-  geom_boxplot(aes(x = phenotype, y = 1-s_index), width = 0.07, size = .5, color = "black", fill = "transparent")+
-  scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
-                    values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
-                    labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
-  scale_x_discrete(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
-                   labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
-  scale_y_continuous(limits = c(-0.1, 1),
-                     breaks = seq(0,1, 0.25))+
-  labs(x = "behavioral phenotype",
-       y = "specialization index")+
-  theme_bw()+
-  theme(legend.position = "none",
-        axis.text = element_text(size = 10, color = "black"),
-        axis.title = element_text(size = 15, color = "black"))
-
-ggsave("Figures/S-index-individual.png", Specplot, height = 15, width = 15, units = "cm", dpi = 600, bg = "white")
 fwrite(Ecopike_spec, "Data/Pike/Pike_eco-clean-cbackcalculated_s-metric.csv")
 ```
 
@@ -3132,25 +3126,70 @@ Ecopike_spec <- Ecopike2%>%
                                  "Trans-habitat",
                                  "BW-resident"))
 
-Specplot <- ggplot(Ecopike_spec, aes(x = phenotype, y = 1-s_index, fill = phenotype))+
+fwrite(Ecopike_spec, "Data/Pike/Pike_eco-clean-cbackcalculated_s-metric-phenotypes.csv")
+```
+
+```{r plot s- metrics, include=FALSE, eval=FALSE}
+rm(list = ls())
+Ecopike_spec_pop <- fread("Data/Pike/Pike_eco-clean-cbackcalculated_s-metric.csv")
+Ecopike_spec_pop <- Ecopike_spec_pop%>%
+  mutate(phenotype = fct_relevel(phenotype,
+                                 "FW_resident",
+                                 "Anadromous", 
+                                 "Trans-habitat",
+                                 "BW-resident"))
+
+Ecopike_spec_pheno <- fread("Data/Pike/Pike_eco-clean-cbackcalculated_s-metric-phenotypes.csv")
+Ecopike_spec_pheno <- Ecopike_spec_pheno%>%
+  mutate(phenotype = fct_relevel(phenotype,
+                                 "FW_resident",
+                                 "Anadromous", 
+                                 "Trans-habitat",
+                                 "BW-resident"))
+
+Specplot_pop <- ggplot(Ecopike_spec_pop)+
+  geom_violin(aes(x = phenotype, y = 1-s_index, fill = phenotype), width = 1)+
+  geom_boxplot(aes(x = phenotype, y = 1-s_index), width = 0.07, size = .5, color = "black", fill = "transparent")+
+  scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                    values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
+                    labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
+  scale_x_discrete(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                   labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
+  scale_y_continuous(limits = c(-0.1, 1),
+                     breaks = seq(0,1, 0.25))+
+  labs(title = "s-index population level",
+       x = "behavioral phenotype",
+       y = "specialization index")+
+  theme_bw()+
+  theme(legend.position = "none",
+        axis.text.x = element_text(size = 10, color = "black", angle = 45, hjust = 1),
+        axis.text.y = element_text(size = 10, color = "black"),
+        axis.title = element_blank())
+
+Specplot_pheno <- ggplot(Ecopike_spec_pheno, aes(x = phenotype, y = 1-s_index, fill = phenotype))+
   geom_violin(width = 1)+
   geom_boxplot(aes(x = phenotype, y = 1-s_index), width = 0.07, size = .5, color = "black", fill = "transparent")+
   scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
                     values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
                     labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
   scale_x_discrete(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
-                   labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
+                   labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
   scale_y_continuous(limits = c(-0.1, 1),
                      breaks = seq(0,1, 0.25))+
-  labs(x = "behavioral phenotype",
+  labs(title = "s-index phenotype level",
+       x = "behavioral phenotype",
        y = "specialization index")+
   theme_bw()+
   theme(legend.position = "none",
-        axis.text = element_text(size = 10, color = "black"),
-        axis.title = element_text(size = 15, color = "black"))
+        axis.text.x = element_text(size = 10, color = "black", angle = 45, hjust = 1),
+        axis.text.y = element_text(size = 10, color = "black"),
+        axis.title = element_blank())
 
-ggsave("Figures/S-index-individual-phenotype-level.png", Specplot, height = 15, width = 15, units = "cm", dpi = 600, bg = "white")
-fwrite(Ecopike_spec, "Data/Pike/Pike_eco-clean-cbackcalculated_s-metric-phenotypes.csv")
+Specplot <- ggarrange(Specplot_pop, Specplot_pheno, labels = c("A", "B"))
+Specplot2 <- annotate_figure(Specplot, left = text_grob("specialization index", size = 12, color = "black", rot = 90, hjust = 0),
+                             bottom = text_grob("behavioral phenotype", size = 12, color = "black"))
+
+ggsave("Figures/S-index-individual-pop-pheno.png", Specplot2, height = 10, width = 15, units = "cm", dpi = 600, bg = "white")
 ```
 
 ```{r individual overlap metrics population-level, include=FALSE, eval=FALSE}
@@ -3253,7 +3292,7 @@ CN <- ggplot()+
                      labels = c(expression("TNW"["Pop"]), expression("WIC"["Pop"]), expression("BIC"["Pop"])))+
   scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
                     values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
-                    labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
+                    labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
   theme_bw()+
   pl_theme
 
@@ -3274,7 +3313,7 @@ CS <- ggplot()+
                      labels = c(expression("TNW"["Pop"]), expression("WIC"["Pop"]), expression("BIC"["Pop"])))+
   scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
                     values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
-                    labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
+                    labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
   theme_bw()+
   pl_theme
 
@@ -3295,7 +3334,7 @@ NS <- ggplot()+
                      labels = c(expression("TNW"["Pop"]), expression("WIC"["Pop"]), expression("BIC"["Pop"])))+
   scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
                     values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
-                    labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
+                    labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
   theme_bw()+
   pl_theme
 
@@ -3317,7 +3356,7 @@ empty <- ggplot()+
                      drop = FALSE)+
   scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
                     values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
-                    labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"),
+                    labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"),
                     drop = FALSE)+
   guides(color = guide_legend(override.aes = list(shape = 21, size = 8, linetype = c(0,0,0), alpha = 1)),
          fill = guide_legend(override.aes = list(alpha = 0.3)))+
