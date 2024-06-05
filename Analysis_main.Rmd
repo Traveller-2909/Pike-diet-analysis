@@ -21,7 +21,6 @@ library(foreign)
 library(lubridate)
 library(ggpubr)
 library(rjags)
-library(jagsUI)
 library(simmr)
 library(ggmap)
 library(assignR)
@@ -985,10 +984,9 @@ otomod <- lm(TL_mm~trad_um, data = Pikeoto2)
 summary(otomod)
 
 a <- coefficients(otomod)[[1]]
-#Model not needed, as otoliths form at birth!
 
 Pikeoto3 <- Pikeoto2%>%
-  dplyr::mutate(length_back = (rad_um/trad_um)*(TL_mm))
+  dplyr::mutate(length_back = (rad_um/trad_um)*(TL_mm-a)+a)
 
 ALK <- Pikeoto3%>%
   transmute(fish_ID = ID,
@@ -1457,10 +1455,11 @@ Pikeprey$Species <- fct_relevel(Pikeprey$Species, c("freshwater resident pike",
 #Biplot by species
 colorBlindBlack8  <- c("#C5D86D", "#00BFB2", "#F1C40F", "#004643",
                         "darkgreen", "brown4", "#004690")
+contours <- c("dashed", "dashed", "dashed", "dashed", "solid", "solid", "solid")
 
 
 Binorm <- ggplot()+ 
-  stat_density_2d(data = Pikeprey, aes(x = d13C, y = d15N, fill = Species, color = Species), 
+  stat_density_2d(data = Pikeprey, aes(x = d13C, y = d15N, fill = Species, color = Species, linetype = Species), 
                   alpha = 0.3, geom = "polygon", linewidth = .1)+
   # geom_errorbar(data=descriptive2, aes(x=d13C, y=d15N, ymin = d15N-sdd15N,ymax = d15N+sdd15N, col=Sp),
   #                       width=.5, size=.5) + 
@@ -1472,8 +1471,11 @@ Binorm <- ggplot()+
   scale_fill_manual(breaks = levels(descriptive2$Sp),
                       values=colorBlindBlack8,
                       labels = levels(descriptive2$Sp))+
+  scale_linetype_manual(breaks = levels(descriptive2$Sp),
+                      values=contours,
+                      labels = levels(descriptive2$Sp))+
   xlim(-27,-12)+ylim(10,20)+
-  labs(fill = "Group", color = "Group")+
+  labs(fill = "Group", color = "Group", linetype = "Group")+
   theme_bw()+xlab(delta^"13"~"C(\u2030)")+ylab(delta^"15"~"N(\u2030)")+
   theme(text = element_text(size = 10, color = "black"),
         legend.position="bottom",
@@ -1482,7 +1484,7 @@ Binorm <- ggplot()+
         strip.background = element_rect(colour="black", fill="white"))
 
 BiNS <- ggplot()+
-  stat_density_2d(data = Pikeprey, aes(x = d34S, y = d15N, fill = Species, color = Species), 
+  stat_density_2d(data = Pikeprey, aes(x = d34S, y = d15N, fill = Species, color = Species, linetype = Species), 
                   alpha = 0.3, geom = "polygon", linewidth = 0.1)+
   # geom_errorbar(data=descriptive2, aes(x=d34S, y=d15N, ymin = d15N-sdd15N,ymax = d15N+sdd15N, color=Sp),
   #                       width=.5, size=.5) +
@@ -1494,8 +1496,11 @@ BiNS <- ggplot()+
   scale_fill_manual(breaks = levels(descriptive2$Sp),
                       values=colorBlindBlack8,
                       labels = levels(descriptive2$Sp))+
+  scale_linetype_manual(breaks = levels(descriptive2$Sp),
+                      values=contours,
+                      labels = levels(descriptive2$Sp))+
   xlim(0,25)+ylim(10,20)+
-  labs(fill = "Group", color = "Group")+
+  labs(fill = "Group", color = "Group", linetype = "Group")+
   theme_bw()+xlab(delta^"34"~"S(\u2030)")+ylab(delta^"15"~"N(\u2030)")+
   theme(text = element_text(size = 10, color = "black"),
         legend.position="none",
@@ -1504,7 +1509,7 @@ BiNS <- ggplot()+
         strip.background = element_rect(colour="black", fill="white"))
 
 BiCS <- ggplot()+ 
-  stat_density_2d(data = Pikeprey, aes(x = d13C, y = d34S, fill = Species, color = Species), 
+  stat_density_2d(data = Pikeprey, aes(x = d13C, y = d34S, fill = Species, color = Species, linetype = Species), 
                   alpha = 0.3, geom = "polygon", linewidth = 0.1)+
   # geom_errorbar(data=descriptive2, aes(x=d13C, y=d34S, ymin = d34S+sdd34S,ymax = d34S-sdd34S, col=Sp),
   #                       width=.5, size=.5) + 
@@ -1515,6 +1520,9 @@ BiCS <- ggplot()+
                       labels = levels(descriptive2$Sp))+
   scale_fill_manual(breaks = levels(descriptive2$Sp),
                       values=colorBlindBlack8,
+                      labels = levels(descriptive2$Sp))+
+  scale_linetype_manual(breaks = levels(descriptive2$Sp),
+                      values=contours,
                       labels = levels(descriptive2$Sp))+
   xlim(-27,-12)+ylim(0,25)+
   theme_bw()+xlab(delta^"13"~"C(\u2030)")+ylab(delta^"34"~"S(\u2030)")+
@@ -2500,11 +2508,11 @@ length(unique(Data2$ID))
 
 fwrite(Data2, "Data/Pike/Pikedata-model.csv")
 
-pikemodel1 <- lmer(length_back~I(lifeyear^2)+sex+d13C+d15N+d34S+(1|ID), data = Data2, REML = T)
+pikemodel1 <- lmer(length_back~I(lifeyear^2)+sex+phenotype+d13C+d15N+d34S+(1|ID), data = Data2, REML = T)
 
 pike.vif <- vif(pikemodel1)
 
-barplot(pike.vif, main = "VIF values", horiz = F, col = "darkgreen", ylim = c(0,10),
+barplot(pike.vif[,3], main = "VIF values", horiz = F, col = "darkgreen", ylim = c(0,10),
         las = 2)
 abline(h = 5, lwd = 3, lty = 2, col="red")
 
@@ -2533,6 +2541,7 @@ pikemodel_no34S <- update(pikemodel1, ~. -d34S)
 anova(pikemodel1, pikemodel_no34S)
 
 r.squaredGLMM(pikemodel1)
+lsmeans(pikemodel1, pairwise~phenotype, adjust = "tukey")
 summary(pikemodel1)
 tab_model(pikemodel1)
 ```
