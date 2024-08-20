@@ -365,7 +365,7 @@ months <- ggplot(SC_months[SC_months$season != "Dec-Feb",], aes(x = as.factor(se
   scale_fill_viridis_d()+
   theme_bw()+
   theme(axis.title = element_text(size = 8, color = "black"),
-        plot.title = element_text(size = 8, color = "black"),
+        plot.title = element_text(size = 10, color = "black"),
         axis.text = element_text(size = 8, color = "black"),
         legend.text = element_text(size = 5.5, color = "black", face = "italic"),
         legend.key.size = unit(0.3, "cm"),
@@ -388,14 +388,14 @@ Energ <- ggplot(Prey_energy, aes(x = species, y = Caloric_value_mJ_per_kg, fill 
         axis.title.y = element_text(size = 8, color = "black"),
         axis.title.x = element_blank(),
         axis.ticks.x = element_blank(),
-        plot.title = element_text(size = 8, color = "black"),
+        plot.title = element_text(size = 10, color = "black"),
         legend.text = element_text(size = 5.5, color = "black", face = "italic"),
         legend.key.size = unit(0.3, "cm"),
         legend.margin = margin(t = 10),
         legend.title = element_blank())
 
 Pies <- ggarrange(Props, months, Energ, common.legend = T, legend = "bottom",
-                  labels = c("A", "B", "C"), vjust = .5, ncol = 1)+
+                  labels = c("A", "B", "C"), font.label = list(size = 10, face = "plain"), vjust = .5, ncol = 1)+
   theme(plot.margin = margin(10,1,1,1))
 
 ggsave("Figures/Stomach-contents-all_months.png", Pies, width = 8, height = 15, units = "cm", dpi = 600, bg = "white")
@@ -407,8 +407,7 @@ ggsave("Figures/Stomach-contents-all_months.png", Pies, width = 8, height = 15, 
 rm(list = ls())
 
 #read in pike data from source
-Pike1 <- read.delim("C:/Users/timor/Nextcloud2/Boddenhecht/Data/Pike Data/1.pike_data_base_FOR_USERS/1Pike_Latest_Version.txt", 
-                    sep = ";", dec = ".", header = T, stringsAsFactors = F)
+Pike1 <- fread("C:/Users/timor/Nextcloud2/Boddenhecht/Data/Pike Data/1.pike_data_base_FOR_USERS/1Pike_Latest_Version.txt")
 
 Pike2 <- Pike1%>%
   filter(MarkorRecap == "Mark"|is.na(MarkorRecap) == TRUE|Fish_ID == "BH-51614")%>%
@@ -417,6 +416,7 @@ Pike2 <- Pike1%>%
                          TRUE~Fish_ID),
             capt_date=Date,
             TL_mm = Total_Length_mm,
+            gape = 
             weight=Weight,
             sex=Sex,
             area=case_when(ID == "BH-00554" ~ "Peene",
@@ -1475,8 +1475,9 @@ Binorm <- ggplot()+
                       values=contours,
                       labels = levels(descriptive2$Sp))+
   xlim(-27,-12)+ylim(10,20)+
-  labs(fill = "Group", color = "Group", linetype = "Group")+
-  theme_bw()+xlab(delta^"13"~"C(\u2030)")+ylab(delta^"15"~"N(\u2030)")+
+  theme_bw()+
+  labs(x = expression(delta^13~"C"~("\u2030"~"VPDB")), y = expression(delta^15~"N"~("\u2030"~air-N[2])),
+       fill = "group", color = "group", linetype = "group")+
   theme(text = element_text(size = 10, color = "black"),
         legend.position="bottom",
         legend.text = element_text(color = "black", size=5, face="italic"),
@@ -1500,8 +1501,9 @@ BiNS <- ggplot()+
                       values=contours,
                       labels = levels(descriptive2$Sp))+
   xlim(0,25)+ylim(10,20)+
-  labs(fill = "Group", color = "Group", linetype = "Group")+
-  theme_bw()+xlab(delta^"34"~"S(\u2030)")+ylab(delta^"15"~"N(\u2030)")+
+  theme_bw()+
+  labs(x = expression(delta^34~"S"~("\u2030"~"VCDT")), y = expression(delta^15~"N"~("\u2030"~air-N[2])),
+       fill = "group", color = "group", linetype = "group")+
   theme(text = element_text(size = 10, color = "black"),
         legend.position="none",
         legend.text = element_text(color = "black", size=5, face="italic"),
@@ -1525,7 +1527,9 @@ BiCS <- ggplot()+
                       values=contours,
                       labels = levels(descriptive2$Sp))+
   xlim(-27,-12)+ylim(0,25)+
-  theme_bw()+xlab(delta^"13"~"C(\u2030)")+ylab(delta^"34"~"S(\u2030)")+
+  theme_bw()+
+  labs(x = expression(delta^13~"C"~("\u2030"~"VPDB")), y = expression(delta^34~"S"~("\u2030"~"VCDT")),
+       fill = "group", color = "group", linetype = "group")+
   theme(text = element_text(size = 10, color = "black"),
         legend.position="none",
         legend.text = element_text(color = "black", size=5, face="italic"),
@@ -1533,7 +1537,8 @@ BiCS <- ggplot()+
         strip.background = element_rect(colour="black", fill="white"))
 
 
-Ecopike <- ggarrange(Binorm, BiNS, BiCS, ncol = 3, nrow = 1, common.legend = T, labels = c("A", "B", "C"))
+Ecopike <- ggarrange(Binorm, BiNS, BiCS, ncol = 3, nrow = 1, common.legend = T, legend = "bottom", labels = c("A", "B", "C"), 
+                     font.label = list(size = 10, face = "plain"), vjust = 1.1)
 
 ggsave("Figures/Biplots-muscle-ecotypes_density.png", Ecopike, width = 16, height = 6, units = "cm", dpi = 600, bg = "white")
 ```
@@ -2091,10 +2096,10 @@ pl.theme <- theme(panel.grid.major = element_line(color = "grey", linetype = "so
 
 pl.color <- scale_color_manual(breaks = c("marine", "lagoon", "freshwater"),
                               values = c("#29B6F6", "#00796B","#B71C1C"),
-                              labels = c("marine food web", "lagoon food web", "freshwater food web"))
+                              labels = c("marine resources", "lagoon resources", "freshwater resources"))
 pl.fill <- scale_fill_manual(breaks = c("marine", "lagoon", "freshwater"),
                               values = c("#29B6F6", "#00796B","#B71C1C"),
-                              labels = c("marine food web", "lagoon food web", "freshwater food web"))
+                              labels = c("marine resources", "lagoon resources", "freshwater resources"))
 
 scalex <- scale_x_continuous(breaks = c(0, 0.25, 0.50, 0.75, 1.00),
                    labels = c("0", "25", "50", "75", "100"),
@@ -2104,7 +2109,7 @@ scaley <- scale_y_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1),
                              labels = c("0.00", "0.25", "0.50", "0.75", "1.00"))
 
 FW_plot <- Fresh+
-  labs(title = "freshwater resident (N = 23)", fill = "source", color = "source")+
+  labs(title = "freshwater resident (N = 23)", fill = "", color = "")+
   pl.theme+
   pl.color+
   pl.fill+
@@ -2113,7 +2118,7 @@ FW_plot <- Fresh+
   guides(color = guide_legend(ncol = 3, nrow = 1))
 
 Ana_plot <- Anadrom+
-  labs(title = "anadromous (N = 50)", fill = "source", color = "source")+
+  labs(title = "anadromous (N = 50)", fill = "", color = "")+
   pl.theme+
   pl.color+
   pl.fill+
@@ -2122,7 +2127,7 @@ Ana_plot <- Anadrom+
   guides(color = guide_legend(ncol = 3, nrow = 1))
 
 Cross_plot <- Cross+
-  labs(title = "cross-habitat (N = 89)", fill = "source", color = "source")+
+  labs(title = "cross-habitat (N = 89)", fill = "", color = "")+
   pl.theme+
   pl.color+
   pl.fill+
@@ -2131,7 +2136,7 @@ Cross_plot <- Cross+
   guides(color = guide_legend(ncol = 3, nrow = 1))
 
 BW_plot <- Brackish+
-  labs(title = "brackish resident (N = 140)", fill = "source", color = "source")+
+  labs(title = "brackish resident (N = 140)", fill = "", color = "")+
   pl.theme+
   pl.color+
   pl.fill+
@@ -2140,7 +2145,7 @@ BW_plot <- Brackish+
   guides(color = guide_legend(ncol = 3, nrow = 1))
 
 Allplot <- ggarrange(FW_plot, Ana_plot, Cross_plot, BW_plot, nrow = 2, ncol = 2, 
-                     common.legend = TRUE)
+                     common.legend = TRUE, legend = "top")
 Allplot2 <- annotate_figure(Allplot, left = text_grob("posterior density", rot = 90, size = 12), 
                             bottom = text_grob("diet proportion (%)", size = 12))
 
@@ -2180,16 +2185,16 @@ pl.theme <- theme(panel.grid.major = element_line(color = "grey", linetype = "so
 
 pl.color <- scale_color_manual(breaks = c("marine", "lagoon", "freshwater"),
                               values = c("#29B6F6", "#00796B","#B71C1C"),
-                              labels = c("marine food web", "lagoon food web", "freshwater food web"))
+                              labels = c("marine resources", "lagoon resources", "freshwater resources"))
 pl.fill <- scale_fill_manual(breaks = c("marine", "lagoon", "freshwater"),
                               values = c("#29B6F6", "#00796B","#B71C1C"),
-                              labels = c("marine food web", "lagoon food web", "freshwater food web"))
+                              labels = c("marine resources", "lagoon resources", "freshwater resources"))
 
 scaley2 <- scale_y_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1),
                              labels = c("0", "25", "50", "75", "100"))
 
 Ana.plot <- Ana_cont+
-  labs(title = "anadromous (N = 50)", fill = "source", color = "source")+
+  labs(title = "anadromous (N = 50)", fill = "", color = "")+
   pl.theme+
   pl.color+
   pl.fill+
@@ -2200,7 +2205,7 @@ Ana.plot <- Ana_cont+
   scaley2
 
 BW.plot <- BW_cont+
-  labs(title = "brackish resident (N = 140)", fill = "source", color = "source")+
+  labs(title = "brackish resident (N = 140)", fill = "", color = "")+
   pl.theme+
   pl.color+
   pl.fill+
@@ -2211,7 +2216,7 @@ BW.plot <- BW_cont+
   scaley2
 
 Cross.plot <- Cross_cont+
-  labs(title = "cross-habitat (N = 89)", fill = "source", color = "source")+
+  labs(title = "cross-habitat (N = 89)", fill = "", color = "")+
   pl.theme+
   pl.color+
   pl.fill+
@@ -2222,7 +2227,7 @@ Cross.plot <- Cross_cont+
   scaley2
 
 FW.plot <- FW_cont+
-  labs(title = "freshwater resident (N = 23)", fill = "source", color = "source")+
+  labs(title = "freshwater resident (N = 23)", fill = "", color = "")+
   pl.theme+
   pl.color+
   pl.fill+
@@ -2482,6 +2487,7 @@ plot(Data$length_back ~ Data$d34S_mean, ylab = "Backcalculated length (mm)", xla
 rm(list = ls())
 
 Data <- fread("Data/Pike/Pikedata-eye-lens-years.csv")
+Datasceno <- fread("Data/Pike/Pikedata_model-sceno.csv")
 
 Data2 <- Data%>%
   drop_na(d34S_mean)%>%
@@ -2501,22 +2507,41 @@ Data2 <- Data%>%
           d34S = case_when(max(lifeyear) != 1 ~ scale(d34S_mean, center = T, scale = T),
                            TRUE ~ (d34S_mean-(mean(Data$d34S_mean, na.rm = T)))),
           CN = case_when(max(lifeyear) != 1 ~ scale(CN_mean, center = T, scale = T),
-                           TRUE ~ (CN_mean-(mean(Data$CN_mean)))))%>%
-  filter(length_back < 700)
+                           TRUE ~ (CN_mean-(mean(Data$CN_mean)))))
 
-length(unique(Data2$ID))
+Datasceno2 <- Datasceno%>%
+  transmute(ID, lifeyear, res_mean, Sr_mean)%>%
+  distinct()
 
-fwrite(Data2, "Data/Pike/Pikedata-model.csv")
+Data3 <- Data2%>%
+  inner_join(Datasceno2, by = c("ID", "lifeyear"))%>%
+  distinct()
 
-pikemodel1 <- lmer(length_back~I(lifeyear^2)+sex+phenotype+d13C+d15N+d34S+(1|ID), data = Data2, REML = T)
+length(unique(Data3$ID))
 
+fwrite(Data3, "Data/Pike/Pikedata-model.csv")
+
+pikemodel0 <- lmer(length_back~I(lifeyear^2)+sex+phenotype+(1|ID), data = Data3, REML = T)
+pikemodel1 <- lmer(length_back~I(lifeyear^2)+sex+phenotype+d13C+d15N+d34S+res_mean+Sr_mean+(1|ID), data = Data3, REML = T)
+pikemodel2 <- lmer(length_back~I(lifeyear^2)+sex+phenotype+d13C+d15N+d34S+res_mean+(1|ID), data = Data3, REML = T)
+pikemodel3 <- lmer(length_back~I(lifeyear^2)+sex+phenotype+d13C+d15N+d34S+Sr_mean+(1|ID), data = Data3, REML = T)
+pikemodel4 <- lmer(length_back~I(lifeyear^2)+sex+phenotype+d13C+d15N+d34S+(1|ID), data = Data3, REML = T)
+pikemodel5 <- lmer(length_back~I(lifeyear^2)+sex+phenotype+d15N+d34S+(1|ID), data = Data3, REML = T)
+pikemodel6 <- lmer(length_back~I(lifeyear^2)+sex+phenotype+d13C+d15N+(1|ID), data = Data3, REML = T)
+pikemodel7 <- lmer(length_back~I(lifeyear^2)+sex+phenotype+d13C+(1|ID), data = Data3, REML = T)
+pikemodel8 <- lmer(length_back~I(lifeyear^2)+sex+d13C+d15N+d34S+res_mean+Sr_mean+(1|ID), data = Data3, REML = T)
+
+
+anova(pikemodel0, pikemodel1, pikemodel2, pikemodel3, pikemodel4, pikemodel5, pikemodel6, pikemodel7, pikemodel8)
+
+#VIF for diet-only model
 pike.vif <- vif(pikemodel1)
 
 barplot(pike.vif[,3], main = "VIF values", horiz = F, col = "darkgreen", ylim = c(0,10),
         las = 2)
 abline(h = 5, lwd = 3, lty = 2, col="red")
 
-#test effects
+#test effects for diet + phenotype only model
 rand(pikemodel1)
 #Individual is not significant
 
@@ -2546,16 +2571,18 @@ summary(pikemodel1)
 tab_model(pikemodel1)
 ```
 
+
+
 ```{r model eval, include=FALSE, eval=FALSE}
 rm(list = ls())
 Data2 <- fread("Data/Pike/Pikedata-model.csv")
 
-pikemodel1 <- lmer(length_back~I(lifeyear^2)+sex+phenotype+d13C+d15N+d34S+(1|ID), data = Data2, REML = T)
+pikemodel1 <- lmer(length_back~I(lifeyear^2)+sex+phenotype+d13C+d15N+d34S+res_mean+Sr_mean+(1|ID), data = Data2, REML = T)
 
 pike.vif <- vif(pikemodel1)
 
 png("Figures/supplement/VIF-values-mixed-effects.png", width = 15, height = 15, units = "cm", res = 300)
-barplot(pike.vif, main = "VIF values", horiz = F, col = "darkgreen", ylim = c(0,10),
+barplot(pike.vif[,1], main = "VIF values", horiz = F, col = "darkgreen", ylim = c(0,10),
         las = 2)
 abline(h = 5, lwd = 3, lty = 2, col="red")
 dev.off()
@@ -2577,13 +2604,15 @@ qqline(resid(pikemodel1))
 dev.off()
 
 png("Figures/supplement/Residuals-vs-predictors_mixed-effects.png", width = 15, height = 15, units = "cm", res = 300)
-par(mfrow=c(2,3))
+par(mfrow=c(3,3))
 plot(Data3$resid~as.factor(Data3$sex), ylab = "Residuals", xlab = "Sex")
+plot(Data3$resid~as.factor(Data3$phenotype), ylab = "Residuals", xlab = "Phenotype")
 plot(Data3$resid~Data3$lifeyear, ylab = "Residuals", xlab = "Age")
 plot(Data3$resid~Data3$d15N, ylab = "Residuals", xlab = "d15N")
 plot(Data3$resid~Data3$d13C, ylab = "Residuals", xlab = "d13C")
 plot(Data3$resid~Data3$d34S, ylab = "Residuals", xlab = "d34S")
-plot(Data3$resid~Data3$CN, ylab = "Residuals", xlab = "C:N ratio")
+plot(Data3$resid~Data3$res_mean, ylab = "Residuals", xlab = "d18O")
+plot(Data3$resid~Data3$Sr, ylab = "Residuals", xlab = "Sr:Ca")
 dev.off()
 ```
 
@@ -2680,7 +2709,7 @@ d34S <- ggplot(Ecopike[Ecopike$lens_layer>1,], aes(length_back, d34S))+
   scale_shape_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
                      labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
   theme_bw()+
-  labs(y = expression(delta^34~"S"~("\u2030 CDT")))+
+  labs(y = expression(delta^34~"S"~("\u2030 VCDT")))+
   ggtitle("d34S")+
   pl_theme
 
@@ -2696,7 +2725,7 @@ d15N <- ggplot(Ecopike[Ecopike$lens_layer>1,], aes(length_back, d15N))+
   scale_shape_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
                      labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
   theme_bw()+
-  labs(y = expression(delta^15~"N"~("\u2030"~N^2*"atm")))+
+  labs(y = expression(delta^15~"N"~("\u2030"~air-N[2])))+
   ggtitle("d15N")+
   pl_theme
 
@@ -3292,7 +3321,7 @@ CN <- ggplot()+
   stat_ellipse(data = WICCN, aes(x = C, y = N, color = "WIC"), level = 0.4, linewidth = 1.5)+
   geom_ellipse(data = BICCN, aes(x0 = C, y0 = N, a = 0.4*varC, b = 0.4*varN, angle = C/N, color = "BIC"), linewidth = 1)+
   labs(x = expression(delta^13~"C"~("\u2030 VPDB")),
-       y = expression(delta^15~"N"~("\u2030 Atm")),
+       y = expression(delta^15~"N"~("\u2030"~air-N[2])),
        color = "niche component",
        fill = "behavioral phenotype")+
   scale_color_manual(values = c("TNW" = "black", "WIC" = "orange", "BIC" = "red", "FW_resident" = "#C5D86D",
@@ -3313,7 +3342,7 @@ CS <- ggplot()+
   stat_ellipse(data = WICCS, aes(x = C, y = S, color = "WIC"), level = 0.4, linewidth = 1.5)+
   geom_ellipse(data = BICCS, aes(x0 = C, y0 = S, a = 0.4*varC, b = 0.4*varS, angle = C/S, color = "BIC"), linewidth = 1)+
   labs(x = expression(delta^13~"C"~("\u2030 VPDB")),
-       y = expression(delta^34~"S"~("\u2030 CDT")),
+       y = expression(delta^34~"S"~("\u2030 VCDT")),
        color = "niche component",
        fill = "behavioral phenotype")+
   scale_color_manual(values = c("TNW" = "black", "WIC" = "orange", "BIC" = "red", "FW_resident" = "#C5D86D",
@@ -3333,8 +3362,8 @@ NS <- ggplot()+
   stat_ellipse(data = TNWNS, aes(x = N, y = S, color = "TNW"), level = 0.4, linewidth = 1.5)+
   stat_ellipse(data = WICNS, aes(x = N, y = S, color = "WIC"), level = 0.4, linewidth = 1.5)+
   geom_ellipse(data = BICNS, aes(x0 = N, y0 = S, a = 0.4*varN, b = 0.4*varS, angle = N/S, color = "BIC"), linewidth = 1)+
-  labs(x = expression(delta^15~"N"~("\u2030 Atm")),
-       y = expression(delta^34~"S"~("\u2030 CDT")),
+  labs(x = expression(delta^15~"N"~("\u2030"~air-N[2])),
+       y = expression(delta^34~"S"~("\u2030 VCDT")),
        color = "niche component",
        fill = "behavioral phenotype")+
   scale_color_manual(values = c("TNW" = "black", "WIC" = "orange", "BIC" = "red", "FW_resident" = "#C5D86D",
@@ -3350,10 +3379,10 @@ NS <- ggplot()+
 empty <- ggplot()+
   geom_point(data = Ecopike2, aes(x = d15N, y = d34S, colour = phenotype), alpha = 0)+
   stat_ellipse(data = Ecopike2, aes(x = d15N, y = d34S, group = fish_ID, fill = phenotype), level = 0.4,
-               alpha = 0, geom = "polygon", linewidth = 0)+
-  stat_ellipse(data = TNWNS, aes(x = N, y = S, color = "TNW"), level = 0.4, linewidth = 0, alpha = 0)+
-  stat_ellipse(data = WICNS, aes(x = N, y = S, color = "WIC"), level = 0.4, linewidth = 0, alpha = 0)+
-  geom_ellipse(data = BICNS, aes(x0 = -1, y0 = -1, a = 0, b = 0, angle = N/S, color = "BIC"), alpha = 0, lwd = 0)+
+               alpha = 0, geom = "polygon", linewidth = 1.5)+
+  stat_ellipse(data = TNWNS, aes(x = N, y = S, color = "TNW"), level = 0.4, linewidth = 1.5, alpha = 0)+
+  stat_ellipse(data = WICNS, aes(x = N, y = S, color = "WIC"), level = 0.4, linewidth = 1.5, alpha = 0)+
+  geom_ellipse(data = BICNS, aes(x0 = -1, y0 = -1, a = 0, b = 0, angle = N/S, color = "BIC"), alpha = 0, lwd = 1.5)+
   labs(x = "",
        y = "",
        color = "niche component",
@@ -3367,7 +3396,7 @@ empty <- ggplot()+
                     values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
                     labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"),
                     drop = FALSE)+
-  guides(color = guide_legend(override.aes = list(shape = 21, size = 8, linetype = c(0,0,0), alpha = 1)),
+  guides(color = guide_legend(override.aes = list(shape = 21, size = 8, stroke = 2, linetype = c(0,0,0), alpha = 1)),
          fill = guide_legend(override.aes = list(alpha = 0.3)))+
   theme_void()+
   theme(legend.position = c(.5,.5),
