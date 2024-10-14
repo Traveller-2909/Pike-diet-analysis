@@ -1298,6 +1298,56 @@ C.corrected <- rbind(Prey[!Prey$Species%in%c("C.harengus", "P.flesus","P.fluviat
 fwrite(C.corrected, "Data/Prey/Preyfish_SI_clean_average_lipid-corrected.csv")
 ```
 
+```{r baseline data, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+#read in baseline data
+base1 <- fread("Data/Baseline/baseline_samples.CSV")
+base2 <- fread("Data/Baseline/baseline_1.CSV")
+base3 <- fread("Data/Baseline/baseline_2.CSV")
+
+base1.1 <- base1 %>%
+  mutate(group = case_when(Species %in% c("Mystery Snail", "Mysis sp.", "Mystery Isopod", "C. lamarcki", "Idotea sp.",
+                                          "M. bathica", "L. obtusata") ~ "Littoral",
+                           Species %in% c("M. arenaria", "M. edulis", "M. mytilus") ~ "Pelagic",
+                           Genus %in% c("Neomysis", "Gastropoda", "Idotea + Gammarus", "Macoma", "Cerastoderma", 
+                                        "Littorina", "Mysidae", "Mystery Gastropoda", "Idotea", "Gammarus", 
+                                        "Bathyporeia", "Isopoda") ~ "Littoral",
+                           Genus %in% c("Mya", "Balanidae", "Mytilus") ~ "Pelagic",
+                           Genus %in% c("Trichoptera", "Coryxidae") ~ "Terrestrial",
+                           TRUE ~ NA)) %>%
+  transmute(ID = Number,
+            functional_group = `Functional group`,
+            sample_type = `Sample type (gill net/grab/dredge/opportunistic)`,
+            date = Date,
+            long = Long,
+            lat = Lat,
+            group, comment) %>%
+  drop_na(group)
+
+base2.1 <- base2 %>%
+  transmute(ID = `Identifier 1`,
+            d13C = `d 13C/12C Calculated`,
+            d15N = `d 15N/14N Calculated`,
+            d34S = `d 34S/32S Calculated`)
+
+base3.1 <- base3 %>%
+  transmute(ID = `Identifier 1`,
+            d13C = `d 13C/12C Calculated`,
+            d15N = `d 15N/14N Calculated`,
+            d34S = `d 34S/32S Calculated`)
+
+Isovalues <- rbind(base2.1, base3.1)
+
+baseline <- base1.1 %>%
+  left_join(Isovalues, by = "ID") %>%
+  drop_na(d13C)
+
+
+# Add receiver positions
+Receivers
+```
+
 # SI basic visuals
 
 ```{r biplots whole sample, include=FALSE, eval=FALSE}
