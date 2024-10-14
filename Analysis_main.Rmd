@@ -1298,6 +1298,57 @@ C.corrected <- rbind(Prey[!Prey$Species%in%c("C.harengus", "P.flesus","P.fluviat
 fwrite(C.corrected, "Data/Prey/Preyfish_SI_clean_average_lipid-corrected.csv")
 ```
 
+```{r baseline data, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+#read in baseline data
+base1 <- fread("Data/Baseline/baseline_samples.CSV")
+base2 <- fread("Data/Baseline/baseline_1.CSV")
+base3 <- fread("Data/Baseline/baseline_2.CSV")
+
+base1.1 <- base1 %>%
+  mutate(group = case_when(Species %in% c("Mystery Snail", "Mysis sp.", "Mystery Isopod", "C. lamarcki", "Idotea sp.",
+                                          "M. bathica", "L. obtusata") ~ "Littoral",
+                           Species %in% c("M. arenaria", "M. edulis", "M. mytilus") ~ "Pelagic",
+                           Genus %in% c("Neomysis", "Gastropoda", "Idotea + Gammarus", "Macoma", "Cerastoderma", 
+                                        "Littorina", "Mysidae", "Mystery Gastropoda", "Idotea", "Gammarus", 
+                                        "Bathyporeia", "Isopoda") ~ "Littoral",
+                           Genus %in% c("Mya", "Balanidae", "Mytilus") ~ "Pelagic",
+                           Genus %in% c("Trichoptera", "Coryxidae") ~ "Terrestrial",
+                           TRUE ~ NA)) %>%
+  transmute(ID = Number,
+            functional_group = `Functional group`,
+            sample_type = `Sample type (gill net/grab/dredge/opportunistic)`,
+            date = Date,
+            long = Long,
+            lat = Lat,
+            group, comment) %>%
+  drop_na(group)
+
+base2.1 <- base2 %>%
+  transmute(ID = `Identifier 1`,
+            d13C = `d 13C/12C Calculated`,
+            d15N = `d 15N/14N Calculated`,
+            d34S = `d 34S/32S Calculated`)
+
+base3.1 <- base3 %>%
+  transmute(ID = `Identifier 1`,
+            d13C = `d 13C/12C Calculated`,
+            d15N = `d 15N/14N Calculated`,
+            d34S = `d 34S/32S Calculated`)
+
+Isovalues <- rbind(base2.1, base3.1)
+
+baseline <- base1.1 %>%
+  left_join(Isovalues, by = "ID") %>%
+  drop_na(d13C)
+
+
+# Add receiver positions
+Receivers
+```
+
+
 # SI basic visuals
 
 ```{r biplots whole sample, include=FALSE, eval=FALSE}
@@ -2173,76 +2224,72 @@ pl.theme <- theme(panel.grid.major = element_line(color = "grey", linetype = "so
                   legend.box.background = element_blank(),
                   axis.line = element_line(linewidth = .5, colour = "black", linetype = 1),
                   axis.ticks = element_line(linewidth = .5, colour = "black"),
-                  axis.text = element_text(size = 12, colour = "black"),
-                  axis.text.y = element_text(size = 12, colour = "black"),
+                  axis.text = element_text(size = 18, colour = "black"),
+                  axis.text.y = element_text(size = 20, colour = "black"),
                   axis.title.x = element_blank(),
                   axis.title.y = element_blank(),
                   legend.position = "bottom",
-                  legend.text = element_text(size = 12),
-                  legend.title = element_text(size = 12),
-                  legend.key.size = unit(.8,"line"),
-                  plot.title = element_text(size = 12, colour = "black"))
+                  legend.text = element_text(size = 20),
+                  legend.title = element_text(size = 20),
+                  legend.key.size = unit(1.5,"line"),
+                  plot.title = element_text(size = 20, colour = "black"))
 
 pl.color <- scale_color_manual(breaks = c("marine", "lagoon", "freshwater"),
                               values = c("#29B6F6", "#00796B","#B71C1C"),
-                              labels = c("marine resources", "lagoon resources", "freshwater resources"))
+                              labels = c("Marin", "Bodden", "Süßwasser"))
 pl.fill <- scale_fill_manual(breaks = c("marine", "lagoon", "freshwater"),
                               values = c("#29B6F6", "#00796B","#B71C1C"),
-                              labels = c("marine resources", "lagoon resources", "freshwater resources"))
+                              labels = c("Marin", "Bodden", "Süßwasser"))
 
 scaley2 <- scale_y_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1),
                              labels = c("0", "25", "50", "75", "100"))
 
 Ana.plot <- Ana_cont+
-  labs(title = "anadromous (N = 50)", fill = "", color = "")+
+  labs(title = "Anadromer Typ (N = 50)", fill = "Ressourcen", color = "Ressourcen")+
   pl.theme+
   pl.color+
   pl.fill+
   scale_x_continuous(breaks = seq(0, 1000, 100),
                      labels = seq(0,100,10),
-                     limits = c(min(pike[pike$ecotype=="Anadromous",]$Length),
-                              max(pike[pike$ecotype=="Anadromous",]$Length)))+
+                     limits = c(400, 1000))+
   scaley2
 
 BW.plot <- BW_cont+
-  labs(title = "brackish resident (N = 140)", fill = "", color = "")+
+  labs(title = "Brackwassertyp (N = 140)", fill = "", color = "")+
   pl.theme+
   pl.color+
   pl.fill+
   scale_x_continuous(breaks = seq(0, 1000, 100),
                      labels = seq(0,100,10),
-                     limits = c(min(pike[pike$ecotype=="BW-resident",]$Length),
-                              max(pike[pike$ecotype=="BW-resident",]$Length)))+
+                     limits = c(400, 1000))+
   scaley2
 
 Cross.plot <- Cross_cont+
-  labs(title = "cross-habitat (N = 89)", fill = "", color = "")+
+  labs(title = "Übergangstyp (N = 89)", fill = "", color = "")+
   pl.theme+
   pl.color+
   pl.fill+
   scale_x_continuous(breaks = seq(0, 1000, 100),
                      labels = seq(0,100,10),
-                     limits = c(min(pike[pike$ecotype=="Cross-habitat",]$Length),
-                              max(pike[pike$ecotype=="Cross-habitat",]$Length)))+
+                     limits = c(400, 1000))+
   scaley2
 
 FW.plot <- FW_cont+
-  labs(title = "freshwater resident (N = 23)", fill = "", color = "")+
+  labs(title = "Süßwassertyp (N = 23)", fill = "", color = "")+
   pl.theme+
   pl.color+
   pl.fill+
   scale_x_continuous(breaks = seq(0, 1000, 100),
                      labels = seq(0,100,10),
-                     limits = c(min(pike[pike$ecotype=="Anadromous",]$Length),
-                              max(pike[pike$ecotype=="Anadromous",]$Length)))+
+                     limits = c(400, 1000))+
   scaley2
 
-Allplot <- ggarrange(Ana.plot, FW.plot, Cross.plot, BW.plot, nrow = 2, ncol = 2, 
+Allplot <- ggarrange(Ana.plot, Cross.plot, FW.plot, BW.plot, nrow = 2, ncol = 2, 
                      common.legend = T, legend = "top")
-Allplot2 <- annotate_figure(Allplot, left = text_grob("diet proportion (%)", rot = 90, size = 12), 
-                            bottom = text_grob("total length (cm)", size = 12))
+Allplot2 <- annotate_figure(Allplot, left = text_grob("Anteil Ernährung (%)", rot = 90, size = 20), 
+                            bottom = text_grob("Totallänge (cm)", size = 20))
 
-ggsave("Figures/length-diet-ecotypes.png", Allplot2, width = 15, height = 15, units = "cm", dpi = 300, bg = "white")
+ggsave("Figures/length-diet-ecotypes_poster_GER.png", Allplot2, width = 25, height = 15, units = "cm", dpi = 300, bg = "white")
 ```
 
 ```{r graphics mixing models individual, include=FALSE, eval=FALSE}
@@ -2301,134 +2348,48 @@ saveRDS(g.post2, "Data/Mixing models/outputs_no-priors_locations.rds")
 ```{r graphic mixing models overview simple, eval=FALSE}
 rm(list = ls())
 
-# Create diagnostics, summary statistics, and posterior plots
-jags.pike <- readRDS("Data/Mixing models/Output/Mixing.model-normal-run-ecotype_TL.rds")
-
-Pike2 <- fread("Data/Mixing models/Pikemix-ecotypes.csv")
-
-source.filename <- "Data/Mixing models/Sources.csv"
-mix.filename <- "Data/Mixing models/Pikemix-ecotypes_all.csv"
-
-# Load mixture data
-mix <- load_mix_data(filename=mix.filename, 
-                     iso_names=c("d15N", "d13C", "d34S"),
-                     factors="ecotype",
-                     fac_random=FALSE,
-                     fac_nested=FALSE,
-                     cont_effects="Length")
-
-# Load source data
-source<- load_source_data(filename=source.filename, source_factors=NULL,
-                          conc_dep=FALSE, data_type="means", mix)
-
-global.contrib.p <- data.frame(median = jags.pike$BUGSoutput$median$p.fac1, ecotype=c("anadromous",
-                                                                                      "brackish resident",
-                                                                                      "cross-habitat",
-                                                                                      "freshwater resident"))
-global.contrib.sd <- data.frame(sd = jags.pike$BUGSoutput$sd$p.fac1,
-                                ecotype=c("anadromous",
-                                          "brackish resident",
-                                          "cross-habitat",
-                                          "freshwater resident"))
-
-names(global.contrib.p) <- c(paste0("p.", source[["source_names"]]),"ecotype")
-names(global.contrib.sd) <- c(paste0("sd.", source[["source_names"]]),"ecotype")
-
-sum <- rowSums(global.contrib.p[,1:3])
-
-global.contrib.p2 <- global.contrib.p%>%
-  pivot_longer(cols = p.freshwater:p.marine,names_to = "species", values_to = "median")%>%
-  transmute(ecotype=fct_relevel(ecotype,
-                                "freshwater resident",
-                                "anadromous",
-                                "cross-habitat",
-                                "brackish resident"),
-            species=sub("p.","",species),
-            median=median)
-global.contrib.sd2 <- global.contrib.sd%>%
-  pivot_longer(cols = sd.freshwater:sd.marine,names_to = "species", values_to = "sd")%>%
-  transmute(ecotype=fct_relevel(ecotype,
-                                "freshwater resident",
-                                "anadromous",
-                                "cross-habitat",
-                                "brackish resident"),
-            species=sub("sd.","",species),
-            sd=sd)
-
-global.contrib2 <- global.contrib.p2%>%inner_join(global.contrib.sd2, by = c("species", "ecotype"))
-
-
-indiv.contrib <- data.frame(contr=jags.pike$BUGSoutput$mean$p.ind)
-indiv.sd <- data.frame(sd=jags.pike$BUGSoutput$sd$p.ind)
-names(indiv.contrib) <- paste0("p.",source[["source_names"]])
-names(indiv.sd) <- paste0("sd.",source[["source_names"]])
-indiv.contrib$ID <- Pike2$ID
-indiv.sd$ID <- Pike2$ID
-
-contrib.pike <- indiv.contrib%>%
-  inner_join(indiv.sd, by = "ID")
-
-Pike.contrib <- Pike2 %>%
-  inner_join(contrib.pike, by = "ID")%>%
-  transmute(ID=ID,
-            capt_date,
-            TL_mm = Length,
-            weight_g=weight_g,
-            area=area,
-            Long=Long,
-            Lat=Lat,
-            d15N=d15N,
-            d13C=d13C,
-            d34S=d34S,
-            CN_ratio=CN_ratio,
-            halflife=halflife,
-            p.marine=p.marine,
-            sd.marine=sd.marine,
-            p.lagoon=p.lagoon,
-            sd.lagoon=sd.lagoon,
-            p.freshwater=p.freshwater,
-            sd.freshwater=sd.freshwater)
-
-fwrite(Pike.contrib, "Data/Mixing models/Pike_individual_diet.csv")
+Pike.contrib <- fread("Data/Mixing models/Pike_individual_diet.csv")
 
 pl.theme <- theme(panel.grid.major = element_line(),
                   legend.background = element_blank(),
                   legend.box.background = element_blank(),
+                  legend.position = c(0.7, 0.9),
                   axis.line = element_line(linewidth = .5, colour = "black", linetype = 1),
                   axis.ticks = element_line(linewidth = .5, colour = "black"),
-                  axis.text = element_text(size = 12, colour = "black"),
-                  axis.text.y = element_text(size = 12, colour = "black"),
-                  axis.title.x = element_text(size = 12, colour = "black"),
-                  axis.title.y = element_text(size = 12, colour = "black"),
-                  legend.text = element_text(size = 12),
-                  legend.title = element_text(size = 12),
+                  axis.text = element_text(size = 25, colour = "black"),
+                  axis.text.y = element_text(size = 25, colour = "black"),
+                  axis.title.x = element_text(size = 25, colour = "black"),
+                  axis.title.y = element_text(size = 25, colour = "black"),
+                  legend.text = element_text(size = 25),
+                  legend.title = element_text(size = 25),
                   legend.key.size = unit(.8,"line"),
-                  plot.title = element_text(size = 12, colour = "black"))
+                  plot.title = element_text(size = 12, colour = "black"),
+                  plot.margin = unit(c(1,1,0.2,0.2), "cm"))
 
 Pike.length <- ggplot(Pike.contrib)+
-  geom_smooth(aes(TL_mm, p.marine, color="marine", fill="marine"))+
-  geom_smooth(aes(TL_mm, p.freshwater, color="freshwater", fill="freshwater"))+
-  geom_smooth(aes(TL_mm, p.lagoon, color="lagoon", fill="lagoon"))+
-  scale_color_manual(name = "energy source",
+  geom_smooth(aes(TL_mm, p.marine, color="marine", fill="marine"), method = "gam", lwd = 1.5)+
+  geom_smooth(aes(TL_mm, p.freshwater, color="freshwater", fill="freshwater"), method = "gam", lwd = 1.5)+
+  geom_smooth(aes(TL_mm, p.lagoon, color="lagoon", fill="lagoon"), method = "gam", lwd = 1.5)+
+  scale_color_manual(name = "Ressource",
                      breaks = c("marine", "lagoon", "freshwater"),
                      values = c("#29B6F6", "#00796B","#B71C1C"),
-                     labels = c("marine food web", "lagoon food web", "freshwater food web"))+
-  scale_fill_manual(name = "energy source",
+                     labels = c("Wanderhering", "Boddenfische", "Süßwasserfische"))+
+  scale_fill_manual(name = "Ressource",
                      breaks = c("marine", "lagoon", "freshwater"),
                      values = c("#29B6F6", "#00796B","#B71C1C"),
-                     labels = c("marine food web", "lagoon food web", "freshwater food web"))+
+                     labels = c("Wanderhering", "Boddenfische", "Süßwasserfische"))+
   scale_y_continuous(expand = c(0,0),
                      breaks = c(0,0.25,0.5,0.75,1), labels = c("0", "25", "50", "75", "100"))+
   scale_x_continuous(expand = c(0,0),
-                     limits = c(min(Pike.contrib$TL_mm),max(Pike.contrib$TL_mm)),
+                     limits = c(400, 1000),
                      breaks = c(200,300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300), 
-                     labels = c("20","30","40","50","60","70","80","90","100","110","120","130"))+
-  labs(x="total length (cm)", y="pike diet proportion (%)")+
+                     labels = c("20","30","","50","60","70","80","90","100","110","120","130"))+
+  labs(x="Totallänge (cm)", y="Anteil Ernährung (%)")+
   coord_cartesian(ylim = c(0,1))+
   theme_classic()+
   pl.theme
 
-ggsave("Figures/diet-per-length_global.png", Pike.length, width = 15, height = 9, units = "cm", dpi = 600)
+ggsave("Figures/diet-per-length_global.png", Pike.length, width = 20, height = 15, units = "cm", dpi = 600)
 
 global <- ggplot(global.contrib2)+
   geom_bar(aes(ecotype, median+sd, fill=species), stat="identity")+
@@ -2621,55 +2582,57 @@ rm(list = ls())
 
 pikes <- fread("Data/Pike/Pikedata-model.csv")
 
-pikes <- pikes%>%
-  reframe(ID = ID,
-          lifeyear = lifeyear,
-          waterbody = as.factor(waterbody),
-          phenotype = phenotype,
-          genotype = genotype,
-          sex = sex,
-          length_back = length_back,
-          d13C = d13C,
-          d15N = d15N,
-          d34S = d34S,
-          CN = CN)%>%
-  filter(length_back < 700)
+pikes2 <- pikes%>%
+  transmute(ID, lifeyear, sex, phenotype, length_back, d13C, d15N, d34S, res_mean, Sr_mean)%>%
+  filter(d34S > -1.8)
 
-#factorize age
-pikes$agefact <- ifelse(pikes$lifeyear==1, 2, 
-                         ifelse(pikes$lifeyear==2, 1,
-                                ifelse(pikes$lifeyear>2, 3, NA)))
+pikemodel <- lmer(length_back~I(lifeyear^2)+sex+phenotype+d13C+d15N+d34S+res_mean+Sr_mean+(1|ID), data = pikes, REML = T)
 
-pikes$agefact2 <- factor(pikes$agefact,levels = c(2,1,3),
-                                            labels = c("0-1 years", "1-2 years", 
-                                                       "> 2 years"))
+lifeyear <- unique(pikes2$lifeyear)
+phenotype <- unique(pikes2$phenotype)
+d34S <- seq(min(pikes2$d34S), max(pikes2$d34S), 0.5)
+d13C <- mean(pikes2$d13C)
+d15N <- mean(pikes2$d15N)
+res_mean <- mean(pikes2$res_mean)
+Sr_mean <- seq(min(pikes2$Sr_mean), max(pikes2$Sr_mean), 0.5)
+sex <- unique(pikes2$sex)
+ID <- "NA"
 
-mypallette <- viridis::viridis(4, direction = -1)
+Newdata <- expand.grid(lifeyear=lifeyear, phenotype=phenotype, d34S=d34S, d15N=d15N, d13C=d13C, res_mean=res_mean, Sr_mean=Sr_mean,
+                       sex=sex, ID=ID)
+head(Newdata)
+
+Newdata$prediction <- predict(pikemodel, newdata = Newdata, allow.new.levels=TRUE, type="response")
 
 #Isotope effects growth
-d34S <- ggplot(pikes, aes(d34S,log(length_back)))+
-  geom_point(size=.5)+
-  scale_x_continuous(limits = c(-2,2))+
-  #scale_y_continuous(limits = c(0,500),
-                     #breaks = c(0, 50, 100, 150, 200, 250))+
-  stat_smooth(method = "lm", fill="#440154FF", color = "#FDE725FF", fullrange = T, lwd=.8)+
-  labs(x=expression("scaled"~delta^34*"S"~("z-score")), 
-       y="yearly growth increment (mm)")+
-  scale_color_viridis_d()+
+Effect <- ggplot()+
+  geom_point(data = pikes2, aes(d34S, log(length_back), color = "Marin"), size=1)+
+  geom_point(data = pikes2, aes(Sr_mean, log(length_back), color = "Salzgehalt"), size=1)+
+  stat_smooth(data = pikes2, aes(d34S, log(length_back), fill = "Marin"), method = "lm", color="black", fullrange = T, lwd=1)+
+  stat_smooth(data = pikes2, aes(Sr_mean, log(length_back), fill = "Salzgehalt"), method = "lm", color="black", fullrange = T, lwd=1)+
+  labs(x="Prädiktor (z-score)", y="Zuwachs (log-Skala)", color = "", fill = "")+
+  scale_color_manual(breaks = c("Marin", "Salzgehalt"),
+                     values = c("#00BFB2", "#F1C40F"),
+                     labels = c("Marine Ernährung", "Salzgehalt"))+
+  
+  scale_fill_manual(breaks = c("Marin", "Salzgehalt"),
+                     values = c("#00BFB2", "#F1C40F"),
+                     labels = c("Marine Ernährung", "Salzgehalt"))+
   theme_classic()+
   theme(panel.grid.major = element_line(),
-        legend.position = c(.9,.82),
+        legend.position = "top",
         legend.background = element_blank(),
         legend.box.background = element_rect(),
         axis.line = element_line(linewidth = .5, colour = "black", linetype = 1),
         axis.ticks = element_line(linewidth = .5, colour = "black"),
-        axis.title.x = element_text(size = 10, margin = margin(t=15), colour = "black"),
-        axis.title.y = element_text(size = 10, margin = margin(t=30), colour = "black"),
-        legend.text = element_text(size = 10),
-        legend.title = element_text(size = 10, colour = "black"),
+        axis.text = element_text(size = 25, colour = "black"),
+        axis.title.x = element_text(size = 25, colour = "black", margin = margin(t = 15)),
+        axis.title.y = element_text(size = 25, colour = "black", margin = margin(r = 15)),
+        legend.text = element_text(size = 25, hjust = 0),
+        legend.title = element_text(size = 25, colour = "black"),
         legend.key.size = unit(.8,"line"))
 
-ggsave("Figures/Iso-effect-growth.png", d34S, width = 15, height = 9, units = "cm", dpi = 600, bg = "white")
+ggsave("Figures/Iso-effect-growth_poster.png", Effect, width = 20, height = 15, units = "cm", dpi = 600, bg = "white")
 ```
 
 ```{r plot eye lens isotopes, include=FALSE, eval=FALSE}
@@ -3192,42 +3155,19 @@ Specplot_pop <- ggplot(Ecopike_spec_pop)+
                     values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
                     labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
   scale_x_discrete(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
-                   labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
+                   labels = c("Süßwasser", "Anadrom", "Übergang", "Brackwasser"))+
   scale_y_continuous(limits = c(-0.1, 1),
                      breaks = seq(0,1, 0.25))+
-  labs(title = "s-index population level",
-       x = "behavioral phenotype",
-       y = "specialization index")+
+  labs(x = "Verhaltenstyp",
+       y = "Spezialisierung")+
   theme_bw()+
   theme(legend.position = "none",
-        axis.text.x = element_text(size = 10, color = "black", angle = 45, hjust = 1),
-        axis.text.y = element_text(size = 10, color = "black"),
-        axis.title = element_blank())
+        axis.text.x = element_text(size = 25, color = "black", angle = 45, hjust = 1),
+        axis.text.y = element_text(size = 25, color = "black"),
+        axis.title.x = element_text(size = 25, color = "black"),
+        axis.title.y = element_text(size = 25, color = "black", margin = margin(r = 15)))
 
-Specplot_pheno <- ggplot(Ecopike_spec_pheno, aes(x = phenotype, y = 1-s_index, fill = phenotype))+
-  geom_violin(width = 1)+
-  geom_boxplot(aes(x = phenotype, y = 1-s_index), width = 0.07, size = .5, color = "black", fill = "transparent")+
-  scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
-                    values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
-                    labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
-  scale_x_discrete(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
-                   labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
-  scale_y_continuous(limits = c(-0.1, 1),
-                     breaks = seq(0,1, 0.25))+
-  labs(title = "s-index phenotype level",
-       x = "behavioral phenotype",
-       y = "specialization index")+
-  theme_bw()+
-  theme(legend.position = "none",
-        axis.text.x = element_text(size = 10, color = "black", angle = 45, hjust = 1),
-        axis.text.y = element_text(size = 10, color = "black"),
-        axis.title = element_blank())
-
-Specplot <- ggarrange(Specplot_pop, Specplot_pheno, labels = c("A", "B"))
-Specplot2 <- annotate_figure(Specplot, left = text_grob("specialization index", size = 12, color = "black", rot = 90, hjust = 0),
-                             bottom = text_grob("behavioral phenotype", size = 12, color = "black"))
-
-ggsave("Figures/S-index-individual-pop-pheno.png", Specplot2, height = 10, width = 15, units = "cm", dpi = 600, bg = "white")
+ggsave("Figures/S-index-individual-pop-pheno_poster.png", Specplot_pop, height = 15, width = 20, units = "cm", dpi = 600, bg = "white")
 ```
 
 ```{r individual overlap metrics population-level, include=FALSE, eval=FALSE}
