@@ -3542,6 +3542,10 @@ CN <- ggplot()+
 
 
 CS <- ggplot()+
+  #individuals
+  #geom_point(data = Ecopike2, aes(x = d13C, y = d34S, colour = phenotype), size = 0.1)+
+  #stat_ellipse(data = Ecopike2, aes(x = d13C, y = d34S, group = fish_ID, fill = phenotype), level = 0.4, alpha = 0.1, geom = "polygon", 
+  #             color = "darkgrey", linewidth = 0.1)+
   #Population level
   stat_ellipse(data = TNWCS, aes(x = C, y = S, color = "Population-level", lty = "TNW"), level = 0.4, linewidth = 1)+
   stat_ellipse(data = WICCS, aes(x = C, y = S, color = "Population-level", lty = "WIC"), level = 0.4, linewidth = 1)+
@@ -3578,6 +3582,10 @@ CS <- ggplot()+
   pl_theme
 
 NS <- ggplot()+
+  #individuals
+  #geom_point(data = Ecopike2, aes(x = d15N, y = d34S, colour = phenotype), size = 0.1)+
+  #stat_ellipse(data = Ecopike2, aes(x = d15N, y = d34S, group = fish_ID, fill = phenotype), level = 0.4, alpha = 0.1, geom = "polygon", 
+  #             color = "darkgrey", linewidth = 0.1)+
   #Population level
   stat_ellipse(data = TNWNS, aes(x = N, y = S, color = "Population-level", lty = "TNW"), level = 0.4, linewidth = 1)+
   stat_ellipse(data = WICNS, aes(x = N, y = S, color = "Population-level", lty = "WIC"), level = 0.4, linewidth = 1)+
