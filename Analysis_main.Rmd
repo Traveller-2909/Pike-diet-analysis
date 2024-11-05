@@ -2901,6 +2901,11 @@ BIC_Cross <- mean(BIC_Cross_post)
 BIC_BW_post <- mod_BW$VCV[, "fish_ID"]
 BIC_BW <- mean(BIC_BW_post)
 
+# BIC_FW <- 0.6040101
+# BIC_Ana <- 0.40918
+# BIC_Cross <- 1.108324
+# BIC_BW <- 0.7034615
+
 #Extract within individual components
 WICmat_FW <- mod_FW$VCV[, grep("trait", colnames(mod_FW$VCV))]
 WICmat_Ana <- mod_Ana$VCV[, grep("trait", colnames(mod_Ana$VCV))]
@@ -3334,9 +3339,43 @@ TNWmat <- as.matrix(read.table("Data/Pike/Total-niche-width_matrix.txt"))
 WICmat <- as.matrix(read.table("Data/Pike/Within-individual-variance_matrix.txt"))
 Individuals <- readRDS("Data/Pike/individual-varcov-CNS.RData")
 
-means <- Ecopike2%>%reframe(d13C = mean(d13C, na.rm = T), d15N = mean(d15N, na.rm = T), d34S = mean(d34S, na.rm = T))
-means <- as.matrix(means)
+# phenotype-level matrices
 
+TNWmat_FW <- as.matrix(read.table("Data/Pike/Total-niche-width_freshwater_matrix.txt"))
+WICmat_FW <- as.matrix(read.table("Data/Pike/Within-individual-variance_freshwater_matrix.txt"))
+TNWmat_Ana <- as.matrix(read.table("Data/Pike/Total-niche-width_anadromous_matrix.txt"))
+WICmat_Ana <- as.matrix(read.table("Data/Pike/Within-individual-variance_anadromous_matrix.txt"))
+TNWmat_Cross <- as.matrix(read.table("Data/Pike/Total-niche-width_cross-habitat_matrix.txt"))
+WICmat_Cross <- as.matrix(read.table("Data/Pike/Within-individual-variance_cross-habitat_matrix.txt"))
+TNWmat_BW <- as.matrix(read.table("Data/Pike/Total-niche-width_brackish_matrix.txt"))
+WICmat_BW <- as.matrix(read.table("Data/Pike/Within-individual-variance_brackish_matrix.txt"))
+
+BIC_FW <- 0.6040101
+BIC_Ana <- 0.40918
+BIC_Cross <- 1.108324
+BIC_BW <- 0.7034615
+
+
+means_pop <- Ecopike2%>%reframe(d13C = mean(d13C, na.rm = T), d15N = mean(d15N, na.rm = T), d34S = mean(d34S, na.rm = T))
+means_pop <- as.matrix(means_pop)
+
+means_FW <- Ecopike2[Ecopike2$phenotype == "FW_resident",]%>%
+  reframe(d13C = mean(d13C, na.rm = T), d15N = mean(d15N, na.rm = T), d34S = mean(d34S, na.rm = T))
+means_FW <- as.matrix(means_FW)
+
+means_Ana <- Ecopike2[Ecopike2$phenotype == "Anadromous",]%>%
+  reframe(d13C = mean(d13C, na.rm = T), d15N = mean(d15N, na.rm = T), d34S = mean(d34S, na.rm = T))
+means_Ana <- as.matrix(means_Ana)
+
+means_Cross <- Ecopike2[Ecopike2$phenotype == "Trans-habitat",]%>%
+  reframe(d13C = mean(d13C, na.rm = T), d15N = mean(d15N, na.rm = T), d34S = mean(d34S, na.rm = T))
+means_Cross <- as.matrix(means_Cross)
+
+means_BW <- Ecopike2[Ecopike2$phenotype == "BW-resident",]%>%
+  reframe(d13C = mean(d13C, na.rm = T), d15N = mean(d15N, na.rm = T), d34S = mean(d34S, na.rm = T))
+means_BW <- as.matrix(means_BW)
+
+# Varcov isotope-specific population level
 TNWmatCN <- TNWmat[1:2, 1:2]
 TNWmatCS <- matrix(c(TNWmat[1,1], TNWmat[1,3], TNWmat[3,1], TNWmat[3,3]), nrow = 2, ncol = 2, dimnames = list(c("C", "S"), c("C", "S")))
 TNWmatNS <- matrix(c(TNWmat[2,2], TNWmat[2,3], TNWmat[3,2], TNWmat[3,3]), nrow = 2, ncol = 2, dimnames = list(c("N", "S"), c("N", "S")))
@@ -3347,7 +3386,53 @@ WICmatNS <- matrix(c(WICmat[2,2], WICmat[2,3], WICmat[3,2], WICmat[3,3]), nrow =
 
 BICmat <- TNWmat - WICmat
 
+# Varcov isotope-specific phenotype level
+# Freshwater residents
+TNWmatCN_FW <- TNWmat_FW[1:2, 1:2]
+TNWmatCS_FW <- matrix(c(TNWmat_FW[1,1], TNWmat_FW[1,3], TNWmat_FW[3,1], TNWmat_FW[3,3]), nrow = 2, ncol = 2, dimnames = list(c("C", "S"), c("C", "S")))
+TNWmatNS_FW <- matrix(c(TNWmat_FW[2,2], TNWmat_FW[2,3], TNWmat_FW[3,2], TNWmat_FW[3,3]), nrow = 2, ncol = 2, dimnames = list(c("N", "S"), c("N", "S")))
 
+WICmatCN_FW <- WICmat_FW[1:2, 1:2]
+WICmatCS_FW <- matrix(c(WICmat_FW[1,1], WICmat_FW[1,3], WICmat_FW[3,1], WICmat_FW[3,3]), nrow = 2, ncol = 2, dimnames = list(c("C", "S"), c("C", "S")))
+WICmatNS_FW <- matrix(c(WICmat_FW[2,2], WICmat_FW[2,3], WICmat_FW[3,2], WICmat_FW[3,3]), nrow = 2, ncol = 2, dimnames = list(c("N", "S"), c("N", "S")))
+
+BICmat_FW <- TNWmat_FW - WICmat_FW
+
+# Anadromous
+TNWmatCN_Ana <- TNWmat_Ana[1:2, 1:2]
+TNWmatCS_Ana <- matrix(c(TNWmat_Ana[1,1], TNWmat_Ana[1,3], TNWmat_Ana[3,1], TNWmat_Ana[3,3]), nrow = 2, ncol = 2, dimnames = list(c("C", "S"), c("C", "S")))
+TNWmatNS_Ana <- matrix(c(TNWmat_Ana[2,2], TNWmat_Ana[2,3], TNWmat_Ana[3,2], TNWmat_Ana[3,3]), nrow = 2, ncol = 2, dimnames = list(c("N", "S"), c("N", "S")))
+
+WICmatCN_Ana <- WICmat_Ana[1:2, 1:2]
+WICmatCS_Ana <- matrix(c(WICmat_Ana[1,1], WICmat_Ana[1,3], WICmat_Ana[3,1], WICmat_Ana[3,3]), nrow = 2, ncol = 2, dimnames = list(c("C", "S"), c("C", "S")))
+WICmatNS_Ana <- matrix(c(WICmat_Ana[2,2], WICmat_Ana[2,3], WICmat_Ana[3,2], WICmat_Ana[3,3]), nrow = 2, ncol = 2, dimnames = list(c("N", "S"), c("N", "S")))
+
+BICmat_Ana <- TNWmat_Ana - WICmat_Ana
+
+# Cross-habitat
+TNWmatCN_Cross <- TNWmat_Cross[1:2, 1:2]
+TNWmatCS_Cross <- matrix(c(TNWmat_Cross[1,1], TNWmat_Cross[1,3], TNWmat_Cross[3,1], TNWmat_Cross[3,3]), nrow = 2, ncol = 2, dimnames = list(c("C", "S"), c("C", "S")))
+TNWmatNS_Cross <- matrix(c(TNWmat_Cross[2,2], TNWmat_Cross[2,3], TNWmat_Cross[3,2], TNWmat_Cross[3,3]), nrow = 2, ncol = 2, dimnames = list(c("N", "S"), c("N", "S")))
+
+WICmatCN_Cross <- WICmat_Cross[1:2, 1:2]
+WICmatCS_Cross <- matrix(c(WICmat_Cross[1,1], WICmat_Cross[1,3], WICmat_Cross[3,1], WICmat_Cross[3,3]), nrow = 2, ncol = 2, dimnames = list(c("C", "S"), c("C", "S")))
+WICmatNS_Cross <- matrix(c(WICmat_Cross[2,2], WICmat_Cross[2,3], WICmat_Cross[3,2], WICmat_Cross[3,3]), nrow = 2, ncol = 2, dimnames = list(c("N", "S"), c("N", "S")))
+
+BICmat_Cross <- TNWmat_Cross - WICmat_Cross
+
+# Brackish resident
+TNWmatCN_BW <- TNWmat_BW[1:2, 1:2]
+TNWmatCS_BW <- matrix(c(TNWmat_BW[1,1], TNWmat_BW[1,3], TNWmat_BW[3,1], TNWmat_BW[3,3]), nrow = 2, ncol = 2, dimnames = list(c("C", "S"), c("C", "S")))
+TNWmatNS_BW <- matrix(c(TNWmat_BW[2,2], TNWmat_BW[2,3], TNWmat_BW[3,2], TNWmat_BW[3,3]), nrow = 2, ncol = 2, dimnames = list(c("N", "S"), c("N", "S")))
+
+WICmatCN_BW <- WICmat_BW[1:2, 1:2]
+WICmatCS_BW <- matrix(c(WICmat_BW[1,1], WICmat_BW[1,3], WICmat_BW[3,1], WICmat_BW[3,3]), nrow = 2, ncol = 2, dimnames = list(c("C", "S"), c("C", "S")))
+WICmatNS_BW <- matrix(c(WICmat_BW[2,2], WICmat_BW[2,3], WICmat_BW[3,2], WICmat_BW[3,3]), nrow = 2, ncol = 2, dimnames = list(c("N", "S"), c("N", "S")))
+
+BICmat_BW <- TNWmat_BW - WICmat_BW
+
+# Make ellipses
+# Population-level
 TNWCN <- data.frame(ellipse::ellipse(TNWmatCN, level = 0.4, npoints = 100, centre = c(means[1], means[2])))
 TNWCS <- data.frame(ellipse::ellipse(TNWmatCS, level = 0.4, npoints = 100, centre = c(means[1], means[3])))
 TNWNS <- data.frame(ellipse::ellipse(TNWmatNS, level = 0.4, npoints = 100, centre = c(means[2], means[3])))
@@ -3357,48 +3442,135 @@ WICCS <- data.frame(ellipse::ellipse(WICmatCS, level = 0.4, npoints = 100, centr
 WICNS <- data.frame(ellipse::ellipse(WICmatNS, level = 0.4, npoints = 100, centre = c(means[2], means[3])))
 
 BICCN <- data.frame(C = means[1], N = means[2], varC = 1.18, varN = 1.18)
-BICCS <- data.frame(C = means[1], S = means[3], varC = 1.18, varS = 1.18)
+BICCS <- data.frame(C = means[1], S = means[3], varC = 1.18, varS = 1.18) 
 BICNS <- data.frame(N = means[2], S = means[3], varN = 1.18, varS = 1.18)
+
+# Freshwater resident
+TNWCN_FW <- data.frame(ellipse::ellipse(TNWmatCN_FW, level = 0.4, npoints = 100, centre = c(means_FW[1], means_FW[2])))
+TNWCS_FW <- data.frame(ellipse::ellipse(TNWmatCS_FW, level = 0.4, npoints = 100, centre = c(means_FW[1], means_FW[3])))
+TNWNS_FW <- data.frame(ellipse::ellipse(TNWmatNS_FW, level = 0.4, npoints = 100, centre = c(means_FW[2], means_FW[3])))
+
+WICCN_FW <- data.frame(ellipse::ellipse(WICmatCN_FW, level = 0.4, npoints = 100, centre = c(means_FW[1], means_FW[2])))
+WICCS_FW <- data.frame(ellipse::ellipse(WICmatCS_FW, level = 0.4, npoints = 100, centre = c(means_FW[1], means_FW[3])))
+WICNS_FW <- data.frame(ellipse::ellipse(WICmatNS_FW, level = 0.4, npoints = 100, centre = c(means_FW[2], means_FW[3])))
+
+BICCN_FW <- data.frame(C = means_FW[1], N = means_FW[2], varC = BIC_FW, varN = BIC_FW)
+BICCS_FW <- data.frame(C = means_FW[1], S = means_FW[3], varC = BIC_FW, varS = BIC_FW)
+BICNS_FW <- data.frame(N = means_FW[2], S = means_FW[3], varN = BIC_FW, varS = BIC_FW)
+
+# Anadromous
+TNWCN_Ana <- data.frame(ellipse::ellipse(TNWmatCN_Ana, level = 0.4, npoints = 100, centre = c(means_Ana[1], means_Ana[2])))
+TNWCS_Ana <- data.frame(ellipse::ellipse(TNWmatCS_Ana, level = 0.4, npoints = 100, centre = c(means_Ana[1], means_Ana[3])))
+TNWNS_Ana <- data.frame(ellipse::ellipse(TNWmatNS_Ana, level = 0.4, npoints = 100, centre = c(means_Ana[2], means_Ana[3])))
+
+WICCN_Ana <- data.frame(ellipse::ellipse(WICmatCN_Ana, level = 0.4, npoints = 100, centre = c(means_Ana[1], means_Ana[2])))
+WICCS_Ana <- data.frame(ellipse::ellipse(WICmatCS_Ana, level = 0.4, npoints = 100, centre = c(means_Ana[1], means_Ana[3])))
+WICNS_Ana <- data.frame(ellipse::ellipse(WICmatNS_Ana, level = 0.4, npoints = 100, centre = c(means_Ana[2], means_Ana[3])))
+
+BICCN_Ana <- data.frame(C = means_Ana[1], N = means_Ana[2], varC = BIC_Ana, varN = BIC_Ana)
+BICCS_Ana <- data.frame(C = means_Ana[1], S = means_Ana[3], varC = BIC_Ana, varS = BIC_Ana)
+BICNS_Ana <- data.frame(N = means_Ana[2], S = means_Ana[3], varN = BIC_Ana, varS = BIC_Ana)
+
+# Cross-habitat
+TNWCN_Cross <- data.frame(ellipse::ellipse(TNWmatCN_Cross, level = 0.4, npoints = 100, centre = c(means_Cross[1], means_Cross[2])))
+TNWCS_Cross <- data.frame(ellipse::ellipse(TNWmatCS_Cross, level = 0.4, npoints = 100, centre = c(means_Cross[1], means_Cross[3])))
+TNWNS_Cross <- data.frame(ellipse::ellipse(TNWmatNS_Cross, level = 0.4, npoints = 100, centre = c(means_Cross[2], means_Cross[3])))
+
+WICCN_Cross <- data.frame(ellipse::ellipse(WICmatCN_Cross, level = 0.4, npoints = 100, centre = c(means_Cross[1], means_Cross[2])))
+WICCS_Cross <- data.frame(ellipse::ellipse(WICmatCS_Cross, level = 0.4, npoints = 100, centre = c(means_Cross[1], means_Cross[3])))
+WICNS_Cross <- data.frame(ellipse::ellipse(WICmatNS_Cross, level = 0.4, npoints = 100, centre = c(means_Cross[2], means_Cross[3])))
+
+BICCN_Cross <- data.frame(C = means_Cross[1], N = means_Cross[2], varC = BIC_Cross, varN = BIC_Cross)
+BICCS_Cross <- data.frame(C = means_Cross[1], S = means_Cross[3], varC = BIC_Cross, varS = BIC_Cross)
+BICNS_Cross <- data.frame(N = means_Cross[2], S = means_Cross[3], varN = BIC_Cross, varS = BIC_Cross)
+
+# Brackish resident
+TNWCN_BW <- data.frame(ellipse::ellipse(TNWmatCN_BW, level = 0.4, npoints = 100, centre = c(means_BW[1], means_BW[2])))
+TNWCS_BW <- data.frame(ellipse::ellipse(TNWmatCS_BW, level = 0.4, npoints = 100, centre = c(means_BW[1], means_BW[3])))
+TNWNS_BW <- data.frame(ellipse::ellipse(TNWmatNS_BW, level = 0.4, npoints = 100, centre = c(means_BW[2], means_BW[3])))
+
+WICCN_BW <- data.frame(ellipse::ellipse(WICmatCN_BW, level = 0.4, npoints = 100, centre = c(means_BW[1], means_BW[2])))
+WICCS_BW <- data.frame(ellipse::ellipse(WICmatCS_BW, level = 0.4, npoints = 100, centre = c(means_BW[1], means_BW[3])))
+WICNS_BW <- data.frame(ellipse::ellipse(WICmatNS_BW, level = 0.4, npoints = 100, centre = c(means_BW[2], means_BW[3])))
+
+BICCN_BW <- data.frame(C = means_BW[1], N = means_BW[2], varC = BIC_BW, varN = BIC_BW)
+BICCS_BW <- data.frame(C = means_BW[1], S = means_BW[3], varC = BIC_BW, varS = BIC_BW)
+BICNS_BW <- data.frame(N = means_BW[2], S = means_BW[3], varN = BIC_BW, varS = BIC_BW)
 
 pl_theme <- theme(legend.position = "none",
                   axis.text = element_text(size = 10, color = "black"))
 
 CN <- ggplot()+
-  geom_point(data = Ecopike2, aes(x = d13C, y = d15N, colour = phenotype), size = 0.5)+
-  stat_ellipse(data = Ecopike2, aes(x = d13C, y = d15N, group = fish_ID, fill = phenotype), level = 0.4,
-               alpha = 0.3, geom = "polygon", color = "darkgrey", linewidth = 0.2)+
-  stat_ellipse(data = TNWCN, aes(x = C, y = N, color = "TNW"), level = 0.4, linewidth = 1.5)+
-  stat_ellipse(data = WICCN, aes(x = C, y = N, color = "WIC"), level = 0.4, linewidth = 1.5)+
-  geom_ellipse(data = BICCN, aes(x0 = C, y0 = N, a = 0.4*varC, b = 0.4*varN, angle = C/N, color = "BIC"), linewidth = 1)+
+  #individuals
+  #geom_point(data = Ecopike2, aes(x = d13C, y = d15N, colour = phenotype), size = 0.1)+
+  #stat_ellipse(data = Ecopike2, aes(x = d13C, y = d15N, group = fish_ID, fill = phenotype), level = 0.4, alpha = 0.1, geom = "polygon", 
+  #             color = "darkgrey", linewidth = 0.1)+
+  #Population level
+  stat_ellipse(data = TNWCN, aes(x = C, y = N, color = "Population-level", lty = "TNW"), level = 0.4, linewidth = 1)+
+  stat_ellipse(data = WICCN, aes(x = C, y = N, color = "Population-level", lty = "WIC"), level = 0.4, linewidth = 1)+
+  geom_ellipse(data = BICCN, aes(x0 = C, y0 = N, a = 0.4*varC, b = 0.4*varN, angle = C/N, color = "Population-level", lty = "BIC"), linewidth = 1)+
+  #FW-resident 
+  stat_ellipse(data = TNWCN_FW, aes(x = C, y = N, color = "FW_resident", lty = "TNW"), level = 0.4, linewidth = 0.5)+
+  stat_ellipse(data = WICCN_FW, aes(x = C, y = N, color = "FW_resident", lty = "WIC"), level = 0.4, linewidth = 0.5)+
+  geom_ellipse(data = BICCN_FW, aes(x0 = C, y0 = N, a = 0.4*varC, b = 0.4*varN, angle = C/N, color = "FW_resident", lty = "BIC"), linewidth = 0.5)+
+  #Anadromous 
+  stat_ellipse(data = TNWCN_Ana, aes(x = C, y = N, color = "Anadromous", lty = "TNW"), level = 0.4, linewidth = 0.5)+
+  stat_ellipse(data = WICCN_Ana, aes(x = C, y = N, color = "Anadromous", lty = "WIC"), level = 0.4, linewidth = 0.5)+
+  geom_ellipse(data = BICCN_Ana, aes(x0 = C, y0 = N, a = 0.4*varC, b = 0.4*varN, angle = C/N, color = "Anadromous", lty = "BIC"), linewidth = 0.5)+
+  #Cross-habitat
+  stat_ellipse(data = TNWCN_Cross, aes(x = C, y = N, color = "Trans-habitat", lty = "TNW"), level = 0.4, linewidth = 0.5)+
+  stat_ellipse(data = WICCN_Cross, aes(x = C, y = N, color = "Trans-habitat", lty = "WIC"), level = 0.4, linewidth = 0.5)+
+  geom_ellipse(data = BICCN_Cross, aes(x0 = C, y0 = N, a = 0.4*varC, b = 0.4*varN, angle = C/N, color = "Trans-habitat", lty = "BIC"), linewidth = 0.5)+
+  #Brackish resident
+  stat_ellipse(data = TNWCN_BW, aes(x = C, y = N, color = "BW-resident", lty = "TNW"), level = 0.4, linewidth = 0.5)+
+  stat_ellipse(data = WICCN_BW, aes(x = C, y = N, color = "BW-resident", lty = "WIC"), level = 0.4, linewidth = 0.5)+
+  geom_ellipse(data = BICCN_BW, aes(x0 = C, y0 = N, a = 0.4*varC, b = 0.4*varN, angle = C/N, color = "BW-resident", lty = "BIC"), linewidth = 0.5)+
   labs(x = expression(delta^13~"C"~("\u2030 VPDB")),
        y = expression(delta^15~"N"~("\u2030"~air-N[2])),
-       color = "niche component",
-       fill = "behavioral phenotype")+
-  scale_color_manual(values = c("TNW" = "black", "WIC" = "orange", "BIC" = "red", "FW_resident" = "#C5D86D",
-                                "BW-resident" = "#004643", "Anadromous" = "#00BFB2", "Trans-habitat" = "#F1C40F"),
-                     breaks = c("TNW", "WIC", "BIC"),
-                     labels = c(expression("TNW"["Pop"]), expression("WIC"["Pop"]), expression("BIC"["Pop"])))+
+       lty = "niche component",
+       fill = "behavioural phenotype",
+       color = "behavioural phenotype")+
+  scale_linetype_manual(breaks = c("TNW", "WIC", "BIC"), values = c("solid", "dotdash", "dotted"))+
+  scale_color_manual(values = c("Population-level" = "black", "FW_resident" = "#C5D86D", "BW-resident" = "#004643", "Anadromous" = "#00BFB2", 
+                                "Trans-habitat" = "#F1C40F"),
+                     labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
   scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
                     values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
                     labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
   theme_bw()+
   pl_theme
 
+
 CS <- ggplot()+
-  geom_point(data = Ecopike2, aes(x = d13C, y = d34S, colour = phenotype), size = 0.5)+
-  stat_ellipse(data = Ecopike2, aes(x = d13C, y = d34S, group = fish_ID, fill = phenotype), level = 0.4,
-               alpha = 0.3, geom = "polygon", color = "darkgrey", linewidth = 0.2)+
-  stat_ellipse(data = TNWCS, aes(x = C, y = S, color = "TNW"), level = 0.4, linewidth = 1.5)+
-  stat_ellipse(data = WICCS, aes(x = C, y = S, color = "WIC"), level = 0.4, linewidth = 1.5)+
-  geom_ellipse(data = BICCS, aes(x0 = C, y0 = S, a = 0.4*varC, b = 0.4*varS, angle = C/S, color = "BIC"), linewidth = 1)+
+  #Population level
+  stat_ellipse(data = TNWCS, aes(x = C, y = S, color = "Population-level", lty = "TNW"), level = 0.4, linewidth = 1)+
+  stat_ellipse(data = WICCS, aes(x = C, y = S, color = "Population-level", lty = "WIC"), level = 0.4, linewidth = 1)+
+  geom_ellipse(data = BICCS, aes(x0 = C, y0 = S, a = 0.4*varC, b = 0.4*varS, angle = C/S, color = "Population-level", lty = "BIC"), linewidth = 1)+
+  #FW-resident 
+  stat_ellipse(data = TNWCS_FW, aes(x = C, y = S, color = "FW_resident", lty = "TNW"), level = 0.4, linewidth = 0.5)+
+  stat_ellipse(data = WICCS_FW, aes(x = C, y = S, color = "FW_resident", lty = "WIC"), level = 0.4, linewidth = 0.5)+
+  geom_ellipse(data = BICCS_FW, aes(x0 = C, y0 = S, a = 0.4*varC, b = 0.4*varS, angle = C/S, color = "FW_resident", lty = "BIC"), linewidth = 0.5)+
+  #Anadromous 
+  stat_ellipse(data = TNWCS_Ana, aes(x = C, y = S, color = "Anadromous", lty = "TNW"), level = 0.4, linewidth = 0.5)+
+  stat_ellipse(data = WICCS_Ana, aes(x = C, y = S, color = "Anadromous", lty = "WIC"), level = 0.4, linewidth = 0.5)+
+  geom_ellipse(data = BICCS_Ana, aes(x0 = C, y0 = S, a = 0.4*varC, b = 0.4*varS, angle = C/S, color = "Anadromous", lty = "BIC"), linewidth = 0.5)+
+  #Cross-habitat
+  stat_ellipse(data = TNWCS_Cross, aes(x = C, y = S, color = "Trans-habitat", lty = "TNW"), level = 0.4, linewidth = 0.5)+
+  stat_ellipse(data = WICCS_Cross, aes(x = C, y = S, color = "Trans-habitat", lty = "WIC"), level = 0.4, linewidth = 0.5)+
+  geom_ellipse(data = BICCS_Cross, aes(x0 = C, y0 = S, a = 0.4*varC, b = 0.4*varS, angle = C/S, color = "Trans-habitat", lty = "BIC"), linewidth = 0.5)+
+  #Brackish resident
+  stat_ellipse(data = TNWCS_BW, aes(x = C, y = S, color = "BW-resident", lty = "TNW"), level = 0.4, linewidth = 0.5)+
+  stat_ellipse(data = WICCS_BW, aes(x = C, y = S, color = "BW-resident", lty = "WIC"), level = 0.4, linewidth = 0.5)+
+  geom_ellipse(data = BICCS_BW, aes(x0 = C, y0 = S, a = 0.4*varC, b = 0.4*varS, angle = C/S, color = "BW-resident", lty = "BIC"), linewidth = 0.5)+
   labs(x = expression(delta^13~"C"~("\u2030 VPDB")),
-       y = expression(delta^34~"S"~("\u2030 VCDT")),
-       color = "niche component",
-       fill = "behavioral phenotype")+
-  scale_color_manual(values = c("TNW" = "black", "WIC" = "orange", "BIC" = "red", "FW_resident" = "#C5D86D",
-                                "BW-resident" = "#004643", "Anadromous" = "#00BFB2", "Trans-habitat" = "#F1C40F"),
-                     breaks = c("TNW", "WIC", "BIC"),
-                     labels = c(expression("TNW"["Pop"]), expression("WIC"["Pop"]), expression("BIC"["Pop"])))+
+       y = expression(delta^34~"S"~("\u2030 CTD")),
+       lty = "niche component",
+       fill = "behavioural phenotype",
+       color = "behavioural phenotype")+
+  scale_linetype_manual(breaks = c("TNW", "WIC", "BIC"), values = c("solid", "dotdash", "dotted"))+
+  scale_color_manual(values = c("Population-level" = "black", "FW_resident" = "#C5D86D", "BW-resident" = "#004643", "Anadromous" = "#00BFB2", 
+                                "Trans-habitat" = "#F1C40F"),
+                     labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
   scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
                     values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
                     labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
@@ -3406,20 +3578,35 @@ CS <- ggplot()+
   pl_theme
 
 NS <- ggplot()+
-  geom_point(data = Ecopike2, aes(x = d15N, y = d34S, colour = phenotype), size = 0.5)+
-  stat_ellipse(data = Ecopike2, aes(x = d15N, y = d34S, group = fish_ID, fill = phenotype), level = 0.4,
-               alpha = 0.3, geom = "polygon", color = "darkgrey", linewidth = 0.2)+
-  stat_ellipse(data = TNWNS, aes(x = N, y = S, color = "TNW"), level = 0.4, linewidth = 1.5)+
-  stat_ellipse(data = WICNS, aes(x = N, y = S, color = "WIC"), level = 0.4, linewidth = 1.5)+
-  geom_ellipse(data = BICNS, aes(x0 = N, y0 = S, a = 0.4*varN, b = 0.4*varS, angle = N/S, color = "BIC"), linewidth = 1)+
+  #Population level
+  stat_ellipse(data = TNWNS, aes(x = N, y = S, color = "Population-level", lty = "TNW"), level = 0.4, linewidth = 1)+
+  stat_ellipse(data = WICNS, aes(x = N, y = S, color = "Population-level", lty = "WIC"), level = 0.4, linewidth = 1)+
+  geom_ellipse(data = BICNS, aes(x0 = N, y0 = S, a = 0.4*varN, b = 0.4*varS, angle = N/S, color = "Population-level", lty = "BIC"), linewidth = 1)+
+  #FW-resident 
+  stat_ellipse(data = TNWNS_FW, aes(x = N, y = S, color = "FW_resident", lty = "TNW"), level = 0.4, linewidth = 0.5)+
+  stat_ellipse(data = WICNS_FW, aes(x = N, y = S, color = "FW_resident", lty = "WIC"), level = 0.4, linewidth = 0.5)+
+  geom_ellipse(data = BICNS_FW, aes(x0 = N, y0 = S, a = 0.4*varN, b = 0.4*varS, angle = N/S, color = "FW_resident", lty = "BIC"), linewidth = 0.5)+
+  #Anadromous 
+  stat_ellipse(data = TNWNS_Ana, aes(x = N, y = S, color = "Anadromous", lty = "TNW"), level = 0.4, linewidth = 0.5)+
+  stat_ellipse(data = WICNS_Ana, aes(x = N, y = S, color = "Anadromous", lty = "WIC"), level = 0.4, linewidth = 0.5)+
+  geom_ellipse(data = BICNS_Ana, aes(x0 = N, y0 = S, a = 0.4*varN, b = 0.4*varS, angle = N/S, color = "Anadromous", lty = "BIC"), linewidth = 0.5)+
+  #Cross-habitat
+  stat_ellipse(data = TNWNS_Cross, aes(x = N, y = S, color = "Trans-habitat", lty = "TNW"), level = 0.4, linewidth = 0.5)+
+  stat_ellipse(data = WICNS_Cross, aes(x = N, y = S, color = "Trans-habitat", lty = "WIC"), level = 0.4, linewidth = 0.5)+
+  geom_ellipse(data = BICNS_Cross, aes(x0 = N, y0 = S, a = 0.4*varN, b = 0.4*varS, angle = N/S, color = "Trans-habitat", lty = "BIC"), linewidth = 0.5)+
+  #Brackish resident
+  stat_ellipse(data = TNWNS_BW, aes(x = N, y = S, color = "BW-resident", lty = "TNW"), level = 0.4, linewidth = 0.5)+
+  stat_ellipse(data = WICNS_BW, aes(x = N, y = S, color = "BW-resident", lty = "WIC"), level = 0.4, linewidth = 0.5)+
+  geom_ellipse(data = BICNS_BW, aes(x0 = N, y0 = S, a = 0.4*varN, b = 0.4*varS, angle = N/S, color = "BW-resident", lty = "BIC"), linewidth = 0.5)+
   labs(x = expression(delta^15~"N"~("\u2030"~air-N[2])),
-       y = expression(delta^34~"S"~("\u2030 VCDT")),
-       color = "niche component",
-       fill = "behavioral phenotype")+
-  scale_color_manual(values = c("TNW" = "black", "WIC" = "orange", "BIC" = "red", "FW_resident" = "#C5D86D",
-                                "BW-resident" = "#004643", "Anadromous" = "#00BFB2", "Trans-habitat" = "#F1C40F"),
-                     breaks = c("TNW", "WIC", "BIC"),
-                     labels = c(expression("TNW"["Pop"]), expression("WIC"["Pop"]), expression("BIC"["Pop"])))+
+       y = expression(delta^34~"S"~("\u2030 CTD")),
+       lty = "niche component",
+       fill = "behavioural phenotype",
+       color = "behavioural phenotype")+
+  scale_linetype_manual(breaks = c("TNW", "WIC", "BIC"), values = c("solid", "dotdash", "dotted"))+
+  scale_color_manual(values = c("Population-level" = "black", "FW_resident" = "#C5D86D", "BW-resident" = "#004643", "Anadromous" = "#00BFB2", 
+                                "Trans-habitat" = "#F1C40F"),
+                     labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
   scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
                     values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
                     labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
@@ -3427,34 +3614,27 @@ NS <- ggplot()+
   pl_theme
 
 empty <- ggplot()+
-  geom_point(data = Ecopike2, aes(x = d15N, y = d34S, colour = phenotype), alpha = 0)+
-  stat_ellipse(data = Ecopike2, aes(x = d15N, y = d34S, group = fish_ID, fill = phenotype), level = 0.4,
-               alpha = 0, geom = "polygon", linewidth = 1.5)+
-  stat_ellipse(data = TNWNS, aes(x = N, y = S, color = "TNW"), level = 0.4, linewidth = 1.5, alpha = 0)+
-  stat_ellipse(data = WICNS, aes(x = N, y = S, color = "WIC"), level = 0.4, linewidth = 1.5, alpha = 0)+
-  geom_ellipse(data = BICNS, aes(x0 = -1, y0 = -1, a = 0, b = 0, angle = N/S, color = "BIC"), alpha = 0, lwd = 1.5)+
-  labs(x = "",
-       y = "",
-       color = "niche component",
-       fill = "behavioral phenotype")+
-  scale_color_manual(values = c("TNW" = "black", "WIC" = "orange", "BIC" = "red", "FW_resident" = "#C5D86D",
-                                "BW-resident" = "#004643", "Anadromous" = "#00BFB2", "Trans-habitat" = "#F1C40F"),
-                     breaks = c("TNW", "WIC", "BIC"),
-                     labels = c(expression("TNW"["Pop"]), expression("WIC"["Pop"]), expression("BIC"["Pop"])),
-                     drop = FALSE)+
-  scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
-                    values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
-                    labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"),
-                    drop = FALSE)+
-  guides(color = guide_legend(override.aes = list(shape = 21, size = 8, stroke = 2, linetype = c(0,0,0), alpha = 1)),
-         fill = guide_legend(override.aes = list(alpha = 0.3)))+
+  stat_ellipse(data = TNWNS, aes(x = N, y = S, color = "Population-level", lty = "TNW"), level = 0.4, linewidth = 1.5, alpha = 1)+
+  stat_ellipse(data = TNWCN_FW, aes(x = N, y = C, color = "FW_resident", lty = "WIC"), level = 0.4, linewidth = 1.5, alpha = 1)+
+  stat_ellipse(data = TNWCN_Ana, aes(x = N, y = C, color = "Anadromous", lty = "BIC"), level = 0.4, linewidth = 1.5, alpha = 1)+
+  stat_ellipse(data = TNWCN_Cross, aes(x = N, y = C, color = "Cross-habitat", lty = "WIC"), level = 0.4, linewidth = 1.5, alpha = 1)+
+  stat_ellipse(data = TNWCN_BW, aes(x = N, y = C, color = "BW-resident", lty = "WIC"), level = 0.4, linewidth = 1.5, alpha = 1)+
+  labs(x = "", y = "", lty = "Niche component", color = "Behavioural phenotype", fill = "Behavioural phenotype")+
+  scale_linetype_manual(breaks = c("TNW", "WIC", "BIC"), values = c("solid", "dotdash", "dotted"))+
+  scale_color_manual(values = c("Population-level" = "black", "FW_resident" = "#C5D86D", "BW-resident" = "#004643", "Anadromous" = "#00BFB2", 
+                                "Trans-habitat" = "#F1C40F"),
+                     labels = c("Population-level", "freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
+  scale_fill_manual(c("Population-level" = "black", "FW_resident" = "#C5D86D", "BW-resident" = "#004643", "Anadromous" = "#00BFB2", 
+                                "Trans-habitat" = "#F1C40F"),
+                    labels = c("Population-level", "freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
   theme_void()+
   theme(legend.position = c(.5,.5),
-        legend.key.size = unit(0.7, "cm"),
         legend.text = element_text(size = 10, color = "black"),
         legend.title = element_text(size = 10, color = "black"))
 
-combined <- ggarrange(CN, CS, NS, empty, nrow = 2, ncol = 2, common.legend = F, labels = c("A", "B", "C"))
+legend <- get_legend(empty)
+
+combined <- ggarrange(CN, CS, NS, legend, nrow = 2, ncol = 2, common.legend = F, labels = c("A", "B", "C"))
 
 ggsave("Figures/Overlap_individuals.png", combined, width = 15, height = 15, units = "cm", dpi = 600, bg = "white")
 ```
