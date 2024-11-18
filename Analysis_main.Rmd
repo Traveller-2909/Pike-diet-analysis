@@ -176,6 +176,7 @@ fwrite(SC_all, "Data/Pike/Stomach-contents-all-clean.csv")
 ```{r stomach contents summary, include=FALSE, eval=FALSE}
 rm(list = ls())
 
+# Recent data
 SC_data <- fread("Data/Pike/Stomach-contents-all-clean.csv")
 
 SC_data_area <- SC_data%>%
@@ -186,20 +187,299 @@ table(SC_data_area$area)
 
 SC_data2 <- SC_data%>%
   mutate(date = as.Date(lubridate::parse_date_time(Date, "ymd")),
-         area2 = as.factor(case_when(area == "GB" ~ "lagoon",
-                           area == "SB" ~ "lagoon",
-                           area == "Duwenbeek" ~ "lagoon",
-                           area == "NHG" ~ "lagoon",
-                           area == "Ziese" ~ "lagoon",
-                           area == "Sehrowbach" ~ "lagoon",
-                           area == "Barthe" ~ "lagoon",
-                           area == "KB" ~ "lagoon",
-                           area == "P" ~ "lagoon",
-                           area == "BAT" ~ "lagoon")))
+         area2 = "lagoon",
+         species = case_when(species == "Gasteroseus aculeatus" ~ "Gasterosteus aculeatus",
+                              species == "Gammerus sp." ~ "Gammarus",
+                              species == "P.elegans" ~ "Palaemon adspersus",
+                              species == "Pungitis pungitis" ~ "Pungitius pungitius",
+                              species == "Spinachio spinachio" ~ "Spinachia spinachia",
+                              TRUE ~ species))
 
-#Join with energy density data
+SC_biomass <- SC_data2%>%
+  reframe(species = species,
+          prey_weight_g = prey_weight_g,
+          total_biomass_g = sum(prey_weight_g, na.rm = T),
+          area2 = area2)%>%
+  group_by(species)%>%
+  reframe(species = as.factor(species),
+          prey_weight_g = sum(prey_weight_g, na.rm = T),
+          total_biomass_g = total_biomass_g,
+          area2 = area2)%>%
+  mutate(proportion = prey_weight_g/total_biomass_g)%>%
+  distinct()
+
+SC_biomass2 <- SC_biomass%>%
+  reframe(Origin = "recent",
+          Species = as.factor(case_when(proportion < 0.05 ~ "other",
+                              TRUE ~ species)),
+          proportion = proportion,
+          area2 = area2)%>%
+  group_by(Species)%>%
+  reframe(proportion = sum(proportion),
+          order = case_when(Species == "Clupea harengus" ~ 1,
+                            Species == "Rutilus rutilus" ~ 2,
+                            Species == "Perca fluviatilis" ~ 3,
+                            Species == "Neogobius melanostomus" ~ 4,
+                            Species == "Platichthys flesus" ~ 5,
+                            Species == "other" ~ 6),
+          Origin)%>%
+  ungroup()%>%
+  distinct()
+
+fwrite(SC_biomass2, "Data/Prey/Stomach_proportions_total.csv")
+```
+
+```{r stomach content graphics, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+SC_summary <- fread("Data/Prey/Stomach_proportions_total.csv")
+
+# Winkler data
+SC_Winkler <- fread("Data/Marlon_data/Winkler/Winkler_Daten.csv")
+
+SC_Winkler <- SC_Winkler %>%
+  mutate(N = case_when(Year == "1987" & Salinity == "oligohaline" ~ 11,
+                       Year == "1987" & Salinity == "mesohaline" ~ 9,
+                       Year == "1988" & Salinity == "oligohaline" ~ 23,
+                       Year == "1988" & Salinity == "mesohaline" ~ 8,
+                       Year == "1989" & Salinity == "oligohaline" ~ 4,
+                       Year == "1989" & Salinity == "mesohaline" ~ 24,
+                       Year == "1990" & Salinity == "oligohaline" ~ 6,
+                       Year == "1990" & Salinity == "mesohaline" ~ 12,
+                       Year == "2015" ~ 83))
+
+SC_Winkler_15 <- SC_Winkler %>%
+  filter(Year == "2015") %>%
+  mutate(Origin = "Winkler15",
+         Species = case_when(Species == "Hering" ~ "Clupea harengus",
+                             Species == "Schwarzmundgrundel" ~ "Neogobius melanostomus",
+                             Species == "Kaulbarsch" ~ "Gymnocephalus cernua",
+                             Species == "Barsch" ~ "Perca fluviatilis",
+                             Species == "Plötze" ~ "Rutilus rutilus",
+                             Species == "Zander" ~ "Sander lucioperca"),
+         order = case_when(Species == "Clupea harengus" ~ 1,
+                           Species == "Neogobius melanostomus" ~ 6,
+                           Species == "Gymnocephalus cernua" ~ 5,
+                           Species == "Perca fluviatilis" ~ 3,
+                           Species == "Rutilus rutilus" ~ 2,
+                           Species == "Sander lucioperca" ~ 4),
+         proportion = Percentage) %>%
+  transmute(Species, proportion, order, Origin)
+
+SC_Winkler_mhist <- SC_Winkler %>%
+  filter(Year != "2015" & Year != "alle" & Salinity == "mesohaline")%>%
+  group_by(Species, Year) %>%
+  mutate(Percentage = Percentage*N/43) %>%
+  ungroup(Year) %>%
+  reframe(Origin = "Winkler_past_meso",
+          Species = case_when(Species == "Tobiasfisch" ~ "Ammodytes tobianus",
+                              Species == "Hering" ~ "Clupea harengus",
+                              Species == "Aalmutter" ~ "Zoarces viviparus",
+                              Species == "Dreistachliger Stichling" ~ "other",
+                              Species == "Hecht" ~ "Esox lucius",
+                              Species == "Plötze" ~ "Rutilus rutilus",
+                              Species == "Großer Sandaal" ~ "other",
+                              Species == "Sand-/Strandgrundel" ~ "other",
+                              Species == "Kaulbarsch" ~ "Gymnocephalus cernua",
+                              Species == "Neunstachliger Stichling" ~ "other",
+                              Species == "Barsch" ~ "Perca fluviatilis"),
+          order = case_when(Species == "Ammodytes tobianus" ~ 7,
+                            Species == "Clupea harengus" ~ 1,
+                            Species == "Zoarces viviparus" ~ 3,
+                            Species == "Esox lucius" ~ 5,
+                            Species == "Rutilus rutilus" ~ 2,
+                            Species == "Gymnocephalus cernua" ~ 6,
+                            Species == "Perca fluviatilis" ~ 4,
+                            Species == "other" ~ 7),
+          proportion = mean(Percentage))%>%
+  ungroup() %>%
+  distinct() %>%
+  transmute(Species = as.factor(Species), 
+            proportion = proportion/sum(proportion), 
+            order, Origin)
+ 
+  
+SC_Winkler_ohist <- SC_Winkler %>%
+  filter(Year != "2015" & Year != "alle" & Salinity != "mesohaline")%>%
+  group_by(Species, Year)%>%
+  mutate(Percentage = Percentage*N/44) %>%
+  ungroup(Year) %>%
+  reframe(Origin = "Winkler_past_oligo",
+          Species = case_when(Species == "Zander" ~ "Sander lucioperca",
+                              Species == "Blei" ~ "Abramis brama",
+                              Species == "Güster" ~ "Blicca bjoerkna",
+                              Species == "Dreistachliger Stichling" ~ "other",
+                              Species == "Stint" ~ "Osmerus eperlanus",
+                              Species == "Plötze" ~ "Rutilus rutilus",
+                              Species == "Kaulbarsch" ~ "Gymnocephalus cernua",
+                              Species == "Neunstachliger Stichling" ~ "other",
+                              Species == "Barsch" ~ "Perca fluviatilis"),
+          order = case_when(Species == "Blicca bjoerkna" ~ 6,
+                            Species == "Sander lucioperca" ~ 2,
+                            Species == "Abramis brama" ~ 5,
+                            Species == "other" ~ 8,
+                            Species == "Osmerus eperlanus" ~ 7,
+                            Species == "Rutilus rutilus" ~ 1,
+                            Species == "Gymnocephalus cernua" ~ 4,
+                            Species == "Perca fluviatilis" ~ 3),
+          proportion = mean(Percentage))%>%
+  ungroup() %>%
+  distinct() %>%
+  transmute(Species, 
+            proportion = proportion/sum(proportion), 
+            order, Origin)
+
+  
+SC_summary$Species <- reorder(SC_summary$Species, SC_summary$order)
+SC_Winkler_15$Species <- reorder(SC_Winkler_15$Species, SC_Winkler_15$order)
+SC_Winkler_mhist$Species <- reorder(SC_Winkler_mhist$Species, SC_Winkler_mhist$order)
+SC_Winkler_ohist$Species <- reorder(SC_Winkler_ohist$Species, SC_Winkler_ohist$order)
+
+SC_summary2 <- SC_summary %>%
+  arrange(order) %>%
+  mutate(csum = rev(cumsum(rev(proportion))),
+           pos1 = proportion/2 + lead(csum, 1),
+           pos = case_when(is.na(pos1) == TRUE ~ proportion/2,
+                           TRUE ~ pos1))
+
+SC_Winkler_15.2 <- SC_Winkler_15 %>%
+  mutate(Species = case_when(proportion < 1 ~ "other",
+                             TRUE ~ Species),
+         order = case_when(proportion < 1 ~ max(order),
+                           TRUE ~ order)) %>%
+  group_by(Species) %>%
+  reframe(Species,
+          proportion = mean(proportion),
+          order, Origin) %>%
+  distinct() %>%
+  arrange(order)%>%
+  mutate(csum = rev(cumsum(rev(proportion))),
+           pos1 = proportion/2 + lead(csum, 1),
+           pos = case_when(is.na(pos1) == TRUE ~ proportion/2,
+                           TRUE ~ pos1))
+
+
+SC_Winkler_mhist.2 <- SC_Winkler_mhist %>%
+  mutate(Species = case_when(proportion < 0.01 ~ "other",
+                             TRUE ~ Species),
+         order = case_when(proportion < 0.01 ~ max(order),
+                           TRUE ~ order)) %>%
+  group_by(Species) %>%
+  reframe(Species = as.factor(Species),
+          proportion = mean(proportion),
+          order, Origin) %>%
+  distinct() %>%
+  arrange(order) %>%
+  mutate(csum = rev(cumsum(rev(proportion))),
+           pos1 = proportion/2 + lead(csum, 1),
+           pos = case_when(is.na(pos1) == TRUE ~ proportion/2,
+                           TRUE ~ pos1))
+
+SC_Winkler_ohist.2 <- SC_Winkler_ohist %>%
+  mutate(Species = case_when(proportion < 0.01 ~ "other",
+                             TRUE ~ Species),
+         order = case_when(proportion < 0.01 ~ max(order),
+                           TRUE ~ order)) %>%
+  group_by(Species) %>%
+  reframe(Species,
+          proportion = mean(proportion),
+          order, Origin) %>%
+  distinct() %>%
+  arrange(order) %>%
+  mutate(csum = rev(cumsum(rev(proportion))),
+           pos1 = proportion/2 + lead(csum, 1),
+           pos = case_when(is.na(pos1) == TRUE ~ proportion/2,
+                           TRUE ~ pos1))
+
+Props_past_meso <- ggplot(SC_Winkler_mhist.2, aes(x = "", y = proportion, fill = as.factor(order))) +
+  geom_bar(stat = "identity") +
+  coord_polar(theta = "y") +  # Convert to a polar coordinate for pie chart
+  labs(title = "1987 - 1990 mesohaline (N = 53)",
+       fill = "Species") +
+  geom_label_repel(aes(y = pos, label = scales::percent(proportion)), nudge_x = .75, 
+                   size = 3, show.legend = FALSE, fill = "white")+
+  #scale_fill_viridis_d(alpha = 0.9)+
+  theme_void()+
+  theme(plot.title = element_text(size = 10, color = "black"),
+        legend.position = "none")+
+  scale_fill_manual(breaks = c(1, 2, 3, 4, 5, 6, 7), 
+                    values = c("#1B9E77", "#66A61E", "#7570B3", "#D95F02", "#A6761D", "#E6AB02", "blue"))
+
+Props_past_oligo <- ggplot(SC_Winkler_ohist.2, aes(x = "", y = proportion, fill = as.factor(order))) +
+  geom_bar(stat = "identity") +
+  coord_polar(theta = "y") +  # Convert to a polar coordinate for pie chart
+  labs(title = "1987 - 1990 oligohaline (N = 44)",
+       fill = "Species") +
+  geom_label_repel(aes(y = pos, label = scales::percent(proportion)), nudge_x = .75, 
+                   size = 3, show.legend = FALSE, fill = "white")+
+  #scale_fill_viridis_d(alpha = 0.9)+
+  theme_void()+
+  theme(plot.title = element_text(size = 10, color = "black"),
+        legend.position = "none")+
+  scale_fill_manual(breaks = c(1, 2, 3, 4, 5, 6, 7, 8), 
+                    values = c("#66A61E", "red", "#D95F02", "#E6AB02", "darkgreen", "#666666", "#E7298A", "blue"))
+
+Props_2015 <- ggplot(SC_Winkler_15.2, aes(x = "", y = proportion, fill = as.factor(order))) +
+  geom_bar(stat = "identity") +
+  coord_polar(theta = "y") +  # Convert to a polar coordinate for pie chart
+  labs(title = "Spring 2015 (N = 83)",
+       fill = "Species") +
+  geom_label_repel(aes(y = pos, label = scales::percent(proportion/100)), nudge_x = .75, 
+                   size = 3, show.legend = FALSE, fill = "white")+
+  #scale_fill_viridis_d(alpha = 0.9)+
+  theme_void()+
+  theme(plot.title = element_text(size = 10, color = "black"),
+        legend.position = "none")+
+  scale_fill_manual(breaks = c(1, 2, 3, 4, 6), 
+                    values = c("#1B9E77", "#66A61E", "#D95F02", "cyan", "blue"))
+
+Props_recent <- ggplot(SC_summary2, aes(x = "", y = proportion, fill = as.factor(order))) +
+  geom_bar(stat = "identity") +
+  coord_polar(theta = "y") +  # Convert to a polar coordinate for pie chart
+  labs(title = "2019 - 2022 (N = 171)",
+       fill = "Species") +
+  geom_label_repel(aes(y = pos, label = scales::percent(proportion)), nudge_x = .75, 
+                   size = 3, show.legend = FALSE, fill = "white")+
+  scale_fill_viridis_d(alpha = 0.9)+
+  theme_void()+
+  theme(plot.title = element_text(size = 10, color = "black"),
+        legend.position = "none")+
+  scale_fill_manual(breaks = c(1, 2, 3, 4, 5, 6), 
+                    values = c("#1B9E77", "#66A61E", "#D95F02", "cyan", "darkred", "blue"))
+
+#Dummy data for plotting
+species_colors <- c("C. harengus" = "#1B9E77", "R. rutilus" = "#66A61E", "P. fluviatilis" = "#D95F02", "Z. viviparus" = "#7570B3", "P. flesus" = "#E7298A", 
+                    "G. cernua" = "#E6AB02",  "E. lucius" = "#A6761D", "B. bjoerkna" = "#666666", "O. eperlanus" = "darkred", "N. melanostomus" = "cyan", 
+                    "S. lucioperca" = "red",  "A. brama" = "darkgreen",  "Other" = "blue")
+
+# Dummy dataset
+dummy_data <- data.frame(
+  species = names(species_colors),
+  x = 1:length(species_colors),
+  y = 1:length(species_colors)
+)
+
+# Dummy plot for legend
+legend_plot <- ggplot(dummy_data, aes(x = x, y = y, color = species)) +
+  geom_point(size = 3) +
+  scale_color_manual(breaks = names(species_colors), values = species_colors) +
+  guides(color = guide_legend(title = "Species", ncol = 3)) +
+  theme_void()  # Remove axes and gridlines
+
+legend <- cowplot::get_legend(legend_plot)
+
+Pies <- cowplot::plot_grid(Props_past_meso, Props_past_oligo, Props_2015, Props_recent, legend,
+                  labels = c("A", "B", "C", "D"),
+                  ncol = 2,
+                  rel_widths = c(5,5,5,5,1))
+
+ggsave("Figures/Stomach-contents-all.png", Pies, width = 20, height = 20, units = "cm", dpi = 600, bg = "white")
+```
+
+```{r energy density data, include=FALSE, eval=FALSE}
+# energy density data
 Prey <- fread("Data/Prey/Preyfish_samples.CSV")
-
+ 
 Prey_energy <- fread("Data/Prey/Preyfish_energy_content.csv")
 
 Prey_energy_species2 <- Prey_energy%>%
@@ -227,95 +507,7 @@ A1 <- aov(Caloric_value_mJ_per_kg~Species, data = Prey_energy_species2)
 summary(A1)
 pairwise.t.test(Prey_energy$Caloric_value_mJ_per_kg, Prey_energy_species2$Species, p.adj = "bonf")
 
-
-SC_summary <- SC_data2%>%
-  reframe(species = case_when(species == "Gasteroseus aculeatus" ~ "Gasterosteus aculeatus",
-                              species == "Gammerus sp." ~ "Gammarus",
-                              species == "P.elegans" ~ "Palaemon adspersus",
-                              species == "Pungitis pungitis" ~ "Pungitius pungitius",
-                              species == "Spinachio spinachio" ~ "Spinachia spinachia",
-                              TRUE ~ species),
-          prey_weight_g = prey_weight_g,
-          total_biomass_g = sum(prey_weight_g, na.rm = T),
-          area2 = area2)%>%
-  group_by(species)%>%
-  reframe(species = as.factor(species),
-          prey_weight_g = sum(prey_weight_g, na.rm = T),
-          total_biomass_g = total_biomass_g,
-          area2 = area2)%>%
-  mutate(proportion = prey_weight_g/total_biomass_g)%>%
-  distinct()
-
-SC_summary2 <- SC_summary%>%
-  reframe(species = as.factor(case_when(proportion < 0.05 ~ "other",
-                              TRUE ~ species)),
-          proportion = proportion,
-          area2 = area2)%>%
-  group_by(species)%>%
-  reframe(proportion2 = sum(proportion),
-          order = case_when(species == "Clupea harengus" ~ 1,
-                            species == "Rutilus rutilus" ~ 2,
-                            species == "Perca fluviatilis" ~ 3,
-                            species == "Neogobius melanostomus" ~ 4,
-                            species == "Platichthys flesus" ~ 5,
-                            species == "other" ~ 6))%>%
-  ungroup()%>%
-  distinct()
-
-SC_months <- SC_data2%>%
-  mutate(month = month(date))%>%
-  mutate(season = case_when(month >= 3 & month <= 5 ~ "Mar-May",
-                            month >= 6 & month <= 8 ~ "Jun-Aug",
-                            month >= 9 & month <= 11 ~ "Sep-Nov",
-                            TRUE ~ "Dec-Feb"))%>%
-  group_by(season)%>%
-  reframe(species = case_when(species == "Gasteroseus aculeatus" ~ "Gasterosteus aculeatus",
-                              species == "Gammerus sp." ~ "Gammarus",
-                              species == "P.elegans" ~ "Palaemon adspersus",
-                              species == "Pungitis pungitis" ~ "Pungitius pungitius",
-                              species == "Spinachio spinachio" ~ "Spinachia spinachia",
-                              TRUE ~ species),
-          prey_weight_g = prey_weight_g,
-          total_biomass_g = sum(prey_weight_g, na.rm = T),
-          area2 = area2,
-          sample = length(unique(fish_ID)))
-
-SC_months2 <- SC_months%>%
-  mutate(species = case_when(species == "Perca fluviatilis" ~ species,
-                              species == "Rutilus rutilus" ~ species,
-                              species == "Clupea harengus" ~ species,
-                              species == "Platichthys flesus" ~ species,
-                              species == "Neogobius melanostomus" ~ species,
-                              TRUE ~ "other"),
-         order = case_when(species == "Clupea harengus" ~ 1,
-                            species == "Rutilus rutilus" ~ 2,
-                            species == "Perca fluviatilis" ~ 3,
-                            species == "Neogobius melanostomus" ~ 4,
-                            species == "Platichthys flesus" ~ 5,
-                            species == "other" ~ 6))%>%
-  group_by(season, species)%>%
-  reframe(prey_weight_g = sum(prey_weight_g),
-          total_biomass_g = total_biomass_g,
-          proportion = prey_weight_g/total_biomass_g,
-          order = order,
-          sample = sample)%>%
-  distinct()
-
-fwrite(SC_summary2, "Data/Prey/Stomach_proportions_total.csv")
-fwrite(SC_months2, "Data/Prey/Stomach_proportions_months.csv")
 fwrite(Prey_energy_species2, "Data/Prey/Energy_content_species.csv")
-```
-
-```{r stomach content graphics, include=FALSE, eval=FALSE}
-rm(list = ls())
-
-SC_summary <- fread("Data/Prey/Stomach_proportions_total.csv")
-SC_months <- fread("Data/Prey/Stomach_proportions_months.csv")
-Prey_energy <- fread("Data/Prey/Energy_content_species.csv")
-
-SC_summary$species <- reorder(SC_summary$species, SC_summary$order)
-SC_months$species <- reorder(SC_months$species, SC_months$order)
-Prey_energy$species <- reorder(Prey_energy$Species, Prey_energy$order)
 
 Speclabel <- Prey_energy%>%
   group_by(Species)%>%
@@ -323,54 +515,6 @@ Speclabel <- Prey_energy%>%
             Caloric_value_mJ_per_kg = 15,
             N = length(species))%>%
   distinct()
-
-SC_summary2 <- SC_summary%>%
-  arrange(order)%>%
-  mutate(csum = rev(cumsum(rev(proportion2))),
-           pos1 = proportion2/2 + lead(csum, 1),
-           pos = case_when(is.na(pos1) == TRUE ~ proportion2/2,
-                           TRUE ~ pos1))
-
-monthlabel <- SC_months%>%
-  group_by(season)%>%
-  reframe(season = season,
-          sample = sample,
-          proportion = 1,
-          species = "other")%>%
-  distinct()
-
-SC_months$season <- fct_relevel(SC_months$season, "Mar-May", "Jun-Aug", "Sep-Nov", "Dec-Feb")
-
-Props <- ggplot(SC_summary2, aes(x = "", y = proportion2, fill = species)) +
-  geom_bar(stat = "identity") +
-  coord_polar(theta = "y") +  # Convert to a polar coordinate for pie chart
-  labs(title = "prey proportion of total biomass",
-       fill = "Species") +
-  geom_label_repel(aes(y = pos, label = scales::percent(proportion2)), nudge_x = .75, 
-                   size = 3, show.legend = FALSE, fill = "white")+
-  scale_fill_viridis_d(alpha = 0.9)+
-  theme_void()+
-  theme(plot.title = element_text(size = 10, color = "black", hjust = 1),
-        plot.margin = margin(-10,-10,-10,-10),
-        legend.text = element_text(size = 5.5, color = "black", face = "italic"),
-        legend.key.size = unit(0.3, "cm"),
-        legend.margin = margin(t = 10),
-        legend.title = element_blank())
-
-months <- ggplot(SC_months[SC_months$season != "Dec-Feb",], aes(x = as.factor(season), y = proportion, fill = species)) +
-  geom_bar(stat = "identity")+
-  geom_text(data = monthlabel[monthlabel$season != "Dec-Feb",], aes(label = paste0("N = ", sample)), 
-            position = position_stack(vjust = 1), size = 2, vjust = 18) +
-  labs(x = "season", y = "proportion", title = "prey proportions per season", fill = "Species")+
-  scale_fill_viridis_d()+
-  theme_bw()+
-  theme(axis.title = element_text(size = 8, color = "black"),
-        plot.title = element_text(size = 10, color = "black"),
-        axis.text = element_text(size = 8, color = "black"),
-        legend.text = element_text(size = 5.5, color = "black", face = "italic"),
-        legend.key.size = unit(0.3, "cm"),
-        legend.margin = margin(t = 10),
-        legend.title = element_blank())
 
 Energ <- ggplot(Prey_energy, aes(x = species, y = Caloric_value_mJ_per_kg, fill = species))+
   geom_boxplot(alpha = 0.8, width = 0.5, lwd = 0.3)+
@@ -394,15 +538,9 @@ Energ <- ggplot(Prey_energy, aes(x = species, y = Caloric_value_mJ_per_kg, fill 
         legend.margin = margin(t = 10),
         legend.title = element_blank())
 
-Pies <- ggarrange(Props, months, Energ, common.legend = T, legend = "bottom",
-                  labels = c("A", "B", "C"), font.label = list(size = 10, face = "plain"), vjust = .5, ncol = 1)+
-  theme(plot.margin = margin(10,1,1,1))
-
-ggsave("Figures/Stomach-contents-all_months.png", Pies, width = 8, height = 15, units = "cm", dpi = 600, bg = "white")
 ```
 
 # SI Cleanup
-
 ```{r pike muscle data cleanup, include=FALSE, eval=FALSE}
 rm(list = ls())
 

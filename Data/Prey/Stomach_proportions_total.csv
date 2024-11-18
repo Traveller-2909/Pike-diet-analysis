@@ -1,7 +1,7 @@
-species,proportion2,order
-Clupea harengus,0.283055664533366,1
-Neogobius melanostomus,0.126397408027941,4
-other,0.142989165995017,6
-Perca fluviatilis,0.155373793952911,3
-Platichthys flesus,0.0534904467679785,5
-Rutilus rutilus,0.238693520722786,2
+Species,proportion,order,Origin
+Clupea harengus,0.283055664533366,1,recent
+Neogobius melanostomus,0.126397408027941,4,recent
+other,0.142989165995017,6,recent
+Perca fluviatilis,0.155373793952911,3,recent
+Platichthys flesus,0.0534904467679785,5,recent
+Rutilus rutilus,0.238693520722786,2,recent
