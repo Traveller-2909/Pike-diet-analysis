@@ -477,6 +477,8 @@ ggsave("Figures/Stomach-contents-all.png", Pies, width = 20, height = 20, units 
 ```
 
 ```{r energy density data, include=FALSE, eval=FALSE}
+rm(list = ls())
+
 # energy density data
 Prey <- fread("Data/Prey/Preyfish_samples.CSV")
  
@@ -516,16 +518,20 @@ Speclabel <- Prey_energy%>%
             N = length(species))%>%
   distinct()
 
-Energ <- ggplot(Prey_energy, aes(x = species, y = Caloric_value_mJ_per_kg, fill = species))+
+species_colors <- c("C. harengus" = "#1B9E77", "R. rutilus" = "#66A61E", "P. fluviatilis" = "#D95F02", "Z. viviparus" = "#7570B3", "P. flesus" = "#E7298A", 
+                    "G. cernua" = "#E6AB02",  "E. lucius" = "#A6761D", "B. bjoerkna" = "#666666", "O. eperlanus" = "darkred", "N. melanostomus" = "cyan", 
+                    "S. lucioperca" = "red",  "A. brama" = "darkgreen",  "Other" = "blue")
+
+Energ <- ggplot(Prey_energy, aes(x = Species, y = Caloric_value_mJ_per_kg, fill = Species))+
   geom_boxplot(alpha = 0.8, width = 0.5, lwd = 0.3)+
-  labs(title = "species-specific energy content",
+  labs(title = "Species-specific energy content",
        y = "Energy (MJ/kg)",
        fill = "Species")+
   geom_text(data = Speclabel, aes(label = paste0("N = ", N)), 
             position = position_stack(), size = 2, vjust = -.5) +
   scale_y_continuous(limits = c(15, 26.1),
                      breaks = seq(15, 25, 1))+
-  scale_fill_viridis_d()+
+  scale_fill_manual(breaks = names(species_colors), values = species_colors)+
   theme_bw()+
   theme(axis.text.x = element_blank(),
         axis.text.y = element_text(size = 8, color = "black"),
@@ -538,6 +544,7 @@ Energ <- ggplot(Prey_energy, aes(x = species, y = Caloric_value_mJ_per_kg, fill 
         legend.margin = margin(t = 10),
         legend.title = element_blank())
 
+ggsave("Figures/Prey-energy-density.png", Energ, width = 15, height = 15, units = "cm", dpi = 600, bg = "white")
 ```
 
 # SI Cleanup
@@ -1439,6 +1446,10 @@ fwrite(C.corrected, "Data/Prey/Preyfish_SI_clean_average_lipid-corrected.csv")
 ```{r baseline data, include=FALSE, eval=FALSE}
 rm(list = ls())
 
+substrRight <- function(x, n){
+  substr(x, nchar(x)-n+1, nchar(x))
+}
+
 #read in baseline data
 base1 <- fread("Data/Baseline/baseline_samples.CSV")
 base2 <- fread("Data/Baseline/baseline_1.CSV")
@@ -1479,15 +1490,40 @@ Isovalues <- rbind(base2.1, base3.1)
 
 baseline <- base1.1 %>%
   left_join(Isovalues, by = "ID") %>%
+  transmute(ID,
+            Fun_group = functional_group,
+            Receiver = substrRight(sample_type, 3),
+            Date = parse_date_time(sub(".", "-", date), "dmy"),
+            Group = group,
+            N = comment,
+            d13C, d15N, d34S) %>%
   drop_na(d13C)
 
 
 # Add receiver positions
-Receivers
+Receivers <- fread("Data/Baseline/Receiver_positions.csv")
+
+Receivers1 <- Receivers %>%
+  transmute(Long = Longitude,
+            Lat = Latitude,
+            Receiver = substr(Station.na, 1, 3),
+            Section,
+            Bodden = case_when(Bodden == "S" ~ "WRBC",
+                               Bodden == "KbSb" ~ "WRBC",
+                               Bodden == "VbGjb" ~ "NRBC",
+                               Bodden == "BAT" ~ "DZBC",
+                               Bodden == "KJB" ~ "NRBC",
+                               Bodden == "P" ~ "P",
+                               Bodden == "GB" ~ "GB",
+                               TRUE ~ "Tributary"))
+
+baseline2 <- baseline %>%
+  left_join(Receivers1, by = "Receiver")
+
+fwrite(baseline2, "Data/Baseline/Baseline_bodden.csv")
 ```
 
 # SI basic visuals
-
 ```{r biplots whole sample, include=FALSE, eval=FALSE}
 rm(list = ls())
 descriptive <- fread("Data/Pike/Descriptive-whole-sample.csv")
@@ -1827,6 +1863,67 @@ SeasonS <- ggplot(Pike2[is.na(capt_date)==FALSE,], aes(as.factor(month(capt_date
 Seasons <- ggarrange(SeasonC, SeasonN, SeasonS, nrow = 3, ncol = 1, labels = c("A", "B", "C"))
 
 ggsave("Figures/supplement/Seasons.png", width = 15, height = 15, units = "cm", dpi = 600, bg = "white")
+```
+
+```{r baseline effects}
+rm(list = ls())
+
+baseline2 <- fread("Data/Baseline/Baseline_bodden.csv")
+
+baseline_lit <- subset(baseline2, Group == "Littoral")
+baseline_pel <- subset(baseline2, Group == "Pelagic")
+
+# test for differences
+anova_d15N_lit <- aov(d15N ~ Bodden, data = baseline_lit[baseline_lit$Bodden != "Tributary",])
+summary(anova_d15N_lit)
+
+anova_d15N_pel <- aov(d15N ~ Bodden, data = baseline_pel[baseline_pel$Bodden != "Tributary",])
+summary(anova_d15N_pel)
+
+anova_d13C_lit <- aov(d13C ~ Bodden, data = baseline_lit[baseline_lit$Bodden != "Tributary",])
+summary(anova_d13C_lit)
+
+anova_d13C_pel <- aov(d13C ~ Bodden, data = baseline_pel[baseline_pel$Bodden != "Tributary",])
+summary(anova_d13C_pel)
+
+anova_d34S_lit <- aov(d34S ~ Bodden, data = baseline_lit[baseline_lit$Bodden != "Tributary",])
+summary(anova_d34S_lit)
+
+anova_d34S_pel <- aov(d34S ~ Bodden, data = baseline_pel[baseline_pel$Bodden != "Tributary",])
+summary(anova_d34S_pel)
+
+
+TukeyHSD(anova_d15N_lit)
+TukeyHSD(anova_d13C_pel)
+
+#test for differences in variances
+# For d15N
+leveneTest(d15N ~ Bodden, data = baseline_lit)
+leveneTest(d15N ~ Bodden, data = baseline_pel)
+
+# For d13C
+leveneTest(d13C ~ Bodden, data = baseline_lit)
+leveneTest(d13C ~ Bodden, data = baseline_pel)
+
+# For d34S
+leveneTest(d34S ~ Bodden, data = baseline_lit)
+leveneTest(d34S ~ Bodden, data = baseline_pel)
+
+ggplot(baseline2, aes(Bodden, d15N, color = Group))+
+  geom_boxplot()+
+  theme_minimal()
+  
+ggplot(baseline2, aes(Bodden, d13C, color = Group))+
+  geom_boxplot()+
+  theme_minimal()
+
+ggplot(baseline2, aes(Bodden, d34S, color = Group))+
+  geom_boxplot()+
+  theme_minimal()
+
+ggplot(baseline2, aes(as.factor(month(Date)), d15N, color = Group))+
+  geom_point()+
+  theme_minimal()
 ```
 
 # Mixing models
@@ -2199,6 +2296,111 @@ mcomp<-list(jags.pike.0, jags.pike.1, jags.pike.2, jags.pike.3, jags.pike.4, jag
 names(mcomp) <- c("NULL", "ecotype|body length", "body length", "ecotype", "capture location|body length", "capt")
 # Model comparison
 compare_models(mcomp, loo = TRUE)
+```
+
+```{r mixing model quality assurance, include=FALSE, eval=FALSE}
+rm(list = ls())
+Prey <- fread("Data/Prey/Preyfish_SI_clean_average_lipid-corrected.csv")
+Pike <- fread("Data/Pike/Ecotypes-Oto-Tele_SI_clean.csv")
+Telepike <- fread("Data/Pike/herring_coupling_tracking_hr.csv")
+
+mix.filename <- "Data/Mixing models/Pikemix-ecotypes_all.csv"
+
+# Rerun best-performing mixing model with discrete sources and group posterior
+# Prepare source data
+Prey$SL_mm <- as.numeric(Prey$SL_mm)
+
+Prey1 <- Prey%>%
+  filter(Species %in% c("C.harengus", "R.rutilus", "N.melanostomus" ,"P.fluviatilis", "P.flesus")) %>%
+  transmute(ID=ID,
+            Species=case_when(area %in% c("Barthe", "Peene", "Ziese", "Duwenbeek", "Beck", "KBW") & Species == "P.fluviatilis" ~ "P.fluviatilis.FW",
+                              area %in% c("Barthe", "Peene", "Ziese", "Duwenbeek", "Beck", "KBW") & Species == "R.rutilus" ~ "R.rutilus.FW",
+                              TRUE ~ Species),
+            SL_mm=SL_mm,
+            SL_size_class=SL_size_class,
+            weight_g=weight_g,
+            height_mm=height_mm,
+            sample_type=sample_type,
+            area=area,
+            Long=Long,
+            Lat=Lat,
+            d15N=d15N,
+            d13C=d13C,
+            d34S=d34S,
+            CN_ratio=CN_ratio,
+            comment1=comment1,
+            comment2=comment2)
+
+m_by_sp<-aggregate(cbind(d15N, d13C, d34S)~Species, data=Prey1, FUN=mean)
+
+sd_by_sp<-aggregate(cbind(d15N, d13C, d34S)~Species, data=Prey1, FUN=sd)
+
+length_by_sp<-aggregate(cbind(d15N)~Species, data=Prey1, FUN=length)
+
+
+descriptive<-cbind(m_by_sp, sd_by_sp, length_by_sp)
+descriptive<-descriptive[c(-5,-9)]
+colnames(descriptive)<-c("prey", "Meand15N", "Meand13C", "Meand34S", "SDd15N", "SDd13C", "SDd34S","n")
+fwrite(descriptive, "Data/Mixing models/Sources.csv")
+
+source.filename <- "Data/Mixing models/Sources.csv"
+
+#full model
+mix1 <- load_mix_data(filename=mix.filename, 
+                     iso_names=c("d15N", "d13C", "d34S"),
+                     factors=c("area","ecotype"),
+                     fac_random=c(FALSE, FALSE),
+                     fac_nested=c(FALSE,FALSE),
+                     cont_effects="Length")
+
+# # Load source data
+source <- load_source_data(filename=source.filename, source_factors=NULL,
+                          conc_dep=FALSE, data_type="means", mix1)
+
+#TEFs
+discr <- descriptive%>%
+  transmute(prey=prey,
+            Meand15N=2.9,
+            Meand13C=1.2,
+            Meand34S=-0.5,
+            SDd15N=0.32,
+            SDd13C=0.3,
+            SDd34S=0.2)
+
+fwrite(discr, "Data/Mixing models/Discrimination_qc.csv")
+
+discr.filename <- "Data/Mixing models/Discrimination_qc.csv"
+
+discr.df <- load_discr_data(filename=discr.filename, mix1)
+
+plot_data(filename="isospace_plotn",
+          plot_save_pdf=FALSE,
+          plot_save_png=FALSE,
+          return_obj = T,
+          mix1,source,discr.df)
+
+#write model
+model1_qc_filename <- "Data/Mixing models/MixSIAR_model_posterior-grouping.txt"
+# Include residual error; appropriate in situations where, for instance, each mixture data point was 
+# generated through the combination of many samples from the source population
+resid_err <- TRUE
+
+# Include process error; derived from an assumption about the mixing process. 
+# Analyst provides a single mixture value for each of the j tracers considered
+process_err <- TRUE
+
+write_JAGS_model(model1_qc_filename, resid_err, process_err, mix1, source)
+
+jags.pike.qc1 <- run_model(run="normal", mix1, source, discr.df, model1_qc_filename, alpha.prior = 1)
+
+saveRDS(jags.pike.0.0, "Data/Mixing models/Output/Mixing.model-normal-run-continuous-NULL.rds")
+
+# Rerun model with different TEFs
+
+
+# Rerun model with informative priors
+
+# Compare
 ```
 
 ```{r plot results, include=FALSE, eval=FALSE}
