@@ -1,7 +1,6 @@
 
 model{
-  
-  #priors
+    #priors
     for (k in 1:ngroups){
     mu[k,1] ~ dnorm(0,0.001)
     mu[k,2] ~ dnorm(0,0.001)

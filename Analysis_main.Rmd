@@ -43,13 +43,15 @@ library(visreg)
 library(car)
 library(MASS)
 library(jagsUI)
-library(rstan)
-options(mc.cores = parallel::detectCores())
-rstan_options(auto_write = TRUE)
+library(geometry)
+library(ptinpoly)
+library(vegan)
+library(mvabund)
+library(RVAideMemoire)
+library(factoextra)
 ```
 
 # Stomach contents
-
 ```{r stomach content cleanup, include=FALSE, eval=FALSE}
 rm(list = ls())
 
@@ -1592,6 +1594,94 @@ Allpike <- ggarrange(Binorm, BiNS, BiCS, ncol = 3, nrow = 1, common.legend = T, 
 ggsave("Figures/Biplots-muscle-whole-sample.png", width = 16, height = 6, units = "cm", dpi = 600, bg = "white")
 ```
 
+```{r biplots main prey Bodden areas, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+Prey <- fread("Data/Prey/Preyfish_SI_clean_average_lipid-corrected.csv")
+
+Prey2 <- Prey%>%
+  filter(Species %in% c("C.harengus", "R.rutilus", "N.melanostomus", "P.fluviatilis", "P.flesus"))%>%
+  mutate(Species = case_when(area == "Barthe" ~ "freshwater",
+                           area == "Ziese" ~ "freshwater",
+                           area == "Peene" ~ "freshwater",
+                           area == "Duwenbeek" ~ "freshwater",
+                           area == "Beck" ~ "freshwater",
+                           area == "KBW" ~ "freshwater",
+                           TRUE ~ Species),
+         area = area,
+         sex="NA")
+
+Prey$Species <- as.factor(Prey$Species)
+
+str(Prey)
+
+descriptive2 <- descriptive%>%
+  filter(Sp!="T.tinca"&Sp!="S.lucioperca"&Sp!="S.erythrophthalmus")%>%
+  drop_na()
+
+#Biplot by species
+brewer.pal(n = 14, name = "Dark2")
+colorBlindBlack8  <- c("#1B9E77", "#D95F02", "#7570B3", "#E7298A", "#66A61E", "#E6AB02", "#A6761D", "#666666","darkblue","darkred","cyan","red","darkgreen", "orange","blue")
+
+ggplot(Prey2, aes(Species, d15N, color = area))+
+  geom_boxplot()+
+  theme_minimal()
+
+ggplot(Prey2, aes(Species, d13C, color = area))+
+  geom_boxplot()+
+  theme_minimal()
+
+ggplot(Prey2, aes(Species, d34S, color = area))+
+  geom_boxplot()+
+  theme_minimal()
+
+Binorm <- ggplot()+ 
+  geom_errorbar(data=descriptive2, aes(x = d13C, ymin = d15N-sdd15N,ymax = d15N+sdd15N, col=Sp), width=.5, size=.5) +
+  geom_errorbarh(data=descriptive2, aes(y = d15N, xmin = d13C+sdd13C,xmax = d13C-sdd13C, col=Sp), height=.5, size=.5)+
+  scale_colour_manual("", values=colorBlindBlack8)+ #1:nlevels(sources$prey))+
+  scale_fill_manual("", values=colorBlindBlack8)+
+  xlim(-27,-12)+ylim(8,18)+
+  theme_bw()+xlab(delta^"13"~"C(\u2030)")+ylab(delta^"15"~"N(\u2030)")+
+  theme(text = element_text(size = 10, color = "black"),
+        legend.position="bottom",
+        legend.text = element_text(color = "black", size=5, face="italic"),
+        legend.key.size = unit(.5, 'cm'),
+        strip.background = element_rect(colour="black", fill="white"))
+
+BiNS <- ggplot()+ geom_errorbar(data=descriptive2, aes(x=d34S, y=d15N, ymin = d15N-sdd15N,ymax = d15N+sdd15N, col=Sp),
+                        width=.5, size=.5) + 
+  geom_errorbarh(data=descriptive2, aes(x=d34S, y=d15N, xmin = d34S+sdd34S,xmax = d34S-sdd34S, col=Sp),
+                 height=.5, size=.5)+
+  scale_colour_manual("", values=colorBlindBlack8)+ #1:nlevels(sources$prey))+
+  scale_fill_manual("", values=1:nlevels(descriptive2$sp))+
+  xlim(5,22)+ylim(8,18)+
+  theme_bw()+xlab(delta^"34"~"S(\u2030)")+ylab(delta^"15"~"N(\u2030)")+
+  theme(text = element_text(size = 10, color = "black"),
+        legend.position="none",
+        legend.text = element_text(color = "black", size=5, face="italic"),
+        legend.key.size = unit(.5, 'cm'),
+        strip.background = element_rect(colour="black", fill="white"))
+
+BiCS <- ggplot()+ geom_errorbar(data=descriptive2, aes(x=d13C, y=d34S, ymin = d34S+sdd34S,ymax = d34S-sdd34S, col=Sp),
+                        width=.5, size=.5) + 
+  geom_errorbarh(data=descriptive2, aes(x=d13C, y=d34S, xmin = d13C+sdd13C,xmax = d13C-sdd13C, col=Sp),
+                 height=.5, size=.5)+
+  scale_colour_manual("", values=colorBlindBlack8)+ #1:nlevels(sources$prey))+
+  scale_fill_manual("", values=1:nlevels(descriptive2$sp))+
+  xlim(-27,-12)+ylim(5,22)+
+  theme_bw()+xlab(delta^"13"~"C(\u2030)")+ylab(delta^"34"~"S(\u2030)")+
+  theme(text = element_text(size = 10, color = "black"),
+        legend.position="none",
+        legend.text = element_text(color = "black", size=5, face="italic"),
+        legend.key.size = unit(.5, 'cm'),
+        strip.background = element_rect(colour="black", fill="white"))
+
+
+Allpike <- ggarrange(Binorm, BiNS, BiCS, ncol = 3, nrow = 1, common.legend = T, labels = c("A", "B", "C"))
+
+ggsave("Figures/Biplots-muscle-whole-sample.png", width = 16, height = 6, units = "cm", dpi = 600, bg = "white")
+```
+
 ```{r biplots for ecotypes, include=FALSE, eval=FALSE}
 rm(list = ls())
 Prey <- fread("Data/Prey/Preyfish_SI_clean_average_lipid-corrected.csv")
@@ -1865,7 +1955,7 @@ Seasons <- ggarrange(SeasonC, SeasonN, SeasonS, nrow = 3, ncol = 1, labels = c("
 ggsave("Figures/supplement/Seasons.png", width = 15, height = 15, units = "cm", dpi = 600, bg = "white")
 ```
 
-```{r baseline effects}
+```{r baseline effects, include=FALSE, eval=FALSE}
 rm(list = ls())
 
 baseline2 <- fread("Data/Baseline/Baseline_bodden.csv")
@@ -1927,6 +2017,73 @@ ggplot(baseline2, aes(as.factor(month(Date)), d15N, color = Group))+
 ```
 
 # Mixing models
+```{r grouping of sources comparisons, include=FALSE, eval=FALSE}
+rm(list = ls())
+Prey <- fread("Data/Prey/Preyfish_SI_clean_average_lipid-corrected.csv")
+
+Prey$SL_mm <- as.numeric(Prey$SL_mm)
+
+Prey1 <- Prey%>%
+  transmute(ID=ID,
+            Species=Species,
+            group=case_when(area=="Barthe"~"freshwater",
+                            area=="Ziese"~"freshwater",
+                            area!="Barthe"&area!="Ziese"&Species=="R.rutilus"~"lagoon",
+                            Species=="C.harengus"~"marine",
+                            Species=="P.flesus"~"marine",
+                            area!="Barthe"&area!="Ziese"&Species=="P.fluviatilis"~"lagoon",
+                            Species=="N.melanostomus"~"lagoon",
+                            TRUE~"Other"),
+            SL_mm=SL_mm,
+            SL_size_class=SL_size_class,
+            weight_g=weight_g,
+            height_mm=height_mm,
+            sample_type=sample_type,
+            area=area,
+            Long=Long,
+            Lat=Lat,
+            d15N=d15N,
+            d13C=d13C,
+            d34S=d34S,
+            CN_ratio=CN_ratio,
+            comment1=comment1,
+            comment2=comment2)%>%
+  mutate(Species = case_when(group == "freshwater" ~ "Freshwater",
+                             TRUE ~ Species)) %>%
+  filter(group!="Other")
+
+Prey1 <- as.data.frame(Prey1)
+
+# PERMANOVA between prey species
+Species_iso <- mvabund(Prey1[12:14])
+
+Species_dist <- vegdist(Species_iso, method = "euclidean", na.rm = T)
+
+PCA_iso <- prcomp(Species_dist)
+
+plot(PCA_iso)
+
+fviz_pca_biplot(PCA_iso, repel = TRUE)
+
+species_colors <- factor(Prey1$Species)  # Convert Species to a factor
+unique_species <- levels(species_colors)  # Get unique species levels
+color_palette <- rainbow(length(unique_species))
+
+plot(PCA_iso$x[,1], PCA_iso$x[,2], 
+     col = color_palette[as.numeric(species_colors)],  # Map colors to species
+     pch = 16,  # Point type
+     xlab = "PC1 (Variance explained: XX%)",  # Replace XX with actual percentage
+     ylab = "PC2 (Variance explained: XX%)",
+     main = "PCA Biplot")
+legend("bottom", legend = unique_species, 
+       col = color_palette, pch = 16, 
+       title = "Species")
+
+adonis2(Species_iso~Prey1$Species, method = "euclidean", permutations = 9999, na.rm = T)
+
+pairwise.perm.manova(Species_iso, Prey1$Species, test = c("Wilks"), nperm = 999, 
+  progress = TRUE, p.method = "fdr", F = FALSE, R2 = FALSE)
+```
 
 ```{r mixing models ecotypes, include=FALSE, eval=FALSE}
 rm(list = ls())
@@ -1945,7 +2102,7 @@ Prey1 <- Prey%>%
                             area=="Ziese"~"freshwater",
                             area!="Barthe"&area!="Ziese"&Species=="R.rutilus"~"lagoon",
                             Species=="C.harengus"~"marine",
-                            Species=="P.flesus"~"marine",
+                            Species=="P.flesus"~"lagoon",
                             area!="Barthe"&area!="Ziese"&Species=="P.fluviatilis"~"lagoon",
                             Species=="N.melanostomus"~"lagoon",
                             TRUE~"Other"),
@@ -2122,8 +2279,8 @@ discr.df <- load_discr_data(filename=discr.filename, mix0)
 
 plot_data(filename="isospace_plotn",
           plot_save_pdf=FALSE,
-          plot_save_png=FALSE,
-          return_obj = T,
+          plot_save_png=TRUE,
+          return_obj = TRUE,
           mix0,source,discr.df)
 
 ##### 3. Writing the mode ######
@@ -2298,18 +2455,60 @@ names(mcomp) <- c("NULL", "ecotype|body length", "body length", "ecotype", "capt
 compare_models(mcomp, loo = TRUE)
 ```
 
-```{r mixing model quality assurance, include=FALSE, eval=FALSE}
+```{r baseline-correction, include=FALSE, eval=FALSE}
 rm(list = ls())
 Prey <- fread("Data/Prey/Preyfish_SI_clean_average_lipid-corrected.csv")
-Pike <- fread("Data/Pike/Ecotypes-Oto-Tele_SI_clean.csv")
-Telepike <- fread("Data/Pike/herring_coupling_tracking_hr.csv")
+Pike <- fread("Data/Mixing models/Pikemix-ecotypes_all.csv")
+baseline2 <- fread("Data/Baseline/Baseline_bodden.csv")
 
-mix.filename <- "Data/Mixing models/Pikemix-ecotypes_all.csv"
+baseline_lit <- subset(baseline2, Group == "Littoral")
+baseline_pel <- subset(baseline2, Group == "Pelagic")
 
-# Rerun best-performing mixing model with discrete sources and group posterior
-# Prepare source data
-Prey$SL_mm <- as.numeric(Prey$SL_mm)
+#Calculate mean deviation at Bodden level for littoral and pelagic basellines
+mean.overall <- colMeans(baseline2[, 7:9])
+mean.lit <- colMeans(baseline_lit[, 7:9])
+mean.pel <- colMeans(baseline_pel[, 7:9])
 
+baseline_dev_mean <- baseline2 %>%
+  filter(Section != "Fresh") %>%
+  group_by(Bodden) %>%
+  dplyr::summarise(d13C_dev_mean = mean(d13C) - mean.overall["d13C"],
+                   d15N_dev_mean = mean(d15N) - mean.overall["d15N"],
+                   d34S_dev_mean = mean(d34S) - mean.overall["d34S"],
+                   area = case_when(Bodden == "WRBC" ~ "WRB",
+                                    Bodden == "NRBC" ~ "NRB",
+                                    TRUE ~ Bodden)) %>%
+  ungroup() %>%
+  dplyr::select(-Bodden)%>%
+  distinct()
+
+baseline_dev_lit <- baseline_lit %>%
+  filter(Section != "Fresh") %>%
+  group_by(Bodden) %>%
+  dplyr::summarise(d13C_dev_lit = mean(d13C) - mean.lit["d13C"],
+                   d15N_dev_lit = mean(d15N) - mean.lit["d15N"],
+                   d34S_dev_lit = mean(d34S) - mean.lit["d34S"],
+                   area = case_when(Bodden == "WRBC" ~ "WRB",
+                                    Bodden == "NRBC" ~ "NRB",
+                                    TRUE ~ Bodden)) %>%
+  ungroup() %>%
+  dplyr::select(-Bodden)%>%
+  distinct()
+
+baseline_dev_pel <- baseline_pel %>%
+  filter(Section != "Fresh") %>%
+  group_by(Bodden) %>%
+  dplyr::summarise(d13C_dev_pel = mean(d13C) - mean.lit["d13C"],
+                   d15N_dev_pel = mean(d15N) - mean.lit["d15N"],
+                   d34S_dev_pel = mean(d34S) - mean.lit["d34S"],
+                   area = case_when(Bodden == "WRBC" ~ "WRB",
+                                    Bodden == "NRBC" ~ "NRB",
+                                    TRUE ~ Bodden))%>%
+  ungroup() %>%
+  dplyr::select(-Bodden)%>%
+  distinct()
+
+#Prep prey for join
 Prey1 <- Prey%>%
   filter(Species %in% c("C.harengus", "R.rutilus", "N.melanostomus" ,"P.fluviatilis", "P.flesus")) %>%
   transmute(ID=ID,
@@ -2321,7 +2520,8 @@ Prey1 <- Prey%>%
             weight_g=weight_g,
             height_mm=height_mm,
             sample_type=sample_type,
-            area=area,
+            area=case_when(area == "Baltic" ~ "WRB",
+                           TRUE ~ area),
             Long=Long,
             Lat=Lat,
             d15N=d15N,
@@ -2331,76 +2531,360 @@ Prey1 <- Prey%>%
             comment1=comment1,
             comment2=comment2)
 
-m_by_sp<-aggregate(cbind(d15N, d13C, d34S)~Species, data=Prey1, FUN=mean)
+#Baseline correction prey
+Prey_baseline_cor <- Prey1 %>%
+  left_join(baseline_dev_mean, by = "area") %>%
+  left_join(baseline_dev_lit, by = "area") %>%
+  left_join(baseline_dev_pel, by = "area") %>%
+  mutate(d15N = case_when(Species %in% c("N.melanostomus", "P.flesus") & area != "Cruise 789 #24182" & area != "Cruise 789 #24071" ~ d15N - d15N_dev_lit,
+                          Species == "R.rutilus" ~ d15N - d15N_dev_pel,
+                          Species == "P.fluviatilis" ~ d15N - d15N_dev_mean,
+                          TRUE ~ d15N),
+         d13C = case_when(Species %in% c("N.melanostomus", "P.flesus") & area != "Cruise 789 #24182" & area != "Cruise 789 #24071" ~ d13C - d13C_dev_lit,
+                          Species == "R.rutilus" ~ d13C - d13C_dev_pel,
+                          Species == "P.fluviatilis" ~ d13C - d13C_dev_mean,
+                          TRUE ~ d13C),
+         d34S = case_when(Species %in% c("N.melanostomus", "P.flesus") & area != "Cruise 789 #24182" & area != "Cruise 789 #24071" ~ d34S - d34S_dev_lit,
+                          Species == "R.rutilus" ~ d34S - d34S_dev_pel,
+                          Species == "P.fluviatilis" ~ d34S - d34S_dev_mean,
+                          TRUE ~ d34S))
 
-sd_by_sp<-aggregate(cbind(d15N, d13C, d34S)~Species, data=Prey1, FUN=sd)
+Prey_baseline_cor <- Prey_baseline_cor[,1:16]
 
-length_by_sp<-aggregate(cbind(d15N)~Species, data=Prey1, FUN=length)
+m_by_sp<-aggregate(cbind(d15N, d13C, d34S)~Species, data=Prey_baseline_cor, FUN=mean)
+
+sd_by_sp<-aggregate(cbind(d15N, d13C, d34S)~Species, data=Prey_baseline_cor, FUN=sd)
+
+length_by_sp<-aggregate(cbind(d15N)~Species, data=Prey_baseline_cor, FUN=length)
 
 
 descriptive<-cbind(m_by_sp, sd_by_sp, length_by_sp)
 descriptive<-descriptive[c(-5,-9)]
 colnames(descriptive)<-c("prey", "Meand15N", "Meand13C", "Meand34S", "SDd15N", "SDd13C", "SDd34S","n")
-fwrite(descriptive, "Data/Mixing models/Sources.csv")
+fwrite(descriptive, "Data/Mixing models/Sensitivity_analysis/Sources_baseline-corrected.csv")
 
-source.filename <- "Data/Mixing models/Sources.csv"
+#baseline correction pike  
+Pike1 <- Pike %>%
+  mutate(area = case_when(area %in% c("BEG", "KJB", "GJB", "WB") ~ "NRB",
+                          area %in% c("S", "SB", "BAT", "VB", "KB") ~ "WRB",
+                          TRUE ~ area)) %>%
+  left_join(baseline_dev_mean, by = "area") %>%
+  mutate(d13C = case_when(area %in% c("WRB", "NRB", "GB") ~ d13C - d13C_dev_mean,
+                          TRUE ~ d13C),
+         d15N = case_when(area %in% c("WRB", "NRB", "GB") ~ d15N - d15N_dev_mean,
+                          TRUE ~ d15N),
+         d34S = case_when(area %in% c("WRB", "NRB", "GB") ~ d34S - d34S_dev_mean,
+                          TRUE ~ d34S))
 
-#full model
-mix1 <- load_mix_data(filename=mix.filename, 
-                     iso_names=c("d15N", "d13C", "d34S"),
-                     factors=c("area","ecotype"),
-                     fac_random=c(FALSE, FALSE),
-                     fac_nested=c(FALSE,FALSE),
-                     cont_effects="Length")
+Pike1 <- Pike1[,1:14]
 
-# # Load source data
-source <- load_source_data(filename=source.filename, source_factors=NULL,
-                          conc_dep=FALSE, data_type="means", mix1)
+fwrite(Pike1, "Data/Mixing models/Pikemix-baseline-corrected.csv")
+```
 
-#TEFs
-discr <- descriptive%>%
-  transmute(prey=prey,
-            Meand15N=2.9,
-            Meand13C=1.2,
-            Meand34S=-0.5,
-            SDd15N=0.32,
-            SDd13C=0.3,
-            SDd34S=0.2)
 
-fwrite(discr, "Data/Mixing models/Discrimination_qc.csv")
+```{r mixing model sensitivity analysis models, include=FALSE, eval=FALSE}
+rm(list = ls())
 
-discr.filename <- "Data/Mixing models/Discrimination_qc.csv"
+# All pike in one mix
+mix.filename_base <- "Data/Mixing models/Sensitivity_analysis/Pikemix-ecotypes_all.csv"
+mix.filename_nolip <- "Data/Mixing models/Sensitivity_analysis/Pikemix-ecotypes_all_no-lipidcorr.csv"
+mix.filename_blcorr <- "Data/Mixing models/Sensitivity_analysis/Pikemix-baseline-corrected.csv"
 
-discr.df <- load_discr_data(filename=discr.filename, mix1)
+
+# Pikemix lipid-corrected, but not baseline-corrected
+mix_base <- load_mix_data(filename=mix.filename_base,
+                          iso_names=c("d15N", "d13C", "d34S"),
+                          factors=NULL,
+                          fac_random=NULL,
+                          fac_nested=NULL,
+                          cont_effects=NULL)
+# Pikemix without lipid correction
+mix_nolip <- load_mix_data(filename=mix.filename_nolip,
+                          iso_names=c("d15N", "d13C", "d34S"),
+                          factors=NULL,
+                          fac_random=NULL,
+                          fac_nested=NULL,
+                          cont_effects=NULL)
+# Pikemix baseline corrected
+mix_blcorr<- load_mix_data(filename=mix.filename_blcorr,
+                          iso_names=c("d15N", "d13C", "d34S"),
+                          factors=NULL,
+                          fac_random=NULL,
+                          fac_nested=NULL,
+                          cont_effects=NULL)
+
+# Rerun best-performing mixing model with discrete sources and group posterior
+# Single species sources
+source.filename.spec <- "Data/Mixing models/Sensitivity_analysis/Sources_spec.csv"
+# A priori groupings
+source.filename.group <- "Data/Mixing models/Sensitivity_analysis/Sources_group.csv"
+# No lipid correction
+source.filename.nolip <- "Data/Mixing models/Sensitivity_analysis/Sources_nolip.csv"
+# baseline corrected
+source.filename.blcorr <- "Data/Mixing models/Sensitivity_analysis/Sources_baseline-corrected.csv"
+
+
+# Load source data, all species
+source_spec_base <- load_source_data(filename=source.filename.spec, source_factors=NULL, conc_dep=FALSE, data_type="means", mix_base)
+# Load source data, a priori groups
+source_group_base <- load_source_data(filename=source.filename.group, source_factors=NULL, conc_dep=FALSE, data_type="means", mix_base)
+# Load source data, no lipid correction
+source_group_nolip <- load_source_data(filename=source.filename.nolip, source_factors=NULL, conc_dep=FALSE, data_type="means", mix_nolip)
+# Load source data, baseline corrected
+source_group_blcorr <- load_source_data(filename=source.filename.blcorr, source_factors=NULL, conc_dep=FALSE, data_type="means", mix_blcorr)
+
+# TEFs species
+discr.filename.spec <- "Data/Mixing models/Sensitivity_analysis/Discrimination_base-spec.csv"
+# TEFs a priori groups
+discr.filename.group <- "Data/Mixing models/Sensitivity_analysis/Discrimination_base-group.csv"
+# TEFs corrected
+discr.filename.corr <- "Data/Mixing models/Sensitivity_analysis/Discrimination_TDF-corrected.csv"
+
+# TEF species base case
+discr.df_spec <- load_discr_data(filename=discr.filename.spec, mix_base)
+# TEF groups base case
+discr.df_group <- load_discr_data(filename=discr.filename.group, mix_base)
+# TEF no lipid correction
+discr.df_nolip <- load_discr_data(filename=discr.filename.spec, mix_nolip)
+# TEF baseline corrected
+discr.df_blcorr <- load_discr_data(filename=discr.filename.spec, mix_blcorr)
+# TEF corrected
+discr.df_corrected <- load_discr_data(filename=discr.filename.corr, mix_base)
+
+# set model error specs
+resid_err <- TRUE
+process_err <- TRUE
+
+# write model for species
+model_qc_spec_filename <- "Data/Mixing models/Sensitivity_analysis/MixSIAR_model_species-base.txt"
+# write model for groups
+model_qc_group_filename <- "Data/Mixing models/Sensitivity_analysis/MixSIAR_model_groups-base.txt"
+# write model for no-lipid corrected run
+model_qc_nolip_filename <- "Data/Mixing models/Sensitivity_analysis/MixSIAR_model_nolipidcorr.txt"
+# write model for baseline correction
+model_qc_blcorr_filename <- "Data/Mixing models/Sensitivity_analysis/MixSIAR_model_baseline-corr.txt"
+# write model for TEF correction
+model_qc_TDFcorr_filename <- "Data/Mixing models/Sensitivity_analysis/MixSIAR_model_TDF-corr.txt"
+# write model for species-level priors
+model_qc_specprior_filename <- "Data/Mixing models/Sensitivity_analysis/MixSIAR_model_species-priors.txt"
+# write model for species-level priors
+model_qc_grprior_filename <- "Data/Mixing models/Sensitivity_analysis/MixSIAR_model_group-priors.txt"
+
+
+write_JAGS_model(model_qc_spec_filename, resid_err, process_err, mix_base, source_spec_base)
+write_JAGS_model(model_qc_group_filename, resid_err, process_err, mix_base, source_group_base)
+write_JAGS_model(model_qc_nolip_filename, resid_err, process_err, mix_nolip, source_group_nolip)
+write_JAGS_model(model_qc_blcorr_filename, resid_err, process_err, mix_blcorr, source_group_blcorr)
+write_JAGS_model(model_qc_TDFcorr_filename, resid_err, process_err, mix_base, source_group_base)
+write_JAGS_model(model_qc_specprior_filename, resid_err, process_err, mix_base, source_group_base)
+write_JAGS_model(model_qc_grprior_filename, resid_err, process_err, mix_base, source_spec_base)
+
+# run models
+jags.pike.specbase <- run_model(run="normal", mix_base, source_spec_base, discr.df_spec, model_qc_spec_filename, alpha.prior = 1)
+jags.pike.groupbase <- run_model(run="normal", mix_base, source_group_base, discr.df_group, model_qc_group_filename, alpha.prior = 1)
+jags.pike.nolip <- run_model(run="normal", mix_nolip, source_group_nolip, discr.df_nolip, model_qc_nolip_filename, alpha.prior = 1)
+jags.pike.blcor <- run_model(run="normal", mix_blcorr, source_group_blcorr, discr.df_blcorr, model_qc_blcorr_filename, alpha.prior = 1)
+jags.pike.TDFcor <- run_model(run="normal", mix_base, source_group_base, discr.df_corrected, model_qc_TDFcorr_filename, alpha.prior = 1)
+jags.pike.spprior <- run_model(run="normal", mix_base, source_spec_base, discr.df_spec, model_qc_specprior_filename, 
+                               alpha.prior = c(0.283, 0.126, 0.053, 0.155, 0.155, 0.239, 0.239))
+jags.pike.grprior <- run_model(run="normal", mix_base, source_group_base, discr.df_group, model_qc_grprior_filename, 
+                               alpha.prior = c(0.394, 0.573, 0.283))
+
+
+#save models
+saveRDS(jags.pike.specbase, "Data/Mixing models/Sensitivity_analysis/Mixing.model_qc_species-normal-run.rds")
+saveRDS(jags.pike.groupbase, "Data/Mixing models/Sensitivity_analysis/Mixing.model_qc_groups-normal-run.rds")
+saveRDS(jags.pike.nolip, "Data/Mixing models/Sensitivity_analysis/Mixing.model_qc_nolipidcorr-normal-run.rds")
+saveRDS(jags.pike.blcor, "Data/Mixing models/Sensitivity_analysis/Mixing.model_qc_baseline-corrected-normal-run.rds")
+saveRDS(jags.pike.TDFcor, "Data/Mixing models/Sensitivity_analysis/Mixing.model_qc_corrected-TDF-normal-run.rds")
+saveRDS(jags.pike.spprior, "Data/Mixing models/Sensitivity_analysis/Mixing.model_qc_species-priors-normal-run.rds")
+saveRDS(jags.pike.grprior, "Data/Mixing models/Sensitivity_analysis/Mixing.model_qc_groups-priors-normal-run.rds")
 
 plot_data(filename="isospace_plotn",
           plot_save_pdf=FALSE,
           plot_save_png=FALSE,
           return_obj = T,
-          mix1,source,discr.df)
+          mix_bl,source3,discr.df3)
 
-#write model
-model1_qc_filename <- "Data/Mixing models/MixSIAR_model_posterior-grouping.txt"
-# Include residual error; appropriate in situations where, for instance, each mixture data point was 
-# generated through the combination of many samples from the source population
-resid_err <- TRUE
+plot_data(filename="isospace_plotn",
+          plot_save_pdf=FALSE,
+          plot_save_png=FALSE,
+          return_obj = T,
+          mix1,source1,discr.df1)
 
-# Include process error; derived from an assumption about the mixing process. 
-# Analyst provides a single mixture value for each of the j tracers considered
-process_err <- TRUE
+plot_data(filename="isospace_plotn",
+          plot_save_pdf=FALSE,
+          plot_save_png=FALSE,
+          return_obj = T,
+          mix1,source2,discr.df2)
+```
 
-write_JAGS_model(model1_qc_filename, resid_err, process_err, mix1, source)
+```{r mixing models sensitivity analysis comparisons, include=FALSE, eval=FALSE}
+rm(list = ls())
 
-jags.pike.qc1 <- run_model(run="normal", mix1, source, discr.df, model1_qc_filename, alpha.prior = 1)
+# load model outputs
+Species_base <- read_rds("Data/Mixing models/Sensitivity_analysis/Mixing.model_qc_species-normal-run.rds")
+Groups_base <- read_rds("Data/Mixing models/Sensitivity_analysis/Mixing.model_qc_groups-normal-run.rds")
 
-saveRDS(jags.pike.0.0, "Data/Mixing models/Output/Mixing.model-normal-run-continuous-NULL.rds")
+source_species.filename <- "Data/Mixing models/Sensitivity_analysis/Sources_spec.csv"
+source_groups.filename <- "Data/Mixing models/Sensitivity_analysis/Sources_group.csv"
 
-# Rerun model with different TEFs
+mix.filename <- "Data/Mixing models/Sensitivity_analysis/Pikemix-ecotypes_all.csv"
+
+# Load mixture data
+mix_base <- load_mix_data(filename=mix.filename, 
+                     iso_names=c("d15N", "d13C", "d34S"),
+                     factors=NULL,
+                     fac_random=NULL,
+                     fac_nested=NULL,
+                     cont_effects=NULL)
+
+# Load source data
+source_spec_base <- load_source_data(filename = source_species.filename, source_factors = NULL,
+                          conc_dep = FALSE, data_type = "means", mix_base)
+source_group_base <- load_source_data(filename = source_groups.filename, source_factors = NULL,
+                          conc_dep = FALSE, data_type = "means", mix_base)
+
+# Extract posterior samples
+posterior_spec_base <- Species_base$BUGSoutput$sims.list$p.global
+posterior_groups_base <- Groups_base$BUGSoutput$sims.list$p.global
+
+# Calculate mean and standard deviation for each source
+posterior_summary_spec_base <- apply(posterior_spec_base, 2, function(x) {
+  c(mean = mean(x), sd = sd(x))
+})
+
+posterior_summary_groups_base <- apply(posterior_groups_base, 2, function(x) {
+  c(mean = mean(x), sd = sd(x))
+})
+
+# Convert to a data frame for better readability
+posterior_summary_spec_df <- as.data.frame(t(posterior_summary_spec_base))
+colnames(posterior_summary_spec_df) <- c("Mean", "SD")
+rownames(posterior_summary_spec_df) <- c(source_spec_base$source_names)
+
+posterior_summary_groups_df <- as.data.frame(t(posterior_summary_groups_base))
+colnames(posterior_summary_groups_df) <- c("Mean", "SD")
+rownames(posterior_summary_groups_df) <- c(source_group_base$source_names)
+
+groups <- source_spec_base$source_names
+
+#group posterior of species
+source("funcs.R")
+
+combined <- combine_sources2(Species_base, mix_base, source_spec_base, alpha.prior = 1, 
+                             groups = list(marine = c("C.harengus"), 
+                                           lagoon = c("N.melanostomus", "P.flesus", "P.fluviatilis", "R.rutilus"),
+                                           freshwater = c("P.fluviatilis.FW", "R.rutilus.FW")))
+
+posterior <- combined$post
+
+#create model list
+mcomp<-list(Groups_base, Species_base)
+names(mcomp) <- c("NULL", "ecotype|body length", "body length", "ecotype", "capture location|body length", "capt")
+# Model comparison
+compare_models(mcomp, loo = TRUE)
+```
 
 
-# Rerun model with informative priors
+```{r mixing polyhedrons for TEF, include=FALSE, eval=FALSE}
+rm(list = ls())
 
-# Compare
+Pikemix <- fread("Data/Mixing models/Pikemix-ecotypes_all.csv")
+
+mixture <- Pikemix %>%
+  transmute(d13C = round(d13C, 1),
+            d15N = round(d15N, 1),
+            d34S = round(d34S, 1))
+
+sources_spec <- fread("Data/Mixing models/Sensitivity_analysis/Sources_spec.csv")
+sources_group <- fread("Data/Mixing models/Sensitivity_analysis/Sources_group.csv")
+
+sources <- sources %>%
+  transmute(d13C_Av = round(Meand13C, 1),
+            d13C_Sd = round(SDd13C, 1),
+            d15N_Av = round(Meand15N, 1),
+            d15N_Sd = round(SDd15N, 1),
+            d34S_Av = round(Meand34S, 1),
+            d34S_Sd = round(SDd34S, 1))
+
+
+sources <- as.data.frame(sources)
+
+# TEFs
+TEF <- data.frame(d13C_Av = rep(1.2, nrow(sources)),
+                  d13C_Sd = rep(0.3, nrow(sources)),
+                  d15N_Av = rep(2.9, nrow(sources)),
+                  d15N_Sd = rep(0.32, nrow(sources)),
+                  d34S_Av = rep(-0.5, nrow(sources)),
+                  d34S_Sd = rep(0.2, nrow(sources)))
+
+its <- 1500  #specify the number of iterations ("its")
+
+## Simulate mixing polyhedrons
+  Par_values <- array(0, c(its,(nrow(sources)*6+3)))  
+  p <- array(0, c(its,(nrow(mixture))))
+  for (i in 1:its) {  
+    v <- array(0, c(nrow(sources),3))
+    f <- array(0, c(nrow(TEF),3))
+        for (j in 1:nrow(sources)) {
+        v[j,1] <- rnorm(1, mean=sources[j,1], sd=sources[j,2])  
+        v[j,2] <- rnorm(1, mean=sources[j,3], sd=sources[j,4])  
+        v[j,3] <- rnorm(1, mean=sources[j,5], sd=sources[j,6])  
+        f[j,1] <- rnorm(1, mean=TEF[j,1], sd=TEF[j,2])  
+        f[j,2] <- rnorm(1, mean=TEF[j,3], sd=TEF[j,4])  
+        f[j,3] <- rnorm(1, mean=TEF[j,5], sd=TEF[j,6])  
+        }
+    V <- v+f
+    hulln <- convhulln(V, options="i") 
+    hulln_v <- as.vector(hulln)
+    hulln_i <- unique(hulln_v)
+    hulln_i <- sort(hulln_i)
+    indices <- V[hulln_i,]
+    hulln_c <- convhulln(indices, options="i") #done again to match-up row indexes
+    mixture_m <- as.matrix(mixture)
+    P <- pip3d(indices, hulln_c, mixture_m)
+    p[i,] <- P
+    hulln_a <- convhulln(V, options="FA")
+    poly_v <- hulln_a$vol  
+    vals <- c(v[,1],v[,2],v[,3],f[,1],f[,2],f[,3],0,0,0) 
+    Par_values[i,] <- vals  
+    Par_values[i,ncol(Par_values)-2] <- poly_v
+    Par_values[i,ncol(Par_values)-1] <- i
+    Par_values[i,ncol(Par_values)] <- var(Par_values[1:i,ncol(Par_values)-2])
+    if (i %% 10 ==0) cat(paste("iteration", i, "\n")) 
+    }
+  
+# FIGURE 1: variance of polygon volume during simulation
+png("Data/Mixing models/Sensitivity_analysis/Figures/Polygon-var_groups.png", width = 15, height = 15, units = "cm", res = 300)
+   Iterations <- Par_values[,ncol(Par_values)-1]
+   Variance <- Par_values[,ncol(Par_values)]
+   plot(Iterations, Variance, type="n")   
+   lines(Iterations, Variance, lty=1, lwd=1.5, col="blue")
+dev.off()
+
+# FIGURE 2: proportion of iterations that each consumer was inside mixing polygon
+png("Data/Mixing models/Sensitivity_analysis/Figures/consumerpols_groups.png", width = 15, height = 15, units = "cm", res = 300)
+   p[p == 0] <- 1   
+   p[p == -1] <- 0   
+   Probabilities <- colSums(p)/its
+   print(Probabilities)
+   barplot(Probabilities, xlab="Consumer", ylab="Probability consumer is within 3-d mixing polygon", 
+           ylim=c(0,1), names.arg=seq(1,nrow(mixture),by=1))
+dev.off()
+
+ ##Write data to files
+   p_a <- rbind(p,Probabilities)
+   write.table(p_a, file = "Consumer_Probabilities_3i_nogroup.csv", sep = ",", row.names=FALSE)
+   col_names <- c(rep("d13C",nrow(sources)),rep("d15N",nrow(sources)),rep("d34S",nrow(sources)),
+                  rep("13C_TEF",nrow(sources)),rep("15N_TEF",nrow(sources)),rep("34S_TEF",nrow(sources)),
+                  "Poly_Vol","Iteration","Variance") 
+   col_nums <- c(rep(1:nrow(sources),6),0,0,0)
+   col_n <- paste(col_names, col_nums)
+   write.table(Par_values, file = "Parameter_Values_3i_nogroup.csv", sep = ",", row.names=FALSE, col.names=col_n)
+   
+length(Probabilities[Probabilities<0.05])/length(Probabilities[Probabilities>0.05])
+
 ```
 
 ```{r plot results, include=FALSE, eval=FALSE}
@@ -3142,7 +3626,7 @@ Eyeplot1 <- annotate_figure(Eyeplot, bottom = text_grob("Backcalculated length (
 ggsave("Figures/Eyelens-data-ecotypes.png", Eyeplot1, width = 15, height = 7, units = "cm", bg = "white")
 ```
 
-```{r population niches whole population level, include=FALSE, eval=FALSE}
+```{r Niche components population-level, include=FALSE, eval=FALSE}
 rm(list = ls())
 
 Ecopike <- fread("Data/Pike/Lens-muscle-SI-eco-clean-cbackcalculated.csv")
@@ -3200,7 +3684,7 @@ write.table(TNWmat, "Data/Pike/Total-niche-width_matrix.txt")
 write.table(WICmat, "Data/Pike/Within-individual-variance_matrix.txt")
 ```
 
-```{r population niches phenotype specific, include=FALSE, eval=FALSE}
+```{r Niche components phenotype-level, include=FALSE, eval=FALSE}
 rm(list = ls())
 
 Ecopike <- fread("Data/Pike/Lens-muscle-SI-eco-clean-cbackcalculated.csv")
@@ -3371,7 +3855,66 @@ write.table(TNWmat_FW, "Data/Pike/Total-niche-width_brackish_matrix.txt")
 write.table(WICmat_FW, "Data/Pike/Within-individual-variance_brackish_matrix.txt")
 ```
 
-```{r individual niche width, include=FALSE, eval=FALSE}
+```{r Niche components WRBC only, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+Ecopike <- fread("Data/Pike/Lens-muscle-SI-eco-clean-cbackcalculated.csv")
+
+Ecopike <- as.data.frame(Ecopike)
+Ecopike2 <- Ecopike%>%
+  filter(area == "WRB" | waterbody == "Sehrowbach" | waterbody == "Barthe") %>%
+  drop_na(diameter_mm)
+Ecopike2$fish_ID <- factor(Ecopike2$fish_ID)
+
+#multi-response model population-level
+mod1 <- MCMCglmm(cbind(d13C, d15N, d34S)~trait-1, random = ~fish_ID, data = Ecopike2, family = c("gaussian", "gaussian", "gaussian"), 
+                 rcov = ~us(trait):units, pr = TRUE, verbose = FALSE, nitt = 100000, burnin = 50000, thin = 50)
+
+#Extract between individual component model 1
+BICmat <- mod1$VCV[, "fish_ID"]
+BIC <- mean(BICmat)
+
+#Extract within individual component model 1
+WICmat <- mod1$VCV[, grep("trait", colnames(mod1$VCV))]
+
+#Convert whole population residual variance into matrix
+CC <- mean(WICmat[,1])
+NC <- mean(WICmat[,2])
+SC <- mean(WICmat[,3])
+CN <- mean(WICmat[,4])
+NN <- mean(WICmat[,5])
+SN <- mean(WICmat[,6])
+CS <- mean(WICmat[,7])
+NS <- mean(WICmat[,8])
+SS <- mean(WICmat[,9])
+
+WICmat <- matrix(0, nrow = 3, ncol = 3)
+
+#fill diagonals with residual variance
+WICmat[1,1] <- CC
+WICmat[2,2] <- NN
+WICmat[3,3] <- SS
+
+#fill off-diagonals with residual covariance
+WICmat[1,2] <- CN
+WICmat[1,3] <- CS
+WICmat[2,1] <- NC
+WICmat[2,3] <- NS
+WICmat[3,1] <- SC
+WICmat[3,2] <- SN
+
+row.names(WICmat) <- c("C", "N", "S")
+colnames(WICmat) <- c("C", "N", "S")
+
+TNWmat <- BIC + WICmat
+
+mean(eigen(WICmat)$value/eigen(TNWmat)$value)
+
+write.table(TNWmat, "Data/Pike/Total-niche-width_matrix-WRBC.txt")
+write.table(WICmat, "Data/Pike/Within-individual-variance_matrix-WRBC.txt")
+```
+
+```{r individual niche width population-level, include=FALSE, eval=FALSE}
 rm(list = ls())
 mod1 <- readRDS("Data/Pike/Variance-components.rds")
 Ecopike2 <- fread("Data/Pike/Lens-SI-eco-clean-cbackcalculated.csv")
@@ -3430,7 +3973,7 @@ Ecopike_spec <- Ecopike2%>%
 fwrite(Ecopike_spec, "Data/Pike/Pike_eco-clean-cbackcalculated_s-metric.csv")
 ```
 
-```{r individual niche width phenotype level, include=FALSE, eval=FALSE}
+```{r individual niche width phenotype-level, include=FALSE, eval=FALSE}
 rm(list = ls())
 
 Ecopike2 <- fread("Data/Pike/Lens-SI-eco-clean-cbackcalculated.csv")
@@ -3557,6 +4100,68 @@ Ecopike_spec <- Ecopike2%>%
 fwrite(Ecopike_spec, "Data/Pike/Pike_eco-clean-cbackcalculated_s-metric-phenotypes.csv")
 ```
 
+```{r individual niche width population-level WRBC, include=FALSE, eval=FALSE}
+rm(list = ls())
+Ecopike2 <- fread("Data/Pike/Lens-SI-eco-clean-cbackcalculated.csv")
+
+Ecopike2 <- Ecopike2 %>%
+  filter(area == "WRB" | waterbody == "Sehrowbach" | waterbody == "Barthe")
+
+TNWmat <- read.table("Data/Pike/Total-niche-width_matrix-WRBC.txt")
+WICmat <- read.table("Data/Pike/Within-individual-variance_matrix-WRBC.txt")
+
+#Individual covariance matrices
+# Initialize an empty list to store covariance matrices from raw data
+num_fish <- length(unique(Ecopike2$fish_ID))
+raw_cov_matrices_list <- vector("list", length = num_fish)
+
+# Loop through each fish_ID and calculate the covariance matrices from raw data
+for (i in 1:num_fish) {
+  fish_data <- subset(Ecopike2, fish_ID == unique(Ecopike2$fish_ID)[i])
+  raw_cov_matrix <- cov(fish_data[, c("d13C", "d15N", "d34S")], use = "complete.obs")
+  raw_cov_matrices_list[[i]] <- raw_cov_matrix
+}
+
+names(raw_cov_matrices_list) <- unique(Ecopike2$fish_ID)
+
+saveRDS(raw_cov_matrices_list, file = "Data/Pike/individual-varcov-CNS.RData")
+raw_cov_matrices_list["BH-01922"]
+# Function to calculate normalized eigenvalues
+eigenval <- function(fish_matrix, population_matrix) {
+  if (any(is.na(fish_matrix))) {
+    return(NA)
+  }
+  eigenvalues_fish <- eigen(fish_matrix)$values
+  if (any(is.na(eigenvalues_fish))) {
+    return(NA)
+  }
+  #population matrix
+  eigenvalues_population <- eigen(population_matrix)$values
+  normalized_eigenvalues <- eigenvalues_fish / eigenvalues_population
+  return(mean(normalized_eigenvalues))
+}
+
+# Initialize an empty list to store results
+normalized_eigenvalues_list <- numeric(num_fish)
+
+for (i in 1:num_fish) {
+  fish_matrix <- raw_cov_matrices_list[[i]]  # Use the raw data covariance matrix
+  normalized_eigenvalues_list[i] <- eigenval(fish_matrix, TNWmat)
+}
+
+Spec_index <- tibble(fish_ID = unique(Ecopike2$fish_ID), s_index = normalized_eigenvalues_list)
+
+Ecopike_spec <- Ecopike2%>%
+  left_join(Spec_index, by = "fish_ID")%>%
+  mutate(phenotype = fct_relevel(phenotype,
+                                 "FW_resident",
+                                 "Anadromous", 
+                                 "Trans-habitat",
+                                 "BW-resident"))
+
+fwrite(Ecopike_spec, "Data/Pike/Pike_eco-clean-cbackcalculated_s-metric_WRBC.csv")
+```
+
 ```{r plot s- metrics, include=FALSE, eval=FALSE}
 rm(list = ls())
 Ecopike_spec_pop <- fread("Data/Pike/Pike_eco-clean-cbackcalculated_s-metric.csv")
@@ -3618,6 +4223,38 @@ Specplot2 <- annotate_figure(Specplot, left = text_grob("specialization index", 
                              bottom = text_grob("behavioral phenotype", size = 12, color = "black"))
 
 ggsave("Figures/S-index-individual-pop-pheno.png", Specplot2, height = 10, width = 15, units = "cm", dpi = 600, bg = "white")
+```
+
+```{r plot s- metrics for WRBC, include=FALSE, eval=FALSE}
+rm(list = ls())
+Ecopike_spec_pop <- fread("Data/Pike/Pike_eco-clean-cbackcalculated_s-metric_WRBC.csv")
+Ecopike_spec_pop <- Ecopike_spec_pop%>%
+  mutate(phenotype = fct_relevel(phenotype,
+                                 "FW_resident",
+                                 "Anadromous", 
+                                 "Trans-habitat",
+                                 "BW-resident"))
+
+Specplot_pop <- ggplot(Ecopike_spec_pop)+
+  geom_violin(aes(x = phenotype, y = 1-s_index, fill = phenotype), width = 1)+
+  geom_boxplot(aes(x = phenotype, y = 1-s_index), width = 0.07, size = .5, color = "black", fill = "transparent")+
+  scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                    values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
+                    labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
+  scale_x_discrete(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                   labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
+  scale_y_continuous(limits = c(-0.1, 1),
+                     breaks = seq(0,1, 0.25))+
+  labs(title = "s-index population level",
+       x = "behavioral phenotype",
+       y = "specialization index")+
+  theme_bw()+
+  theme(legend.position = "none",
+        axis.text.x = element_text(size = 10, color = "black", angle = 45, hjust = 1),
+        axis.text.y = element_text(size = 10, color = "black"),
+        axis.title = element_text(size = 10, color = "black"))
+
+ggsave("Figures/S-index-individual-pop-pheno_WRBC.png", Specplot_pop, height = 10, width = 15, units = "cm", dpi = 600, bg = "white")
 ```
 
 ```{r individual overlap metrics population-level, include=FALSE, eval=FALSE}
@@ -3799,6 +4436,138 @@ combined <- ggarrange(CN, CS, NS, empty, nrow = 2, ncol = 2, common.legend = F, 
 ggsave("Figures/Overlap_individuals.png", combined, width = 15, height = 15, units = "cm", dpi = 600, bg = "white")
 ```
 
+```{r plot individual overlap population-level, include=FALSE, eval=FALSE}
+rm(list = ls())
+Ecopike2 <- fread("Data/Pike/Pike_eco-clean-cbackcalculated_s-metric_WRBC.csv")
+TNWmat <- as.matrix(read.table("Data/Pike/Total-niche-width_matrix-WRBC.txt"))
+WICmat <- as.matrix(read.table("Data/Pike/Within-individual-variance_matrix-WRBC.txt"))
+Individuals <- readRDS("Data/Pike/individual-varcov-CNS-WRBC.RData")
+
+means <- Ecopike2%>%reframe(d13C = mean(d13C, na.rm = T), d15N = mean(d15N, na.rm = T), d34S = mean(d34S, na.rm = T))
+means <- as.matrix(means)
+
+TNWmatCN <- TNWmat[1:2, 1:2]
+TNWmatCS <- matrix(c(TNWmat[1,1], TNWmat[1,3], TNWmat[3,1], TNWmat[3,3]), nrow = 2, ncol = 2, dimnames = list(c("C", "S"), c("C", "S")))
+TNWmatNS <- matrix(c(TNWmat[2,2], TNWmat[2,3], TNWmat[3,2], TNWmat[3,3]), nrow = 2, ncol = 2, dimnames = list(c("N", "S"), c("N", "S")))
+
+WICmatCN <- WICmat[1:2, 1:2]
+WICmatCS <- matrix(c(WICmat[1,1], WICmat[1,3], WICmat[3,1], WICmat[3,3]), nrow = 2, ncol = 2, dimnames = list(c("C", "S"), c("C", "S")))
+WICmatNS <- matrix(c(WICmat[2,2], WICmat[2,3], WICmat[3,2], WICmat[3,3]), nrow = 2, ncol = 2, dimnames = list(c("N", "S"), c("N", "S")))
+
+BICmat <- TNWmat - WICmat
+
+
+TNWCN <- data.frame(ellipse::ellipse(TNWmatCN, level = 0.4, npoints = 100, centre = c(means[1], means[2])))
+TNWCS <- data.frame(ellipse::ellipse(TNWmatCS, level = 0.4, npoints = 100, centre = c(means[1], means[3])))
+TNWNS <- data.frame(ellipse::ellipse(TNWmatNS, level = 0.4, npoints = 100, centre = c(means[2], means[3])))
+
+WICCN <- data.frame(ellipse::ellipse(WICmatCN, level = 0.4, npoints = 100, centre = c(means[1], means[2])))
+WICCS <- data.frame(ellipse::ellipse(WICmatCS, level = 0.4, npoints = 100, centre = c(means[1], means[3])))
+WICNS <- data.frame(ellipse::ellipse(WICmatNS, level = 0.4, npoints = 100, centre = c(means[2], means[3])))
+
+BICCN <- data.frame(C = means[1], N = means[2], varC = 1.18, varN = 1.18)
+BICCS <- data.frame(C = means[1], S = means[3], varC = 1.18, varS = 1.18)
+BICNS <- data.frame(N = means[2], S = means[3], varN = 1.18, varS = 1.18)
+
+pl_theme <- theme(legend.position = "none",
+                  axis.text = element_text(size = 10, color = "black"))
+
+CN <- ggplot()+
+  geom_point(data = Ecopike2, aes(x = d13C, y = d15N, colour = phenotype), size = 0.5)+
+  stat_ellipse(data = Ecopike2, aes(x = d13C, y = d15N, group = fish_ID, fill = phenotype), level = 0.4,
+               alpha = 0.3, geom = "polygon", color = "darkgrey", linewidth = 0.2)+
+  stat_ellipse(data = TNWCN, aes(x = C, y = N, color = "TNW"), level = 0.4, linewidth = 1.5)+
+  stat_ellipse(data = WICCN, aes(x = C, y = N, color = "WIC"), level = 0.4, linewidth = 1.5)+
+  geom_ellipse(data = BICCN, aes(x0 = C, y0 = N, a = 0.4*varC, b = 0.4*varN, angle = C/N, color = "BIC"), linewidth = 1)+
+  labs(x = expression(delta^13~"C"~("\u2030 VPDB")),
+       y = expression(delta^15~"N"~("\u2030"~air-N[2])),
+       color = "niche component",
+       fill = "behavioral phenotype")+
+  scale_color_manual(values = c("TNW" = "black", "WIC" = "orange", "BIC" = "red", "FW_resident" = "#C5D86D",
+                                "BW-resident" = "#004643", "Anadromous" = "#00BFB2", "Trans-habitat" = "#F1C40F"),
+                     breaks = c("TNW", "WIC", "BIC"),
+                     labels = c(expression("TNW"["Pop"]), expression("WIC"["Pop"]), expression("BIC"["Pop"])))+
+  scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                    values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
+                    labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
+  theme_bw()+
+  pl_theme
+
+CS <- ggplot()+
+  geom_point(data = Ecopike2, aes(x = d13C, y = d34S, colour = phenotype), size = 0.5)+
+  stat_ellipse(data = Ecopike2, aes(x = d13C, y = d34S, group = fish_ID, fill = phenotype), level = 0.4,
+               alpha = 0.3, geom = "polygon", color = "darkgrey", linewidth = 0.2)+
+  stat_ellipse(data = TNWCS, aes(x = C, y = S, color = "TNW"), level = 0.4, linewidth = 1.5)+
+  stat_ellipse(data = WICCS, aes(x = C, y = S, color = "WIC"), level = 0.4, linewidth = 1.5)+
+  geom_ellipse(data = BICCS, aes(x0 = C, y0 = S, a = 0.4*varC, b = 0.4*varS, angle = C/S, color = "BIC"), linewidth = 1)+
+  labs(x = expression(delta^13~"C"~("\u2030 VPDB")),
+       y = expression(delta^34~"S"~("\u2030 VCDT")),
+       color = "niche component",
+       fill = "behavioral phenotype")+
+  scale_color_manual(values = c("TNW" = "black", "WIC" = "orange", "BIC" = "red", "FW_resident" = "#C5D86D",
+                                "BW-resident" = "#004643", "Anadromous" = "#00BFB2", "Trans-habitat" = "#F1C40F"),
+                     breaks = c("TNW", "WIC", "BIC"),
+                     labels = c(expression("TNW"["Pop"]), expression("WIC"["Pop"]), expression("BIC"["Pop"])))+
+  scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                    values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
+                    labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
+  theme_bw()+
+  pl_theme
+
+NS <- ggplot()+
+  geom_point(data = Ecopike2, aes(x = d15N, y = d34S, colour = phenotype), size = 0.5)+
+  stat_ellipse(data = Ecopike2, aes(x = d15N, y = d34S, group = fish_ID, fill = phenotype), level = 0.4,
+               alpha = 0.3, geom = "polygon", color = "darkgrey", linewidth = 0.2)+
+  stat_ellipse(data = TNWNS, aes(x = N, y = S, color = "TNW"), level = 0.4, linewidth = 1.5)+
+  stat_ellipse(data = WICNS, aes(x = N, y = S, color = "WIC"), level = 0.4, linewidth = 1.5)+
+  geom_ellipse(data = BICNS, aes(x0 = N, y0 = S, a = 0.4*varN, b = 0.4*varS, angle = N/S, color = "BIC"), linewidth = 1)+
+  labs(x = expression(delta^15~"N"~("\u2030"~air-N[2])),
+       y = expression(delta^34~"S"~("\u2030 VCDT")),
+       color = "niche component",
+       fill = "behavioral phenotype")+
+  scale_color_manual(values = c("TNW" = "black", "WIC" = "orange", "BIC" = "red", "FW_resident" = "#C5D86D",
+                                "BW-resident" = "#004643", "Anadromous" = "#00BFB2", "Trans-habitat" = "#F1C40F"),
+                     breaks = c("TNW", "WIC", "BIC"),
+                     labels = c(expression("TNW"["Pop"]), expression("WIC"["Pop"]), expression("BIC"["Pop"])))+
+  scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                    values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
+                    labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
+  theme_bw()+
+  pl_theme
+
+empty <- ggplot()+
+  geom_point(data = Ecopike2, aes(x = d15N, y = d34S, colour = phenotype), alpha = 0)+
+  stat_ellipse(data = Ecopike2, aes(x = d15N, y = d34S, group = fish_ID, fill = phenotype), level = 0.4,
+               alpha = 0, geom = "polygon", linewidth = 1.5)+
+  stat_ellipse(data = TNWNS, aes(x = N, y = S, color = "TNW"), level = 0.4, linewidth = 1.5, alpha = 0)+
+  stat_ellipse(data = WICNS, aes(x = N, y = S, color = "WIC"), level = 0.4, linewidth = 1.5, alpha = 0)+
+  geom_ellipse(data = BICNS, aes(x0 = -1, y0 = -1, a = 0, b = 0, angle = N/S, color = "BIC"), alpha = 0, lwd = 1.5)+
+  labs(x = "",
+       y = "",
+       color = "niche component",
+       fill = "behavioral phenotype")+
+  scale_color_manual(values = c("TNW" = "black", "WIC" = "orange", "BIC" = "red", "FW_resident" = "#C5D86D",
+                                "BW-resident" = "#004643", "Anadromous" = "#00BFB2", "Trans-habitat" = "#F1C40F"),
+                     breaks = c("TNW", "WIC", "BIC"),
+                     labels = c(expression("TNW"["Pop"]), expression("WIC"["Pop"]), expression("BIC"["Pop"])),
+                     drop = FALSE)+
+  scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
+                    values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
+                    labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"),
+                    drop = FALSE)+
+  guides(color = guide_legend(override.aes = list(shape = 21, size = 8, stroke = 2, linetype = c(0,0,0), alpha = 1)),
+         fill = guide_legend(override.aes = list(alpha = 0.3)))+
+  theme_void()+
+  theme(legend.position = c(.5,.5),
+        legend.key.size = unit(0.7, "cm"),
+        legend.text = element_text(size = 10, color = "black"),
+        legend.title = element_text(size = 10, color = "black"))
+
+combined <- ggarrange(CN, CS, NS, empty, nrow = 2, ncol = 2, common.legend = F, labels = c("A", "B", "C"))
+
+ggsave("Figures/Overlap_individuals_WRBC.png", combined, width = 15, height = 15, units = "cm", dpi = 600, bg = "white")
+```
+
 ```{r phenotype overlap, include=FALSE, eval=FALSE}
 rm(list = ls())
 
@@ -3961,7 +4730,9 @@ for (i in 1:nrow(pairs)){
     overlap.2.5[pairs[i,1],pairs[i,2]]<-quantile(overlap.SEV[pairs[i,1],pairs[i,2],], probs=0.025)
     overlap.40[pairs[i,1],pairs[i,2]]<-quantile(overlap.SEV[pairs[i,1],pairs[i,2],], probs=0.4)
     overlap.975[pairs[i,1],pairs[i,2]]<-quantile(overlap.SEV[pairs[i,1],pairs[i,2],], probs=0.75)
-  }
+}
+
+groupnames <- c( "Anadromous", "BW-resident", "FW_resident", "Trans-habitat")
 
 rownames(overlap.2.5) <- groupnames
 colnames(overlap.2.5) <- groupnames
@@ -3981,6 +4752,192 @@ write.table(overlap.975, file = "Data/Pike/Niche-overlap97.5-phenotypes.txt")
 overlap.2.5 <- read.table("Data/Pike/Niche-overlap2.5-phenotypes.txt")
 overlap.40 <-  read.table("Data/Pike/Niche-overlap40-phenotypes.txt")
 overlap.975 <- read.table("Data/Pike/Niche-overlap97.5-phenotypes.txt")
+```
+
+```{r phenotype overlap WRBC, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+Ecopike <- fread("Data/Pike/Lens-muscle-SI-eco-clean-cbackcalculated.csv")
+source("funcs.R")
+
+thedata <- Ecopike%>%
+  filter(area == "WRB" | waterbody == "Sehrowbach" | waterbody == "Barthe") %>%
+  transmute(groups = phenotype,
+            isotope1 = d13C,
+            isotope2 = d15N,
+            isotope3 = d34S)%>%
+  arrange(groups)%>%
+  drop_na(isotope1, isotope2, isotope3)
+
+thedata <- as.data.frame(thedata)
+
+sink("ellipsoid_pheno.txt")
+cat("
+model{
+    #priors
+    for (k in 1:ngroups){
+    mu[k,1] ~ dnorm(0,0.001)
+    mu[k,2] ~ dnorm(0,0.001)
+    mu[k,3] ~ dnorm(0,0.001)
+    prec[1:3,1:3,k] ~ dwish(S3,4)
+    cov[1:3,1:3,k] <- inverse(prec[1:3,1:3,k])
+    #likelihood
+    for (i in 1:maxn){
+    y[i,1:3,k] ~ dmnorm(mu[k,],prec[,,k])
+    }#i
+    }
+    }
+    
+    
+    ",fill = TRUE)
+sink()
+
+#generate list names of each group
+groupnames <- levels(as.factor(thedata[,1]))
+
+#generate list of isotope names and number of isotopes
+isotope_names <- colnames(thedata)[2:4]
+isotopes<-3
+
+#convert group names to numeric factors
+thedata[,1] <- as.numeric(as.factor(thedata[,1]))
+ngroups <- max(thedata[,1])
+
+#find the groups with the largest n and the n per group
+nstart <- c(NA)
+nend <- c(NA)
+for (i in 1:ngroups){
+nstart[i] <- min(as.numeric(rownames(thedata[thedata[,1]==i,])))
+nend[i] <- max(as.numeric(rownames(thedata[thedata[,1]==i,])))
+}
+maxn <- max(nend+1-nstart)
+npergroup <- nend+1-nstart
+
+# create an array where nrow = the n of the largest group, for groups with smaller n's 
+# some rows will have NA's to account for uneven replication
+
+y <- array(NA,dim = c(maxn,3,ngroups), dimnames = list(NULL,isotope_names,groupnames))
+for (i in 1:ngroups){
+  y[1:nrow(thedata[thedata[,1]==i,2:4]),,i] <- as.matrix(thedata[thedata[,1]==i,2:4])
+}
+#ensure y is a completely numeric array
+y <- array(as.numeric(y),dim = dim(y))
+
+#objects passed to jags
+data = list(y = y,ngroups = ngroups, maxn = maxn, S3 = (diag(3)*3))
+  
+#initial values
+mu0 <- matrix(NA, nrow = ngroups, ncol=3)
+prec0 <- array(0,dim = c(3,3,ngroups))
+for (k in 1:ngroups){
+mu0[k,] <- mvrnorm(1,c(0,0,0),diag(3)*100)
+prec0[,,k] <- getcov(runif(1,5,30))
+}
+inits = function(){list( mu = mu0, prec = prec0)}
+
+# parameters to monitor
+params <- c("mu","cov")
+
+# MCMC settings
+nt <- 50
+nb <- 1000
+nc <- 3
+na<-1000
+ni <- 5000 
+
+
+
+out <- jagsUI::jags(data = data,
+            inits = inits,
+            parameters.to.save = params,
+            model.file = 'ellipsoid_pheno.txt',
+            n.chains = nc,
+            n.iter = ni,
+            n.adapt = 1000,
+            n.burnin = nb,
+            n.thin = nt)
+
+#plot(out)
+summary(out,digits=2)
+
+# a list to index pairwise comparisons
+pl <- cbind(sort(rep(seq(1:ngroups),ngroups)),rep(seq(1:ngroups),ngroups))
+# probabilities to posterior distrobutions
+probs <- c(0.025,0.5,0.975)
+# Calculate an estimate of SEV from each posterior estimate of sigma and summarize
+SEV <- matrix(NA,ncol = ngroups,nrow = nrow(out$sims.list$cov))
+SEV.summary <- matrix(NA,nrow = ngroups,ncol = 3+length(probs))
+
+for (k in 1:ngroups){
+  SEV[,k] <- apply(out$sims.list$cov[,,,k],1,SEV.function)
+  SEV.summary[k,] <- c(nend[k]+1-nstart[k],quantile(SEV[,k],probs=probs),mode(SEV[,k]), mean(SEV[,k]))
+}
+rownames(SEV.summary) <- groupnames
+colnames(SEV.summary) <- c("n",paste(probs,"%",sep=""),"mode","mean")
+
+#Compare each posterior SEV estimate to those of other groups
+SEV.diff <- array(NA,dim = c(ngroups,ngroups,nrow(SEV)))
+for(i in 1:(ngroups*ngroups)){
+  SEV.diff[pl[i,1],pl[i,2],] <- SEV[,pl[i,1]]-SEV[,pl[i,2]]
+}
+p.table <- matrix(NA,nrow = ngroups,ncol = ngroups)
+colnames(p.table) <- paste(">",groupnames, sep="")
+rownames(p.table) <- groupnames
+for (i in 1:(ngroups*ngroups)){
+    p.table[pl[i,1],pl[i,2]] <- sum(SEV.diff[pl[i,1],pl[i,2],]>0)/nrow(SEV)
+}
+
+# define objects for mu and sigma values from the posterior
+mus <- out$sims.list$mu
+sigmas <- out$sims.list$cov
+
+#create a matrix of all pair-wise comparisons
+pairs <- pairwise(ngroups)
+
+overlap <- matrix(NA, nrow = nrow(mus), ncol = nrow(pairs))
+overlap.SEV <- array(1, dim = c(ngroups,ngroups,nrow(mus)))
+for(i in 1:nrow(pairs)){
+  for(j in 1:nrow(mus)){
+    overlap[j,i] <- CubeCount3D(mus[j,pairs[i,1],],
+                                mus[j,pairs[i,2],],
+                                sigmas[j,,,pairs[i,1]],
+                                sigmas[j,,,pairs[i,2]])
+  }
+  overlap.SEV[pairs[i,1],pairs[i,2],] <- overlap[,i]/SEV[,pairs[i,1]]
+  overlap.SEV[pairs[i,2],pairs[i,1],] <- overlap[,i]/SEV[,pairs[i,2]]
+}
+
+#summarize results
+overlap.2.5<-matrix(NA, nrow=ngroups, ncol=ngroups)
+overlap.40<-matrix(NA, nrow=ngroups, ncol=ngroups)
+overlap.975<-matrix(NA, nrow=ngroups, ncol=ngroups)
+
+for (i in 1:nrow(pairs)){
+    overlap.2.5[pairs[i,1],pairs[i,2]]<-quantile(overlap.SEV[pairs[i,1],pairs[i,2],], probs=0.025)
+    overlap.40[pairs[i,1],pairs[i,2]]<-quantile(overlap.SEV[pairs[i,1],pairs[i,2],], probs=0.4)
+    overlap.975[pairs[i,1],pairs[i,2]]<-quantile(overlap.SEV[pairs[i,1],pairs[i,2],], probs=0.75)
+}
+
+groupnames <- c( "Anadromous", "BW-resident", "FW_resident", "Trans-habitat")
+
+rownames(overlap.2.5) <- groupnames
+colnames(overlap.2.5) <- groupnames
+rownames(overlap.40) <- groupnames
+colnames(overlap.40) <- groupnames
+rownames(overlap.975) <- groupnames
+colnames(overlap.975) <- groupnames
+
+overlap.2.5
+overlap.40
+overlap.975
+
+write.table(overlap.2.5, file = "Data/Pike/Niche-overlap2.5-phenotypes_WRBC.txt")
+write.table(overlap.40, file = "Data/Pike/Niche-overlap40-phenotypes_WRBC.txt")
+write.table(overlap.975, file = "Data/Pike/Niche-overlap97.5-phenotypes_WRBC.txt")
+
+overlap.2.5 <- read.table("Data/Pike/Niche-overlap2.5-phenotypes_WRBC.txt")
+overlap.40 <-  read.table("Data/Pike/Niche-overlap40-phenotypes_WRBC.txt")
+overlap.975 <- read.table("Data/Pike/Niche-overlap97.5-phenotypes_WRBC.txt")
 ```
 
 ```{r individual overlap metrics phenotype-level, include=FALSE, eval=FALSE}
