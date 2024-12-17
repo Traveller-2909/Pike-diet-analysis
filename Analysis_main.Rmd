@@ -49,6 +49,7 @@ library(vegan)
 library(mvabund)
 library(RVAideMemoire)
 library(factoextra)
+library(flextable)
 ```
 
 # Stomach contents
@@ -2723,8 +2724,13 @@ plot_data(filename="isospace_plotn",
 rm(list = ls())
 
 # load model outputs
-Species_base <- read_rds("Data/Mixing models/Sensitivity_analysis/Mixing.model_qc_species-normal-run.rds")
-Groups_base <- read_rds("Data/Mixing models/Sensitivity_analysis/Mixing.model_qc_groups-normal-run.rds")
+Species_base <- readRDS("Data/Mixing models/Sensitivity_analysis/Mixing.model_qc_species-normal-run.rds")
+Species_nolip <- readRDS("Data/Mixing models/Sensitivity_analysis/Mixing.model_qc_nolipidcorr-normal-run.rds")
+Species_blcorr <- readRDS("Data/Mixing models/Sensitivity_analysis/Mixing.model_qc_baseline-corrected-normal-run.rds")
+Species_prior <- readRDS("Data/Mixing models/Sensitivity_analysis/Mixing.model_qc_species-priors-normal-run.rds")
+Groups_base <- readRDS("Data/Mixing models/Sensitivity_analysis/Mixing.model_qc_groups-normal-run.rds")
+Groups_TDF <- readRDS("Data/Mixing models/Sensitivity_analysis/Mixing.model_qc_corrected-TDF-normal-run.rds")
+Groups_prior <- readRDS("Data/Mixing models/Sensitivity_analysis/Mixing.model_qc_groups-priors-normal-run.rds")
 
 source_species.filename <- "Data/Mixing models/Sensitivity_analysis/Sources_spec.csv"
 source_groups.filename <- "Data/Mixing models/Sensitivity_analysis/Sources_group.csv"
@@ -2745,31 +2751,37 @@ source_spec_base <- load_source_data(filename = source_species.filename, source_
 source_group_base <- load_source_data(filename = source_groups.filename, source_factors = NULL,
                           conc_dep = FALSE, data_type = "means", mix_base)
 
+# Plot mixing spaces per constellation --> species base case, baseline corrected, TDF corrected vs. group base and TDF - corrected
+
 # Extract posterior samples
-posterior_spec_base <- Species_base$BUGSoutput$sims.list$p.global
-posterior_groups_base <- Groups_base$BUGSoutput$sims.list$p.global
+posterior_specbase <- Species_base$BUGSoutput$sims.list
+posterior_spec_nolip <- Species_nolip$BUGSoutput$sims.list
+posterior_spec_blcorr <- Species_blcorr$BUGSoutput$sims.list
+posterior_spec_prior <- Species_prior$BUGSoutput$sims.list
+posterior_groups_base <- Groups_base$BUGSoutput$sims.list
+posterior_groups_TDF <- Groups_TDF$BUGSoutput$sims.list
+posterior_groups_prior <- Groups_prior$BUGSoutput$sims.list
 
-# Calculate mean and standard deviation for each source
-posterior_summary_spec_base <- apply(posterior_spec_base, 2, function(x) {
-  c(mean = mean(x), sd = sd(x))
-})
+species <- source_spec_base$source_names
+groups <- source_group_base$source_names
 
-posterior_summary_groups_base <- apply(posterior_groups_base, 2, function(x) {
-  c(mean = mean(x), sd = sd(x))
-})
+#get posterior
+contributions1 <- posterior_specbase$p.global
+colnames(contributions1) <- species
+contributions2 <- posterior_spec_nolip$p.global
+colnames(contributions2) <- species
+contributions3 <- posterior_spec_blcorr$p.global
+colnames(contributions3) <- species
+contributions4 <- posterior_spec_prior$p.global
+colnames(contributions4) <- species
+contributions5 <- posterior_groups_base$p.global
+colnames(contributions5) <- groups
+contributions6 <- posterior_groups_TDF$p.global
+colnames(contributions6) <- groups
+contributions7 <- posterior_groups_prior$p.global
+colnames(contributions7) <- groups
 
-# Convert to a data frame for better readability
-posterior_summary_spec_df <- as.data.frame(t(posterior_summary_spec_base))
-colnames(posterior_summary_spec_df) <- c("Mean", "SD")
-rownames(posterior_summary_spec_df) <- c(source_spec_base$source_names)
-
-posterior_summary_groups_df <- as.data.frame(t(posterior_summary_groups_base))
-colnames(posterior_summary_groups_df) <- c("Mean", "SD")
-rownames(posterior_summary_groups_df) <- c(source_group_base$source_names)
-
-groups <- source_spec_base$source_names
-
-#group posterior of species
+# group posterior of base species model and compare with base group model
 source("funcs.R")
 
 combined <- combine_sources2(Species_base, mix_base, source_spec_base, alpha.prior = 1, 
@@ -2778,12 +2790,101 @@ combined <- combine_sources2(Species_base, mix_base, source_spec_base, alpha.pri
                                            freshwater = c("P.fluviatilis.FW", "R.rutilus.FW")))
 
 posterior <- combined$post
+posterior
 
-#create model list
-mcomp<-list(Groups_base, Species_base)
-names(mcomp) <- c("NULL", "ecotype|body length", "body length", "ecotype", "capture location|body length", "capt")
-# Model comparison
-compare_models(mcomp, loo = TRUE)
+# Overview of mean, median constribuutions with cred intervals
+IDmodels <- list(contributions1, contributions2, contributions3, contributions4, contributions5, contributions6, contributions7)
+Sumtables <- list()
+
+for (i in 1:length(IDmodels)) {
+summary_table <- data.frame(
+   Source = colnames(IDmodels[[i]]),
+   Mean = apply(IDmodels[[i]], 2, mean),
+   Median = apply(IDmodels[[i]], 2, median),
+   SD = apply(IDmodels[[i]], 2, sd),
+   CI_2.5 = apply(IDmodels[[i]], 2, quantile, probs = 0.025),
+   CI_97.5 = apply(IDmodels[[i]], 2, quantile, probs = 0.975),
+   Model = paste("Model", i)
+)
+
+Sumtables[[i]] <- summary_table
+}
+
+IDmodels <- list(Species_base, Species_nolip, Species_blcorr, Species_prior, Groups_base, Groups_TDF, Groups_prior)
+Diaglist <- list()
+
+for (i in 1:length(IDmodels)) {
+# Extract only the rows corresponding to source contributions (p[1] to p[7])
+source_indices <- grep("p.global\\[", rownames(IDmodels[[i]]$BUGSoutput$summary))
+source_summary <- IDmodels[[i]]$BUGSoutput$summary[source_indices,]
+
+if(nrow(source_summary) == 3){
+  source_names <- groups
+} else {
+    source_names <- species
+  }
+
+# Now, you can create the diagnostics table
+diagnostics <- data.frame(
+  Source = source_names,
+  Rhat = source_summary[,"Rhat"],
+  ESS = source_summary[,"n.eff"],
+  Model = paste("Model", i)
+)
+
+Diaglist[[i]] <- diagnostics
+}
+
+Diagtables <- do.call(rbind, Diaglist)
+
+
+Diagtable_flex <- flextable(Diagtables) %>% colformat_double(j = 2:3, digits = 2)
+save_as_docx(Diagtable_flex, path = "Data/Mixing models/Sensitivity_analysis/Figures/Diagnosistable.docx")
+  
+
+# plot single models
+IDmodels <- list(contributions1, contributions2, contributions3, contributions4, contributions5, contributions6, contributions7)
+
+for (i in 1:length(IDmodels)) {
+  png(paste0("Data/Mixing models/Sensitivity_analysis/Figures/Model_", i, ".png"), width = 15, height = 10, units = "cm", res = 300)
+  posterior_long <- reshape2::melt(IDmodels[[i]])  # Reshape for ggplot
+  colnames(posterior_long) <- c("Sample", "Source", "Value")
+  p <- ggplot(posterior_long, aes(x = Value, fill = Source)) +
+    geom_density(alpha = 0.6) +
+    xlim(0,1) +
+    facet_wrap(~Source, scales = "free") +
+    theme_minimal() +
+    labs(title = "Posterior Distributions of Source Contributions",
+         x = "Proportion",
+         y = "Density")
+  print(p)
+  dev.off()
+}
+
+# compare multiple models
+comparison_table <- do.call(rbind, Sumtables)
+
+comptable_flex <- flextable(comparison_table) %>% colformat_double(j = 2:6, digits = 2)
+save_as_docx(comptable_flex, path = "Data/Mixing models/Sensitivity_analysis/Figures/Summarytable.docx")
+  
+# Define the desired order of sources
+desired_order <- c("C.harengus", "N.melanostomus", "P.flesus", "P.fluviatilis", "R.rutilus", "P.fluviatilis.FW", "R.rutilus.FW", "freshwater",
+                   "lagoon", "marine")
+
+# Reshuffle the 'Source' variable based on the desired order
+comparison_table$Source <- factor(comparison_table$Source, levels = desired_order)
+
+# visualize differences
+Diffplot <- ggplot(comparison_table, aes(x = Source, y = Mean, color = Model)) +
+  geom_point(position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(ymin = CI_2.5, ymax = CI_97.5), 
+                 position = position_dodge(width = 0.5)) +
+  theme_minimal() +
+  labs(y = "Source contribution") +
+  labs(title = "Comparison of Source Contributions Across Models")+
+  theme(axis.text.x = element_text(angle = 90))
+
+ggsave("Data/Mixing models/Sensitivity_analysis/Figures/Model_differences.png", Diffplot, width = 15, height = 10, units = "cm", dpi = 600, bg = "white")
 ```
 
 
@@ -2932,8 +3033,11 @@ output_options <- list(summary_save = TRUE,
                        diag_save_ggmcmc = FALSE,
                        return_obj = TRUE)
 
-diag <- output_diagnostics(jags.pike, mix, source, output_options)
-df.stats <- output_stats(jags.pike, mix, source, output_options)
+g.post2 <- output_JAGS(jags.pike, mix, source, output_options)
+
+jags.pike$BUGSoutput$sims.list$ilr.cont1
+
+g.post2 <- output_stats(jags.pike, mix, source, output_options)
 rownames(df.stats)
 g.post2 <- output_posteriors(jags.pike, mix, source, output_options)
 
