@@ -2732,26 +2732,102 @@ Groups_base <- readRDS("Data/Mixing models/Sensitivity_analysis/Mixing.model_qc_
 Groups_TDF <- readRDS("Data/Mixing models/Sensitivity_analysis/Mixing.model_qc_corrected-TDF-normal-run.rds")
 Groups_prior <- readRDS("Data/Mixing models/Sensitivity_analysis/Mixing.model_qc_groups-priors-normal-run.rds")
 
+mix.filename_base <- "Data/Mixing models/Sensitivity_analysis/Pikemix-ecotypes_all.csv"
+mix.filename_nolip <- "Data/Mixing models/Sensitivity_analysis/Pikemix-ecotypes_all_no-lipidcorr.csv"
+mix.filename_blcorr <- "Data/Mixing models/Sensitivity_analysis/Pikemix-baseline-corrected.csv"
+
 source_species.filename <- "Data/Mixing models/Sensitivity_analysis/Sources_spec.csv"
 source_groups.filename <- "Data/Mixing models/Sensitivity_analysis/Sources_group.csv"
+source_nolip.filename <- "Data/Mixing models/Sensitivity_analysis/Sources_nolip.csv"
+source_blcor.filename <- "Data/Mixing models/Sensitivity_analysis/Sources_baseline-corrected.csv"
 
-mix.filename <- "Data/Mixing models/Sensitivity_analysis/Pikemix-ecotypes_all.csv"
+discr.filename.spec <- "Data/Mixing models/Sensitivity_analysis/Discrimination_base-spec.csv"
+discr.filename.group <- "Data/Mixing models/Sensitivity_analysis/Discrimination_base-group.csv"
+discr.filename.spcorr <- "Data/Mixing models/Sensitivity_analysis/Discrimination_TDF-corrected-species.csv"
+discr.filename.grcorr <- "Data/Mixing models/Sensitivity_analysis/Discrimination_TDF-corrected-groups.csv"
 
 # Load mixture data
-mix_base <- load_mix_data(filename=mix.filename, 
+mix_base <- load_mix_data(filename=mix.filename_base, 
                      iso_names=c("d15N", "d13C", "d34S"),
                      factors=NULL,
                      fac_random=NULL,
                      fac_nested=NULL,
                      cont_effects=NULL)
+# Pikemix without lipid correction
+mix_nolip <- load_mix_data(filename=mix.filename_nolip,
+                          iso_names=c("d15N", "d13C", "d34S"),
+                          factors=NULL,
+                          fac_random=NULL,
+                          fac_nested=NULL,
+                          cont_effects=NULL)
+# Pikemix baseline corrected
+mix_blcorr<- load_mix_data(filename=mix.filename_blcorr,
+                          iso_names=c("d15N", "d13C", "d34S"),
+                          factors=NULL,
+                          fac_random=NULL,
+                          fac_nested=NULL,
+                          cont_effects=NULL)
 
 # Load source data
 source_spec_base <- load_source_data(filename = source_species.filename, source_factors = NULL,
                           conc_dep = FALSE, data_type = "means", mix_base)
 source_group_base <- load_source_data(filename = source_groups.filename, source_factors = NULL,
                           conc_dep = FALSE, data_type = "means", mix_base)
+source_spec_nolip <- load_source_data(filename = source_nolip.filename, source_factors = NULL,
+                          conc_dep = FALSE, data_type = "means", mix_base)
+source_spec_blcor <- load_source_data(filename = source_blcor.filename, source_factors = NULL,
+                          conc_dep = FALSE, data_type = "means", mix_base)
 
-# Plot mixing spaces per constellation --> species base case, baseline corrected, TDF corrected vs. group base and TDF - corrected
+# Load TEf data
+discr.df_spec <- load_discr_data(filename=discr.filename.spec, mix_base)
+discr.df_group <- load_discr_data(filename=discr.filename.group, mix_base)
+discr.df_nolip <- load_discr_data(filename=discr.filename.spec, mix_nolip)
+discr.df_blcorr <- load_discr_data(filename=discr.filename.spec, mix_blcorr)
+discr.df_spcorrected <- load_discr_data(filename=discr.filename.spcorr, mix_base)
+discr.df_grcorrected <- load_discr_data(filename=discr.filename.grcorr, mix_base)
+
+# Plot mixing spaces per constellation --> species base case, TDF corrected, baseline corrected vs. group base and TDF - corrected
+# species base case
+plot_data(filename="Data/Mixing models/Sensitivity_analysis/Figures/isospace_plotn_species-base",
+          plot_save_pdf=FALSE,
+          plot_save_png=TRUE,
+          return_obj = TRUE,
+          mix_base, source_spec_base, discr.df_spec)
+
+# species no lipid-correction
+plot_data(filename="Data/Mixing models/Sensitivity_analysis/Figures/isospace_plotn_species-nolipidcorrection",
+          plot_save_pdf=FALSE,
+          plot_save_png=TRUE,
+          return_obj = T,
+          mix_nolip, source_spec_nolip, discr.df_nolip)
+
+# Species TDF corrected
+plot_data(filename="Data/Mixing models/Sensitivity_analysis/Figures/isospace_plotn_species-TDFcorrection",
+          plot_save_pdf=FALSE,
+          plot_save_png=TRUE,
+          return_obj = T,
+          mix_base, source_spec_base, discr.df_spcorrected)
+
+#Species baseline corrected
+plot_data(filename="Data/Mixing models/Sensitivity_analysis/Figures/isospace_plotn_species-BLcorrection",
+          plot_save_pdf=FALSE,
+          plot_save_png=TRUE,
+          return_obj = T,
+          mix_blcorr, source_spec_blcor, discr.df_blcorr)
+
+#Groups base case
+plot_data(filename="Data/Mixing models/Sensitivity_analysis/Figures/isospace_plotn_species-group-base",
+          plot_save_pdf=FALSE,
+          plot_save_png=TRUE,
+          return_obj = T,
+          mix_base, source_group_base, discr.df_group)
+
+#Groups TDF-corrected
+plot_data(filename="Data/Mixing models/Sensitivity_analysis/Figures/isospace_plotn_species-group-TDFcorrection",
+          plot_save_pdf=FALSE,
+          plot_save_png=TRUE,
+          return_obj = T,
+          mix_base, source_group_base, discr.df_grcorrected)
 
 # Extract posterior samples
 posterior_specbase <- Species_base$BUGSoutput$sims.list
@@ -2781,16 +2857,37 @@ colnames(contributions6) <- groups
 contributions7 <- posterior_groups_prior$p.global
 colnames(contributions7) <- groups
 
-# group posterior of base species model and compare with base group model
-source("funcs.R")
-
-combined <- combine_sources2(Species_base, mix_base, source_spec_base, alpha.prior = 1, 
-                             groups = list(marine = c("C.harengus"), 
-                                           lagoon = c("N.melanostomus", "P.flesus", "P.fluviatilis", "R.rutilus"),
-                                           freshwater = c("P.fluviatilis.FW", "R.rutilus.FW")))
-
-posterior <- combined$post
-posterior
+# # group posterior of base species model and compare with base group model
+# source("funcs.R")
+# 
+# combined <- combine_sources2(Species_base, mix_base, source_spec_base, alpha.prior = 1, 
+#                              groups = list(marine = c("C.harengus"), 
+#                                            lagoon = c("N.melanostomus", "P.flesus", "P.fluviatilis", "R.rutilus"),
+#                                            freshwater = c("P.fluviatilis.FW", "R.rutilus.FW")))
+# 
+# posterior <- combined$post
+# posterior <- posterior[,(ncol(posterior)-2):(ncol(posterior))]
+# 
+# summary_table <- data.frame(
+#    Source = c("freshwater", "lagoon", "marine"),
+#    Mean = apply(posterior, 2, mean),
+#    Median = apply(posterior, 2, median),
+#    SD = apply(posterior, 2, sd),
+#    CI_2.5 = apply(posterior, 2, quantile, probs = 0.025),
+#    CI_97.5 = apply(posterior, 2, quantile, probs = 0.975),
+#    Model = "Model posterior groups"
+# )
+# 
+# posterior_long <- reshape2::melt(posterior)  # Reshape for ggplot
+# colnames(posterior_long) <- c("Sample", "Source", "Value")
+# 
+# ggplot(posterior_long, aes(x = Value, fill = Source)) +
+#    geom_density(alpha = 0.6) +
+#    facet_wrap(~Source, scales = "free") +
+#    theme_minimal() +
+#    labs(title = "Posterior Distributions of Source Contributions",
+#         x = "Proportion",
+#         y = "Density")
 
 # Overview of mean, median constribuutions with cred intervals
 IDmodels <- list(contributions1, contributions2, contributions3, contributions4, contributions5, contributions6, contributions7)
