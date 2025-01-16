@@ -448,7 +448,7 @@ Props_recent <- ggplot(SC_summary2, aes(x = "", y = proportion, fill = as.factor
   theme(plot.title = element_text(size = 10, color = "black"),
         legend.position = "none")+
   scale_fill_manual(breaks = c(1, 2, 3, 4, 5, 6), 
-                    values = c("#1B9E77", "#66A61E", "#D95F02", "cyan", "darkred", "blue"))
+                    values = c("#1B9E77", "#66A61E", "#D95F02", "cyan", "#E7298A", "blue"))
 
 #Dummy data for plotting
 species_colors <- c("C. harengus" = "#1B9E77", "R. rutilus" = "#66A61E", "P. fluviatilis" = "#D95F02", "Z. viviparus" = "#7570B3", "P. flesus" = "#E7298A", 
@@ -2458,7 +2458,7 @@ compare_models(mcomp, loo = TRUE)
 
 ```{r baseline-correction, include=FALSE, eval=FALSE}
 rm(list = ls())
-Prey <- fread("Data/Prey/Preyfish_SI_clean_average_lipid-corrected.csv")
+Prey <- fread("Data/Prey/Preyfish_SI_clean_average_lipid-corrected2.csv")
 Pike <- fread("Data/Mixing models/Pikemix-ecotypes_all.csv")
 baseline2 <- fread("Data/Baseline/Baseline_bodden.csv")
 
@@ -2516,7 +2516,7 @@ Prey1 <- Prey%>%
             Species=case_when(area %in% c("Barthe", "Peene", "Ziese", "Duwenbeek", "Beck", "KBW") & Species == "P.fluviatilis" ~ "P.fluviatilis.FW",
                               area %in% c("Barthe", "Peene", "Ziese", "Duwenbeek", "Beck", "KBW") & Species == "R.rutilus" ~ "R.rutilus.FW",
                               TRUE ~ Species),
-            SL_mm=SL_mm,
+            SL_mm=as.numeric(SL_mm),
             SL_size_class=SL_size_class,
             weight_g=weight_g,
             height_mm=height_mm,
@@ -2525,10 +2525,10 @@ Prey1 <- Prey%>%
                            TRUE ~ area),
             Long=Long,
             Lat=Lat,
-            d15N=d15N,
-            d13C=d13C,
-            d34S=d34S,
-            CN_ratio=CN_ratio,
+            d15N=as.numeric(d15N),
+            d13C=as.numeric(d13C),
+            d34S=as.numeric(d34S),
+            CN_ratio=as.numeric(CN_ratio),
             comment1=comment1,
             comment2=comment2)
 
@@ -2564,6 +2564,9 @@ descriptive<-descriptive[c(-5,-9)]
 colnames(descriptive)<-c("prey", "Meand15N", "Meand13C", "Meand34S", "SDd15N", "SDd13C", "SDd34S","n")
 fwrite(descriptive, "Data/Mixing models/Sensitivity_analysis/Sources_baseline-corrected.csv")
 
+mean(as.numeric(Prey1[Prey1$Species == "P.fluviatilis",]$SL_mm), na.rm = TRUE)
+sd(as.numeric(Prey1[Prey1$Species == "P.fluviatilis",]$SL_mm), na.rm = TRUE)
+  
 #baseline correction pike  
 Pike1 <- Pike %>%
   mutate(area = case_when(area %in% c("BEG", "KJB", "GJB", "WB") ~ "NRB",
@@ -2979,7 +2982,18 @@ Diffplot <- ggplot(comparison_table, aes(x = Source, y = Mean, color = Model)) +
   theme_minimal() +
   labs(y = "Source contribution") +
   labs(title = "Comparison of Source Contributions Across Models")+
+  scale_color_manual(breaks = c("Model 1", "Model 2", "Model 3", "Model 4", "Model 5", "Model 6", "Model 7"),
+                     values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643", "darkgreen", "brown4", "#004690"),
+                     labels = c("Species-based, base model", "Species-based, no lipid correction", "Species-based, baseline corrected", "Species-based, informative priors", "Group-based, base model", "Group-based, TDF corrected", "Group-based, informative priors"))+
   theme(axis.text.x = element_text(angle = 90))
+
+Species_base <- readRDS("Data/Mixing models/Sensitivity_analysis/Mixing.model_qc_species-normal-run.rds")
+Species_nolip <- readRDS("Data/Mixing models/Sensitivity_analysis/Mixing.model_qc_nolipidcorr-normal-run.rds")
+Species_blcorr <- readRDS("Data/Mixing models/Sensitivity_analysis/Mixing.model_qc_baseline-corrected-normal-run.rds")
+Species_prior <- readRDS("Data/Mixing models/Sensitivity_analysis/Mixing.model_qc_species-priors-normal-run.rds")
+Groups_base <- readRDS("Data/Mixing models/Sensitivity_analysis/Mixing.model_qc_groups-normal-run.rds")
+Groups_TDF <- readRDS("Data/Mixing models/Sensitivity_analysis/Mixing.model_qc_corrected-TDF-normal-run.rds")
+Groups_prior <- readRDS("Data/Mixing models/Sensitivity_analysis/Mixing.model_qc_groups-priors-normal-run.rds")
 
 ggsave("Data/Mixing models/Sensitivity_analysis/Figures/Model_differences.png", Diffplot, width = 15, height = 10, units = "cm", dpi = 600, bg = "white")
 ```
@@ -4428,7 +4442,8 @@ Specplot <- ggarrange(Specplot_pop, Specplot_pheno, labels = c("A", "B"))
 Specplot2 <- annotate_figure(Specplot, left = text_grob("specialization index", size = 12, color = "black", rot = 90, hjust = 0),
                              bottom = text_grob("behavioral phenotype", size = 12, color = "black"))
 
-ggsave("Figures/S-index-individual-pop-pheno.png", Specplot2, height = 10, width = 15, units = "cm", dpi = 600, bg = "white")
+ggsave("Figures/S-index-individual-pop.png", Specplot_pop, height = 15, width = 15, units = "cm", dpi = 600, bg = "white")
+ggsave("Figures/S-index-individual-pheno.png", Specplot_pheno, height = 15, width = 15, units = "cm", dpi = 600, bg = "white")
 ```
 
 ```{r plot s- metrics for WRBC, include=FALSE, eval=FALSE}
@@ -4451,7 +4466,7 @@ Specplot_pop <- ggplot(Ecopike_spec_pop)+
                    labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
   scale_y_continuous(limits = c(-0.1, 1),
                      breaks = seq(0,1, 0.25))+
-  labs(title = "s-index population level",
+  labs(title = "s-index population level WRBC-Sehrowbach-Barthe",
        x = "behavioral phenotype",
        y = "specialization index")+
   theme_bw()+
@@ -4460,7 +4475,7 @@ Specplot_pop <- ggplot(Ecopike_spec_pop)+
         axis.text.y = element_text(size = 10, color = "black"),
         axis.title = element_text(size = 10, color = "black"))
 
-ggsave("Figures/S-index-individual-pop-pheno_WRBC.png", Specplot_pop, height = 10, width = 15, units = "cm", dpi = 600, bg = "white")
+ggsave("Figures/S-index-individual-pop-pheno_WRBC.png", Specplot_pop, height = 15, width = 15, units = "cm", dpi = 600, bg = "white")
 ```
 
 ```{r individual overlap metrics population-level, include=FALSE, eval=FALSE}
