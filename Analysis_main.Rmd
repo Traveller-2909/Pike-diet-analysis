@@ -525,6 +525,9 @@ species_colors <- c("C. harengus" = "#1B9E77", "R. rutilus" = "#66A61E", "P. flu
                     "G. cernua" = "#E6AB02",  "E. lucius" = "#A6761D", "B. bjoerkna" = "#666666", "O. eperlanus" = "darkred", "N. melanostomus" = "cyan", 
                     "S. lucioperca" = "red",  "A. brama" = "darkgreen",  "Other" = "blue")
 
+Prey_energy <- Prey_energy %>%
+  filter(Species %in% c("C. harengus", "R. rutilus", "P. fluviatilis", "P. flesus", "N. melanostomus"))
+
 Energ <- ggplot(Prey_energy, aes(x = Species, y = Caloric_value_mJ_per_kg, fill = Species))+
   geom_boxplot(alpha = 0.8, width = 0.5, lwd = 0.3)+
   labs(title = "Species-specific energy content",
@@ -3710,55 +3713,58 @@ rm(list = ls())
 
 pikes <- fread("Data/Pike/Pikedata-model.csv")
 
-pikes <- pikes%>%
-  reframe(ID = ID,
-          lifeyear = lifeyear,
-          waterbody = as.factor(waterbody),
-          phenotype = phenotype,
-          genotype = genotype,
-          sex = sex,
-          length_back = length_back,
-          d13C = d13C,
-          d15N = d15N,
-          d34S = d34S,
-          CN = CN)%>%
-  filter(length_back < 700)
+pikes2 <- pikes%>%
+  transmute(ID, lifeyear, sex, phenotype, length_back, d13C, d15N, d34S, res_mean = -res_mean, Sr_mean)%>%
+  filter(d34S > -1.8)
 
-#factorize age
-pikes$agefact <- ifelse(pikes$lifeyear==1, 2, 
-                         ifelse(pikes$lifeyear==2, 1,
-                                ifelse(pikes$lifeyear>2, 3, NA)))
+pikemodel <- lmer(length_back~I(lifeyear^2)+sex+phenotype+d13C+d15N+d34S+res_mean+Sr_mean+(1|ID), data = pikes, REML = T)
 
-pikes$agefact2 <- factor(pikes$agefact,levels = c(2,1,3),
-                                            labels = c("0-1 years", "1-2 years", 
-                                                       "> 2 years"))
+lifeyear <- unique(pikes2$lifeyear)
+phenotype <- unique(pikes2$phenotype)
+d34S <- seq(min(pikes2$d34S), max(pikes2$d34S), 0.5)
+d13C <- mean(pikes2$d13C)
+d15N <- mean(pikes2$d15N)
+res_mean <- mean(pikes2$res_mean)
+Sr_mean <- seq(min(pikes2$Sr_mean), max(pikes2$Sr_mean), 0.5)
+sex <- unique(pikes2$sex)
+ID <- "NA"
 
-mypallette <- viridis::viridis(4, direction = -1)
+Newdata <- expand.grid(lifeyear=lifeyear, phenotype=phenotype, d34S=d34S, d15N=d15N, d13C=d13C, res_mean=res_mean, Sr_mean=Sr_mean,
+                       sex=sex, ID=ID)
+head(Newdata)
+
+Newdata$prediction <- predict(pikemodel, newdata = Newdata, allow.new.levels=TRUE, type="response")
 
 #Isotope effects growth
-d34S <- ggplot(pikes, aes(d34S,log(length_back)))+
-  geom_point(size=.5)+
-  scale_x_continuous(limits = c(-2,2))+
-  #scale_y_continuous(limits = c(0,500),
-                     #breaks = c(0, 50, 100, 150, 200, 250))+
-  stat_smooth(method = "lm", fill="#440154FF", color = "#FDE725FF", fullrange = T, lwd=.8)+
-  labs(x=expression("scaled"~delta^34*"S"~("z-score")), 
-       y="yearly growth increment (mm)")+
-  scale_color_viridis_d()+
+Effect <- ggplot()+
+  geom_point(data = pikes2, aes(-res_mean, log(length_back), color = "Temperature"), size=1)+
+  geom_point(data = pikes2, aes(d34S, log(length_back), color = "Marine resources"), size=1)+
+  geom_point(data = pikes2, aes(Sr_mean, log(length_back), color = "Salinity"), size=1)+
+  stat_smooth(data = pikes2, aes(res_mean, log(length_back), fill = "Temperature", colour = "Temperature"), method = "lm", fullrange = T, lwd=1)+
+  stat_smooth(data = pikes2, aes(d34S, log(length_back), fill = "Marine resources", colour = "Marine resources"), method = "lm", fullrange = T, lwd=1)+
+  stat_smooth(data = pikes2, aes(Sr_mean, log(length_back), fill = "Salinity", colour = "Salinity"), method = "lm", fullrange = T, lwd=1)+
+  labs(x="Predictor (z-score)", y="Log growth increment", color = "", fill = "")+
+  scale_color_manual(breaks = c("Marine resources", "Salinity", "Temperature"),
+                     values = c("#00BFB2", "#F1C40F", "darkred"),
+                     labels = c("Marine resources", "Salinity", "Temperature"))+
+  scale_fill_manual(breaks = c("Marine resources", "Salinity", "Temperature"),
+                     values = c("#00BFB2", "#F1C40F", "darkred"),
+                     labels = c("Marine resources", "Salinity", "Temperature"))+
   theme_classic()+
   theme(panel.grid.major = element_line(),
-        legend.position = c(.9,.82),
+        legend.position = "top",
         legend.background = element_blank(),
         legend.box.background = element_rect(),
         axis.line = element_line(linewidth = .5, colour = "black", linetype = 1),
         axis.ticks = element_line(linewidth = .5, colour = "black"),
-        axis.title.x = element_text(size = 10, margin = margin(t=15), colour = "black"),
-        axis.title.y = element_text(size = 10, margin = margin(t=30), colour = "black"),
-        legend.text = element_text(size = 10),
-        legend.title = element_text(size = 10, colour = "black"),
+        axis.text = element_text(size = 15, colour = "black"),
+        axis.title.x = element_text(size = 15, colour = "black", margin = margin(t = 15)),
+        axis.title.y = element_text(size = 15, colour = "black", margin = margin(r = 15)),
+        legend.text = element_text(size = 15, hjust = 0),
+        legend.title = element_text(size = 15, colour = "black"),
         legend.key.size = unit(.8,"line"))
 
-ggsave("Figures/Iso-effect-growth.png", d34S, width = 15, height = 9, units = "cm", dpi = 600, bg = "white")
+ggsave("Figures/Iso-effect-growth-temp-sal-d34S.png", Effect, width = 15, height = 10, units = "cm", dpi = 600, bg = "white")
 ```
 
 ```{r plot eye lens isotopes, include=FALSE, eval=FALSE}
@@ -4456,6 +4462,10 @@ Ecopike_spec_pop <- Ecopike_spec_pop%>%
                                  "Trans-habitat",
                                  "BW-resident"))
 
+Econum <- Ecopike_spec_pop %>%
+  transmute(fish_ID, phenotype)%>%
+  distinct()
+
 Specplot_pop <- ggplot(Ecopike_spec_pop)+
   geom_violin(aes(x = phenotype, y = 1-s_index, fill = phenotype), width = 1)+
   geom_boxplot(aes(x = phenotype, y = 1-s_index), width = 0.07, size = .5, color = "black", fill = "transparent")+
@@ -4463,7 +4473,7 @@ Specplot_pop <- ggplot(Ecopike_spec_pop)+
                     values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
                     labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
   scale_x_discrete(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
-                   labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
+                   labels = c("freshwater (N = 14)", "anadromous (N = 8)", "cross-habitat (N = 6)", "brackish (N = 17)"))+
   scale_y_continuous(limits = c(-0.1, 1),
                      breaks = seq(0,1, 0.25))+
   labs(title = "s-index population level WRBC-Sehrowbach-Barthe",
@@ -4845,7 +4855,7 @@ rm(list = ls())
 Ecopike2 <- fread("Data/Pike/Pike_eco-clean-cbackcalculated_s-metric_WRBC.csv")
 TNWmat <- as.matrix(read.table("Data/Pike/Total-niche-width_matrix-WRBC.txt"))
 WICmat <- as.matrix(read.table("Data/Pike/Within-individual-variance_matrix-WRBC.txt"))
-Individuals <- readRDS("Data/Pike/individual-varcov-CNS-WRBC.RData")
+Individuals <- readRDS("Data/Pike/individual-varcov-CNS.RData")
 
 means <- Ecopike2%>%reframe(d13C = mean(d13C, na.rm = T), d15N = mean(d15N, na.rm = T), d34S = mean(d34S, na.rm = T))
 means <- as.matrix(means)
@@ -4957,7 +4967,7 @@ empty <- ggplot()+
                      drop = FALSE)+
   scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
                     values = c("#C5D86D", "#00BFB2", "#F1C40F", "#004643"),
-                    labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"),
+                    labels = c("freshwater (N = 14)", "anadromous (N = 8)", "cross-habitat (N = 6)", "brackish (N = 17)"),
                     drop = FALSE)+
   guides(color = guide_legend(override.aes = list(shape = 21, size = 8, stroke = 2, linetype = c(0,0,0), alpha = 1)),
          fill = guide_legend(override.aes = list(alpha = 0.3)))+
