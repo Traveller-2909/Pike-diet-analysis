@@ -36,6 +36,7 @@ library(lme4)
 library(nlme)
 library(lmerTest)
 library(MCMCglmm)
+library(brms)
 library(sjPlot)
 library(emmeans)
 library(MuMIn)
@@ -50,6 +51,9 @@ library(mvabund)
 library(RVAideMemoire)
 library(factoextra)
 library(flextable)
+library(rstan)
+options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)
 ```
 
 # Stomach contents
@@ -96,8 +100,8 @@ stomach2 <- stomach%>%
             area = Area,
             gear = Gear)
 
-Pike <- fread("C:/Users/timor/Nextcloud2/Boddenhecht/Data/Pike Data/1.pike_data_base_FOR_USERS/1Pike_Latest_Version.txt")
-SI <- fread("C:/Users/timor/Nextcloud2/Boddenhecht/Data/Pike Data/1.pike_data_base_FOR_USERS/1Sampling_Instance_Latest_Version.txt")
+Pike <- fread("D:/Nextcloud IGB/Boddenhecht/Data/Pike Data/1.pike_data_base_FOR_USERS/1Pike_Latest_Version.txt")
+SI <- fread("D:/Nextcloud IGB/Boddenhecht/Data/Pike Data/1.pike_data_base_FOR_USERS/1Sampling_Instance_Latest_Version.txt")
 
 nordic <- fread("Data/Prey/Nordic multimesh gillnets.csv")
 names(nordic)[7] <- c("length")
@@ -182,11 +186,11 @@ rm(list = ls())
 # Recent data
 SC_data <- fread("Data/Pike/Stomach-contents-all-clean.csv")
 
-SC_data_area <- SC_data%>%
-  transmute(fish_ID, area)%>%
+SC_data_sex <- SC_data%>%
+  transmute(fish_ID, sex)%>%
   distinct()
 
-table(SC_data_area$area)
+table(SC_data_sex$sex)
 
 SC_data2 <- SC_data%>%
   mutate(date = as.Date(lubridate::parse_date_time(Date, "ymd")),
@@ -397,7 +401,7 @@ SC_Winkler_ohist.2 <- SC_Winkler_ohist %>%
 Props_past_meso <- ggplot(SC_Winkler_mhist.2, aes(x = "", y = proportion, fill = as.factor(order))) +
   geom_bar(stat = "identity") +
   coord_polar(theta = "y") +  # Convert to a polar coordinate for pie chart
-  labs(title = "1987 - 1990 mesohaline (N = 53)",
+  labs(title = "1981 - 1984 mesohaline (N = 53)",
        fill = "Species") +
   geom_label_repel(aes(y = pos, label = scales::percent(proportion)), nudge_x = .75, 
                    size = 3, show.legend = FALSE, fill = "white")+
@@ -411,7 +415,7 @@ Props_past_meso <- ggplot(SC_Winkler_mhist.2, aes(x = "", y = proportion, fill =
 Props_past_oligo <- ggplot(SC_Winkler_ohist.2, aes(x = "", y = proportion, fill = as.factor(order))) +
   geom_bar(stat = "identity") +
   coord_polar(theta = "y") +  # Convert to a polar coordinate for pie chart
-  labs(title = "1987 - 1990 oligohaline (N = 44)",
+  labs(title = "1981 - 1984 oligohaline (N = 44)",
        fill = "Species") +
   geom_label_repel(aes(y = pos, label = scales::percent(proportion)), nudge_x = .75, 
                    size = 3, show.legend = FALSE, fill = "white")+
@@ -425,7 +429,7 @@ Props_past_oligo <- ggplot(SC_Winkler_ohist.2, aes(x = "", y = proportion, fill 
 Props_2015 <- ggplot(SC_Winkler_15.2, aes(x = "", y = proportion, fill = as.factor(order))) +
   geom_bar(stat = "identity") +
   coord_polar(theta = "y") +  # Convert to a polar coordinate for pie chart
-  labs(title = "Spring 2015 (N = 83)",
+  labs(title = "Spring 2015 mesohaline (N = 83)",
        fill = "Species") +
   geom_label_repel(aes(y = pos, label = scales::percent(proportion/100)), nudge_x = .75, 
                    size = 3, show.legend = FALSE, fill = "white")+
@@ -439,7 +443,7 @@ Props_2015 <- ggplot(SC_Winkler_15.2, aes(x = "", y = proportion, fill = as.fact
 Props_recent <- ggplot(SC_summary2, aes(x = "", y = proportion, fill = as.factor(order))) +
   geom_bar(stat = "identity") +
   coord_polar(theta = "y") +  # Convert to a polar coordinate for pie chart
-  labs(title = "2019 - 2022 (N = 171)",
+  labs(title = "2019 - 2022 mesohaline (N = 171)",
        fill = "Species") +
   geom_label_repel(aes(y = pos, label = scales::percent(proportion)), nudge_x = .75, 
                    size = 3, show.legend = FALSE, fill = "white")+
@@ -1778,7 +1782,7 @@ contours <- c("dashed", "dashed", "dashed", "dashed", "solid", "solid", "solid")
 
 Binorm <- ggplot()+ 
   stat_density_2d(data = Pikeprey, aes(x = d13C, y = d15N, fill = Species, color = Species, linetype = Species), 
-                  alpha = 0.3, geom = "polygon", linewidth = .1)+
+                  alpha = 0.5, geom = "polygon", linewidth = .1)+
   # geom_errorbar(data=descriptive2, aes(x=d13C, y=d15N, ymin = d15N-sdd15N,ymax = d15N+sdd15N, col=Sp),
   #                       width=.5, size=.5) + 
   # geom_errorbarh(data=descriptive2, aes(x=d13C, y=d15N, xmin = d13C+sdd13C,xmax = d13C-sdd13C, col=Sp),
@@ -1804,7 +1808,7 @@ Binorm <- ggplot()+
 
 BiNS <- ggplot()+
   stat_density_2d(data = Pikeprey, aes(x = d34S, y = d15N, fill = Species, color = Species, linetype = Species), 
-                  alpha = 0.3, geom = "polygon", linewidth = 0.1)+
+                  alpha = 0.5, geom = "polygon", linewidth = 0.1)+
   # geom_errorbar(data=descriptive2, aes(x=d34S, y=d15N, ymin = d15N-sdd15N,ymax = d15N+sdd15N, color=Sp),
   #                       width=.5, size=.5) +
   # geom_errorbarh(data=descriptive2, aes(x=d34S, y=d15N, xmin = d34S+sdd34S,xmax = d34S-sdd34S, color=Sp),
@@ -1830,7 +1834,7 @@ BiNS <- ggplot()+
 
 BiCS <- ggplot()+ 
   stat_density_2d(data = Pikeprey, aes(x = d13C, y = d34S, fill = Species, color = Species, linetype = Species), 
-                  alpha = 0.3, geom = "polygon", linewidth = 0.1)+
+                  alpha = 0.5, geom = "polygon", linewidth = 0.1)+
   # geom_errorbar(data=descriptive2, aes(x=d13C, y=d34S, ymin = d34S+sdd34S,ymax = d34S-sdd34S, col=Sp),
   #                       width=.5, size=.5) + 
   # geom_errorbarh(data=descriptive2, aes(x=d13C, y=d34S, xmin = d13C+sdd13C,xmax = d13C-sdd13C, col=Sp),
@@ -2127,7 +2131,7 @@ Prey1 <- Prey%>%
   filter(group!="Other")
 
 Pike2 <- Pike%>%
-  filter(TL_mm <= 1000)%>%
+  #filter(TL_mm <= 1000)%>%
   transmute(ID=ID,
             Species="E.lucius",
             capt_date=as.character(capt_date),
@@ -2588,7 +2592,6 @@ Pike1 <- Pike1[,1:14]
 fwrite(Pike1, "Data/Mixing models/Pikemix-baseline-corrected.csv")
 ```
 
-
 ```{r mixing model sensitivity analysis models, include=FALSE, eval=FALSE}
 rm(list = ls())
 
@@ -2645,7 +2648,7 @@ discr.filename.spec <- "Data/Mixing models/Sensitivity_analysis/Discrimination_b
 # TEFs a priori groups
 discr.filename.group <- "Data/Mixing models/Sensitivity_analysis/Discrimination_base-group.csv"
 # TEFs corrected
-discr.filename.corr <- "Data/Mixing models/Sensitivity_analysis/Discrimination_TDF-corrected.csv"
+discr.filename.corr <- "Data/Mixing models/Sensitivity_analysis/Discrimination_TDF-corrected-groups.csv"
 
 # TEF species base case
 discr.df_spec <- load_discr_data(filename=discr.filename.spec, mix_base)
@@ -3001,7 +3004,6 @@ Groups_prior <- readRDS("Data/Mixing models/Sensitivity_analysis/Mixing.model_qc
 ggsave("Data/Mixing models/Sensitivity_analysis/Figures/Model_differences.png", Diffplot, width = 15, height = 10, units = "cm", dpi = 600, bg = "white")
 ```
 
-
 ```{r mixing polyhedrons for TEF, include=FALSE, eval=FALSE}
 rm(list = ls())
 
@@ -3331,8 +3333,8 @@ FW.plot <- FW_cont+
 
 Allplot <- ggarrange(Ana.plot, FW.plot, Cross.plot, BW.plot, nrow = 2, ncol = 2, 
                      common.legend = T, legend = "top")
-Allplot2 <- annotate_figure(Allplot, left = text_grob("diet proportion (%)", rot = 90, size = 12), 
-                            bottom = text_grob("total length (cm)", size = 12))
+Allplot2 <- annotate_figure(Allplot, left = text_grob("diet proportion (%)", rot = 90, size = 20), 
+                            bottom = text_grob("total length (cm)", size = 20))
 
 ggsave("Figures/length-diet-ecotypes.png", Allplot2, width = 15, height = 15, units = "cm", dpi = 300, bg = "white")
 ```
@@ -3394,7 +3396,7 @@ saveRDS(g.post2, "Data/Mixing models/outputs_no-priors_locations.rds")
 rm(list = ls())
 
 # Create diagnostics, summary statistics, and posterior plots
-jags.pike <- readRDS("Data/Mixing models/Output/Mixing.model-normal-run-ecotype_TL.rds")
+jags.pike <- readRDS("Data/Mixing models/Output/Mixing.model-normal-run-ecotype_area_TL.rds")
 
 Pike2 <- fread("Data/Mixing models/Pikemix-ecotypes.csv")
 
@@ -3613,158 +3615,246 @@ length(unique(Data3$ID))
 
 fwrite(Data3, "Data/Pike/Pikedata-model.csv")
 
-pikemodel0 <- lmer(length_back~I(lifeyear^2)+sex+phenotype+(1|ID), data = Data3, REML = T)
-pikemodel1 <- lmer(length_back~I(lifeyear^2)+sex+phenotype+d13C+d15N+d34S+res_mean+Sr_mean+(1|ID), data = Data3, REML = T)
-pikemodel2 <- lmer(length_back~I(lifeyear^2)+sex+phenotype+d13C+d15N+d34S+res_mean+(1|ID), data = Data3, REML = T)
-pikemodel3 <- lmer(length_back~I(lifeyear^2)+sex+phenotype+d13C+d15N+d34S+Sr_mean+(1|ID), data = Data3, REML = T)
-pikemodel4 <- lmer(length_back~I(lifeyear^2)+sex+phenotype+d13C+d15N+d34S+(1|ID), data = Data3, REML = T)
-pikemodel5 <- lmer(length_back~I(lifeyear^2)+sex+phenotype+d15N+d34S+(1|ID), data = Data3, REML = T)
-pikemodel6 <- lmer(length_back~I(lifeyear^2)+sex+phenotype+d13C+d15N+(1|ID), data = Data3, REML = T)
-pikemodel7 <- lmer(length_back~I(lifeyear^2)+sex+phenotype+d13C+(1|ID), data = Data3, REML = T)
-pikemodel8 <- lmer(length_back~I(lifeyear^2)+sex+d13C+d15N+d34S+res_mean+Sr_mean+(1|ID), data = Data3, REML = T)
+pikemodel0 <- brm(length_back~I(lifeyear^2)+sex+phenotype+(1|ID), 
+                  data = Data3, family = Gamma(link = "log"), control = list(max_treedepth = 15, adapt_delta = 0.95), 
+                  iter = 10000, warmup = 5000, chains = 4)
+saveRDS(pikemodel0, "Data/Pike/Growth models/NULLmodel.rds")
+
+pikemodel1 <- brm(length_back~I(lifeyear^2)+phenotype*lifeyear+sex+d13C+d15N+d34S+res_mean+Sr_mean+(1|ID), 
+                  data = Data3, family = Gamma(link = "log"), control = list(max_treedepth = 15, adapt_delta = 0.95), 
+                  iter = 10000, warmup = 5000, chains = 4)
+saveRDS(pikemodel1, "Data/Pike/Growth models/FULLmodel.rds")
+  
+pikemodel2 <- brm(length_back~I(lifeyear^2)+phenotype+sex+d13C+d15N+d34S+res_mean+Sr_mean+(1|ID), 
+                  data = Data3, family = Gamma(link = "log"), control = list(max_treedepth = 15, adapt_delta = 0.95), 
+                  iter = 10000, warmup = 5000, chains = 4)
+saveRDS(pikemodel2, "Data/Pike/Growth models/model-noINT.rds")
+
+pikemodel3 <- brm(length_back~I(lifeyear^2)+phenotype*lifeyear+d13C+d15N+d34S+res_mean+Sr_mean+(1|ID), 
+                  data = Data3, family = Gamma(link = "log"), control = list(max_treedepth = 15, adapt_delta = 0.95), 
+                  iter = 10000, warmup = 5000, chains = 4)
+saveRDS(pikemodel3, "Data/Pike/Growth models/model-noSEX.rds")
+
+pikemodel4 <- brm(length_back~I(lifeyear^2)+phenotype*lifeyear+sex+d15N+d34S+res_mean+Sr_mean+(1|ID), 
+                  data = Data3, family = Gamma(link = "log"), control = list(max_treedepth = 15, adapt_delta = 0.95), 
+                  iter = 10000, warmup = 5000, chains = 4)
+saveRDS(pikemodel4, "Data/Pike/Growth models/model-nod13C.rds")
+
+pikemodel5 <- brm(length_back~I(lifeyear^2)+phenotype*lifeyear+sex+d13C+d34S+res_mean+Sr_mean+(1|ID), 
+                  data = Data3, family = Gamma(link = "log"), control = list(max_treedepth = 15, adapt_delta = 0.95), 
+                  iter = 10000, warmup = 5000, chains = 4)
+saveRDS(pikemodel5, "Data/Pike/Growth models/model-nod15N.rds")
+
+pikemodel6 <- brm(length_back~I(lifeyear^2)+phenotype*lifeyear+sex+d13C+d15N+res_mean+Sr_mean+(1|ID), 
+                  data = Data3, family = Gamma(link = "log"), control = list(max_treedepth = 15, adapt_delta = 0.95), 
+                  iter = 10000, warmup = 5000, chains = 4)
+saveRDS(pikemodel6, "Data/Pike/Growth models/model-nod34S.rds")
+
+pikemodel7 <- brm(length_back~I(lifeyear^2)+phenotype*lifeyear+sex+d13C+d15N+d34S+Sr_mean+(1|ID), 
+                  data = Data3, family = Gamma(link = "log"), control = list(max_treedepth = 15, adapt_delta = 0.95), 
+                  iter = 10000, warmup = 5000, chains = 4)
+saveRDS(pikemodel7, "Data/Pike/Growth models/model-nod18O.rds")
+
+pikemodel8 <- brm(length_back~I(lifeyear^2)+phenotype*lifeyear+sex+d13C+d15N+d34S+res_mean+(1|ID), 
+                  data = Data3, family = Gamma(link = "log"), control = list(max_treedepth = 15, adapt_delta = 0.95), 
+                  iter = 10000, warmup = 5000, chains = 4)
+saveRDS(pikemodel8, "Data/Pike/Growth models/model-noSr.rds")
+
+pikemodel9 <- brm(length_back~phenotype+sex+d13C+d15N+d34S+res_mean+Sr_mean+(1|ID), 
+                  data = Data3, family = Gamma(link = "log"), control = list(max_treedepth = 15, adapt_delta = 0.95), 
+                  iter = 10000, warmup = 5000, chains = 4)
+saveRDS(pikemodel9, "Data/Pike/Growth models/model-noAGE.rds")
+
+pikemodel10 <- brm(length_back~I(lifeyear^2)+phenotype*lifeyear+sex+d13C+d15N+d34S+res_mean+Sr_mean, 
+                  data = Data3, family = Gamma(link = "log"), control = list(max_treedepth = 15, adapt_delta = 0.95), 
+                  iter = 10000, warmup = 5000, chains = 4)
+saveRDS(pikemodel10, "Data/Pike/Growth models/model-noID.rds")
+
+pikemodel11 <- brm(length_back~I(lifeyear^2)+phenotype*lifeyear+sex+d13C+d15N+d34S+res_mean+Sr_mean+Sr_mean^2+(1|ID), 
+                  data = Data3, family = Gamma(link = "log"), control = list(max_treedepth = 15, adapt_delta = 0.95), 
+                  iter = 10000, warmup = 5000, chains = 4)
+saveRDS(pikemodel11, "Data/Pike/Growth models/model-Sr-square.rds")
+
+pikemodel0 <- read_rds("Data/Pike/Growth models/NULLmodel.rds")
+pikemodel1 <- read_rds("Data/Pike/Growth models/FULLmodel.rds")
+pikemodel2 <- read_rds("Data/Pike/Growth models/model-noINT.rds")
+pikemodel3 <- read_rds("Data/Pike/Growth models/model-noSEX.rds")
+pikemodel4 <- read_rds("Data/Pike/Growth models/model-nod13C.rds")
+pikemodel5 <- read_rds("Data/Pike/Growth models/model-nod15N.rds")
+pikemodel6 <- read_rds("Data/Pike/Growth models/model-nod34S.rds")
+pikemodel7 <- read_rds("Data/Pike/Growth models/model-nod18O.rds")
+pikemodel8 <- read_rds("Data/Pike/Growth models/model-noSr.rds")
+pikemodel9 <- read_rds("Data/Pike/Growth models/model-noAGE.rds")
+pikemodel10 <- read_rds("Data/Pike/Growth models/model-noID.rds")
+pikemodel11 <- read_rds("Data/Pike/Growth models/model-Sr-square.rds")
+
+loo0 <- loo(pikemodel0)
+loo1 <- loo(pikemodel1)
+loo2 <- loo(pikemodel2)
+loo3 <- loo(pikemodel3)
+loo4 <- loo(pikemodel4)
+loo5 <- loo(pikemodel5)
+loo6 <- loo(pikemodel6)
+loo7 <- loo(pikemodel7)
+loo8 <- loo(pikemodel8)
+loo9 <- loo(pikemodel9)
+loo10 <- loo(pikemodel10)
+loo11 <- loo(pikemodel11)
+
+loos <- list(
+  pikemodel0 = loo0,
+  pikemodel1 = loo1,
+  pikemodel2 = loo2,
+  pikemodel3 = loo3,
+  pikemodel4 = loo4,
+  pikemodel5 = loo5,
+  pikemodel6 = loo6,
+  pikemodel7 = loo7,
+  pikemodel8 = loo8,
+  pikemodel9 = loo9,
+  pikemodel10 = loo10,
+  pikemodel11 = loo11
+)
 
 
-anova(pikemodel0, pikemodel1, pikemodel2, pikemodel3, pikemodel4, pikemodel5, pikemodel6, pikemodel7, pikemodel8)
+comp <- loo_compare(loos)
 
-#VIF for diet-only model
-pike.vif <- vif(pikemodel1)
+looics <- sapply(loos, function(x) x$estimates["looic", "Estimate"])
 
-barplot(pike.vif[,3], main = "VIF values", horiz = F, col = "darkgreen", ylim = c(0,10),
-        las = 2)
-abline(h = 5, lwd = 3, lty = 2, col="red")
+comp_df <- as.data.frame(comp) %>%
+  mutate(model = rownames(comp)) %>%
+  left_join(
+    data.frame(model = names(looics), looic = looics),
+    by = "model"
+  )
 
-#test effects for diet + phenotype only model
-rand(pikemodel1)
-#Individual is not significant
+write.table(comp_df, "Data/Pike/Growth models/Comparison.csv")
 
-#Test age effect
-pikemodel_noage <- update(pikemodel1, ~. -I(lifeyear^2))
-anova(pikemodel1, pikemodel_noage)
+pikemodel7 <- read_rds("Data/Pike/Growth models/model-nod18O.rds")
 
-#Test sex effect
-pikemodel_nosex <- update(pikemodel1, ~. -sex)
-anova(pikemodel1, pikemodel_nosex)
+summary(pikemodel7)
 
-#Test d13C
-pikemodel_no13C <- update(pikemodel1, ~. -d13C)
-anova(pikemodel1, pikemodel_no13C)
+bayes_R2(pikemodel7)
 
-#Test d15N
-pikemodel_no15N <- update(pikemodel1, ~. -d15N)
-anova(pikemodel1, pikemodel_no15N)
+posterior_predict(pikemodel7)
 
-#test d34S
-pikemodel_no34S <- update(pikemodel1, ~. -d34S)
-anova(pikemodel1, pikemodel_no34S)
-
-r.squaredGLMM(pikemodel1)
-lsmeans(pikemodel1, pairwise~phenotype, adjust = "tukey")
-summary(pikemodel1)
-tab_model(pikemodel1)
-```
-
-
-
-```{r model eval, include=FALSE, eval=FALSE}
-rm(list = ls())
-Data2 <- fread("Data/Pike/Pikedata-model.csv")
-
-pikemodel1 <- lmer(length_back~I(lifeyear^2)+sex+phenotype+d13C+d15N+d34S+res_mean+Sr_mean+(1|ID), data = Data2, REML = T)
-
-pike.vif <- vif(pikemodel1)
-
-png("Figures/supplement/VIF-values-mixed-effects.png", width = 15, height = 15, units = "cm", res = 300)
-barplot(pike.vif[,1], main = "VIF values", horiz = F, col = "darkgreen", ylim = c(0,10),
-        las = 2)
-abline(h = 5, lwd = 3, lty = 2, col="red")
-dev.off()
-
-Data3 <- Data2 %>% drop_na()
-Data3$resid <- resid(pikemodel1)
-
-png("Figures/supplement/Fitted-vs-residual_mixed-effects.png", width = 15, height = 15, units = "cm", res = 300)
-plot(pikemodel1, xlab = "Fitted", ylab = "Residuals")
-dev.off()
-
-png("Figures/supplement/Residual-distribution_mixed-effects.png", width = 15, height = 15, units = "cm", res = 300)
-hist(Data3$resid, main = "", xlab = "Residuals")
-dev.off()
-
-png("Figures/supplement/Normality-residuals_mixed-effects.png", width = 15, height = 15, units = "cm", res = 300)
-qqnorm(resid(pikemodel1))
-qqline(resid(pikemodel1))
-dev.off()
-
-png("Figures/supplement/Residuals-vs-predictors_mixed-effects.png", width = 15, height = 15, units = "cm", res = 300)
-par(mfrow=c(3,3))
-plot(Data3$resid~as.factor(Data3$sex), ylab = "Residuals", xlab = "Sex")
-plot(Data3$resid~as.factor(Data3$phenotype), ylab = "Residuals", xlab = "Phenotype")
-plot(Data3$resid~Data3$lifeyear, ylab = "Residuals", xlab = "Age")
-plot(Data3$resid~Data3$d15N, ylab = "Residuals", xlab = "d15N")
-plot(Data3$resid~Data3$d13C, ylab = "Residuals", xlab = "d13C")
-plot(Data3$resid~Data3$d34S, ylab = "Residuals", xlab = "d34S")
-plot(Data3$resid~Data3$res_mean, ylab = "Residuals", xlab = "d18O")
-plot(Data3$resid~Data3$Sr, ylab = "Residuals", xlab = "Sr:Ca")
-dev.off()
+prior_summary(pikemodel7)
 ```
 
 ```{r GLMM model figures, include=FALSE, eval=FALSE}
 rm(list = ls())
 
 pikes <- fread("Data/Pike/Pikedata-model.csv")
+pikes1 <- fread("Data/Pike/Pikedata_phenomodel.csv")
 
+pikemodel.final <- lmer(log10(inc_um)~res_mean+lifeyear*phenotype+I(lifeyear^2)+Sr_mean+sex+(1|ID),
+                    REML = F, data = pikes1)
+
+mypalette1 <- adjustcolor(c("#004643","#00BFB2","#F1C40F","#C5D86D","#AF3800"), alpha.f = 0.6)
+
+lifeyear <- unique(pikes1$lifeyear)
+phenotype <- unique(pikes1$phenotype)
+genotype <- unique(pikes1$genotype)
+res_mean <- seq(min(pikes1$res_mean), max(pikes$res_mean), 0.1)
+Sr_mean <- seq(min(pikes1$Sr_mean), max(pikes$res_mean),0.1)
+sex <- unique(pikes1$sex)
+ID <- "NA"
+
+Newdata <- expand.grid(lifeyear=lifeyear, phenotype=phenotype, genotype=genotype, res_mean=res_mean, Sr_mean=Sr_mean, sex=sex, ID=ID)
+head(Newdata)
+
+Newdata$prediction <- 10^(predict(pikemodel.final, newdata = Newdata, allow.new.levels=TRUE, type="response"))
+
+Newdata2 <- Newdata%>%
+  mutate(keep=case_when(phenotype=="FW_resident"&lifeyear<=max(pikes1[pikes1$phenotype=="FW_resident",]$lifeyear)~1,
+                   phenotype=="Anadromous"&lifeyear<=max(pikes1[pikes1$phenotype=="Anadromous",]$lifeyear)~1,
+                   phenotype=="BW-resident"&lifeyear<=max(pikes1[pikes1$phenotype=="BW-resident",]$lifeyear)~1,
+                   phenotype=="Trans-habitat"&lifeyear<=max(pikes1[pikes1$phenotype=="Trans-habitat",]$lifeyear)~1,
+                   TRUE~0))%>%
+           filter(keep==1)
+
+Newdata2$phenotype <- fct_relevel(Newdata2$phenotype, "FW_resident", "Anadromous", "Trans-habitat", "BW-resident")
+
+# Create ggplot with boxplots and custom position dodge 
+
+phenogrowth <- ggplot(Newdata2, aes(factor(lifeyear), log(prediction), fill=phenotype), alpha=0.6)+
+  geom_boxplot(lwd=.5, outlier.shape = NA, width=.6, position = position_dodge(width = NULL), color="black")+
+  labs(x="Age (years)", y=expression("Log growth increment"),
+       fill="Behavioural phenotype")+
+  scale_x_discrete(limits=factor(c(1:10)),
+                   breaks=c("1","2","3","4","5","6","7","8","9","10"))+
+  scale_fill_manual(breaks = c("FW_resident","Anadromous","Trans-habitat","BW-resident"),
+                    values = c("#C5D86D","#00BFB2","#F1C40F","#004643"),
+                    labels = c("Freshwater resident (N = 17)", "Anadromous (N = 10)","Cross-habitat (N = 21)", "Brackish resident (N = 33)"))+
+  theme_classic()+
+  theme(panel.grid.major = element_line(),
+        legend.position = c(.715,.79),
+        legend.background = element_blank(),
+        legend.box.background = element_rect(),
+        axis.line = element_line(size = 1, colour = "black", linetype = 1),
+        axis.ticks = element_line(size = 1, colour = "black"),
+        axis.text = element_text(size = 12, colour = "black"),
+        axis.text.y = element_text(size = 12, colour = "black"),
+        axis.title.x = element_text(size = 12, colour = "black"),
+        axis.title.y = element_blank(),
+        legend.text = element_text(size = 12, colour = "black"),
+        legend.title = element_text(size = 12, colour = "black"),
+        legend.key.size = unit(.5,"line"))
+
+#Isotope effects growth
 pikes2 <- pikes%>%
   transmute(ID, lifeyear, sex, phenotype, length_back, d13C, d15N, d34S, res_mean = -res_mean, Sr_mean)%>%
   filter(d34S > -1.8)
 
-pikemodel <- lmer(length_back~I(lifeyear^2)+sex+phenotype+d13C+d15N+d34S+res_mean+Sr_mean+(1|ID), data = pikes, REML = T)
-
-lifeyear <- unique(pikes2$lifeyear)
-phenotype <- unique(pikes2$phenotype)
-d34S <- seq(min(pikes2$d34S), max(pikes2$d34S), 0.5)
-d13C <- mean(pikes2$d13C)
-d15N <- mean(pikes2$d15N)
-res_mean <- mean(pikes2$res_mean)
-Sr_mean <- seq(min(pikes2$Sr_mean), max(pikes2$Sr_mean), 0.5)
-sex <- unique(pikes2$sex)
-ID <- "NA"
-
-Newdata <- expand.grid(lifeyear=lifeyear, phenotype=phenotype, d34S=d34S, d15N=d15N, d13C=d13C, res_mean=res_mean, Sr_mean=Sr_mean,
-                       sex=sex, ID=ID)
-head(Newdata)
-
-Newdata$prediction <- predict(pikemodel, newdata = Newdata, allow.new.levels=TRUE, type="response")
-
-#Isotope effects growth
-Effect <- ggplot()+
-  geom_point(data = pikes2, aes(-res_mean, log(length_back), color = "Temperature"), size=1)+
-  geom_point(data = pikes2, aes(d34S, log(length_back), color = "Marine resources"), size=1)+
-  geom_point(data = pikes2, aes(Sr_mean, log(length_back), color = "Salinity"), size=1)+
-  stat_smooth(data = pikes2, aes(res_mean, log(length_back), fill = "Temperature", colour = "Temperature"), method = "lm", fullrange = T, lwd=1)+
+Effect2 <- ggplot()+
+  geom_point(data = pikes2, aes(d34S, log(length_back)), color = "black", size=1)+
   stat_smooth(data = pikes2, aes(d34S, log(length_back), fill = "Marine resources", colour = "Marine resources"), method = "lm", fullrange = T, lwd=1)+
-  stat_smooth(data = pikes2, aes(Sr_mean, log(length_back), fill = "Salinity", colour = "Salinity"), method = "lm", fullrange = T, lwd=1)+
-  labs(x="Predictor (z-score)", y="Log growth increment", color = "", fill = "")+
-  scale_color_manual(breaks = c("Marine resources", "Salinity", "Temperature"),
-                     values = c("#00BFB2", "#F1C40F", "darkred"),
-                     labels = c("Marine resources", "Salinity", "Temperature"))+
-  scale_fill_manual(breaks = c("Marine resources", "Salinity", "Temperature"),
-                     values = c("#00BFB2", "#F1C40F", "darkred"),
-                     labels = c("Marine resources", "Salinity", "Temperature"))+
+  labs(title = expression(delta^34~"S"~("\u2030 VCDT")))+
+  scale_color_manual(breaks = c("Marine resources", "Salinity"),
+                     values = c("#00BFB2", "#F1C40F"),
+                     labels = c(expression(delta^34~"S"~("\u2030 VCDT")), "Sr/Ca"))+
+  scale_fill_manual(breaks = c("Marine resources", "Salinity"),
+                     values = c("#00BFB2", "#F1C40F"),
+                     labels = c(expression(delta^34~"S"~("\u2030 VCDT")), "Sr/Ca"))+
   theme_classic()+
   theme(panel.grid.major = element_line(),
-        legend.position = "top",
+        legend.position = "none",
         legend.background = element_blank(),
         legend.box.background = element_rect(),
         axis.line = element_line(linewidth = .5, colour = "black", linetype = 1),
         axis.ticks = element_line(linewidth = .5, colour = "black"),
-        axis.text = element_text(size = 15, colour = "black"),
-        axis.title.x = element_text(size = 15, colour = "black", margin = margin(t = 15)),
-        axis.title.y = element_text(size = 15, colour = "black", margin = margin(r = 15)),
-        legend.text = element_text(size = 15, hjust = 0),
-        legend.title = element_text(size = 15, colour = "black"),
-        legend.key.size = unit(.8,"line"))
+        axis.text = element_text(size = 12, colour = "black"),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank())
 
-ggsave("Figures/Iso-effect-growth-temp-sal-d34S.png", Effect, width = 15, height = 10, units = "cm", dpi = 600, bg = "white")
+Effect3 <- ggplot()+
+  geom_point(data = pikes2, aes(Sr_mean, log(length_back)), color = "black", size=1)+
+  stat_smooth(data = pikes2, aes(Sr_mean, log(length_back), fill = "Salinity", colour = "Salinity"), method = "lm", fullrange = T, lwd=1)+
+  labs(title = "Sr/Ca")+
+  scale_color_manual(breaks = c("Marine resources", "Salinity"),
+                     values = c("#00BFB2", "#F1C40F"),
+                     labels = c(expression(delta^34~"S"~("\u2030 VCDT")), "Sr/Ca"))+
+  scale_fill_manual(breaks = c("Marine resources", "Salinity"),
+                     values = c("#00BFB2", "#F1C40F"),
+                     labels = c(expression(delta^34~"S"~("\u2030 VCDT")), "Sr/Ca"))+
+  theme_classic()+
+  theme(panel.grid.major = element_line(),
+        legend.position = "none",
+        legend.background = element_blank(),
+        legend.box.background = element_rect(),
+        axis.line = element_line(linewidth = .5, colour = "black", linetype = 1),
+        axis.ticks = element_line(linewidth = .5, colour = "black"),
+        axis.text = element_text(size = 12, colour = "black"),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank())
+
+Singeffect <- ggarrange(Effect2, Effect3, nrow = 1, ncol = 2, labels = c("B", "C"))
+Singeffect2 <- annotate_figure(Singeffect, bottom = text_grob("Predictor (z-scale)", size = 12))
+
+Alleffect <-ggarrange(phenogrowth, Singeffect2, nrow = 2, labels = c("A", ""), hjust = 1)
+Alleffect2 <- annotate_figure(Alleffect, left = text_grob("Log growth increment", rot = 90, size = 12))
+
+ggsave("Figures/Growtheffects.png", Alleffect2, width = 15, height = 15, units = "cm", dpi = 600, bg = "white")
 ```
 
 ```{r plot eye lens isotopes, include=FALSE, eval=FALSE}
@@ -3787,56 +3877,62 @@ pl_theme <- theme(axis.title.x = element_blank(),
                   axis.text = element_text(size = 8, color = "black"),
                   legend.position = "bottom",
                   legend.text = element_text(size = 8, color = "black"),
+                  legend.key.size = unit(.3, "cm"),
                   legend.title = element_text(size = 8, color = "black"),
-                  plot.title = element_text(size = 8, color = "black"))
+                  plot.title = element_text(size = 8, color = "black"),
+                  panel.grid = element_blank(),
+                  panel.grid.major.y = element_line(linewidth = 0.1, colour = "black", linetype = "solid"))
 
 mypallette  <- c("#C5D86D", "#00BFB2", "#F1C40F", "#004643")
 
-d34S <- ggplot(Ecopike[Ecopike$lens_layer>1,], aes(length_back, d34S))+
-  geom_point(aes(color = phenotype), size=.3, position = position_dodge(width = 1), alpha = 0.5)+
-  geom_smooth(aes(color=phenotype, fill= phenotype), lwd = .5)+
+d34S <- ggplot(Ecopike[Ecopike$lens_layer > 1,], aes(length_back, d34S))+
+  #geom_point(aes(color = phenotype), size = .3, position = position_dodge(width = 1), alpha = 0.5)+
+  geom_line(aes(color = phenotype, group = fish_ID), size = .3, alpha = 0.5)+
+  geom_smooth(aes(color = phenotype, fill = phenotype), lwd = .5)+
   scale_color_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
                      values = mypallette,
-                     labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
+                     labels = c("Freshwater (N = 17)", "Anadromous (N = 10)", "Cross-habitat (N = 21)", "Brackish (N = 33)"))+
   scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
                      values = mypallette,
-                     labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
+                     labels = c("Freshwater (N = 17)", "Anadromous (N = 10)", "Cross-habitat (N = 21)", "Brackish (N = 33)"))+
   scale_shape_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
-                     labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
+                     labels = c("Freshwater (N = 17)", "Anadromous (N = 10)", "Cross-habitat (N = 21)", "Brackish (N = 33)"))+
   theme_bw()+
-  labs(y = expression(delta^34~"S"~("\u2030 VCDT")))+
+  labs(y = expression(delta^34~"S"~("\u2030 VCDT")), color = "Phenotype", fill = "Phenotype")+
   ggtitle("d34S")+
   pl_theme
 
 d15N <- ggplot(Ecopike[Ecopike$lens_layer>1,], aes(length_back, d15N))+
-  geom_point(aes(color = phenotype), size=.3, position = position_dodge(width = 1), alpha = 0.5)+
+  #geom_point(aes(color = phenotype), size=.3, position = position_dodge(width = 1), alpha = 0.5)+
+  geom_line(aes(color = phenotype, group = fish_ID), size = .3, alpha = 0.5)+
   geom_smooth(aes(color=phenotype, fill= phenotype), lwd = .5)+
   scale_color_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
                      values = mypallette,
-                     labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
+                     labels = c("Freshwater (N = 17)", "Anadromous (N = 10)", "Cross-habitat (N = 21)", "Brackish (N = 33)"))+
   scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
                      values = mypallette,
-                     labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
+                     labels = c("Freshwater (N = 17)", "Anadromous (N = 10)", "Cross-habitat (N = 21)", "Brackish (N = 33)"))+
   scale_shape_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
-                     labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
+                     labels = c("Freshwater (N = 17)", "Anadromous (N = 10)", "Cross-habitat (N = 21)", "Brackish (N = 33)"))+
   theme_bw()+
-  labs(y = expression(delta^15~"N"~("\u2030"~air-N[2])))+
+  labs(y = expression(delta^15~"N"~("\u2030"~air-N[2])), color = "Phenotype", fill = "Phenotype")+
   ggtitle("d15N")+
   pl_theme
 
 d13C <- ggplot(Ecopike[Ecopike$lens_layer>1,], aes(length_back, d13C))+
-  geom_point(aes(color = phenotype), size=.3, position = position_dodge(width = 1), alpha = 0.5)+
+  #geom_point(aes(color = phenotype), size=.3, position = position_dodge(width = 1), alpha = 0.5)+
+  geom_line(aes(color = phenotype, group = fish_ID), size = .3, alpha = 0.5)+
   geom_smooth(aes(color=phenotype, fill= phenotype), lwd = .5)+
   scale_color_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
                      values = mypallette,
-                     labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
+                     labels = c("Freshwater (N = 17)", "Anadromous (N = 10)", "Cross-habitat (N = 21)", "Brackish (N = 33)"))+
   scale_fill_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
                      values = mypallette,
-                     labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
+                     labels = c("Freshwater (N = 17)", "Anadromous (N = 10)", "Cross-habitat (N = 21)", "Brackish (N = 33)"))+
   scale_shape_manual(breaks = c("FW_resident", "Anadromous", "Trans-habitat", "BW-resident"),
-                     labels = c("freshwater (N = 17)", "anadromous (N = 10)", "cross-habitat (N = 21)", "brackish (N = 33)"))+
+                     labels = c("Freshwater (N = 17)", "Anadromous (N = 10)", "Cross-habitat (N = 21)", "Brackish (N = 33)"))+
   theme_bw()+
-  labs(y = expression(delta^13~"C"~("\u2030 VPDB")))+
+  labs(y = expression(delta^13~"C"~("\u2030 VPDB")), color = "Phenotype", fill = "Phenotype")+
   ggtitle("d13C")+
   pl_theme
 
