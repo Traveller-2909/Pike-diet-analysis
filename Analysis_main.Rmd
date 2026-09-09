@@ -441,7 +441,7 @@ Props_2015 <- ggplot(SC_Winkler_15.2, aes(x = "", y = proportion, fill = as.fact
 Props_recent <- ggplot(SC_summary2, aes(x = "", y = proportion, fill = as.factor(order))) +
   geom_bar(stat = "identity") +
   coord_polar(theta = "y") +  # Convert to a polar coordinate for pie chart
-  labs(title = "2019 - 2022 mesohaline (N = 171)",
+  labs(title = "2019 - 2022 combined (N = 171)",
        fill = "Species") +
   geom_label_repel(aes(y = pos, label = scales::percent(proportion)), nudge_x = .75, 
                    size = 3, show.legend = FALSE, fill = "white")+
@@ -1210,6 +1210,7 @@ Pikelenses$age <- ages
 #Reshape, correct one fish that was assigned "NA" for some reason (1 year old, so only one lifeyear to assign)
 Pikelenses_age <- Pikelenses%>%
   transmute(ID = fish_ID,
+            Year = year(capt_date),
             lifeyear = case_when(ID == "BH-01719" ~ 1,
                                  TRUE ~ age),
             amount = amount,
@@ -1237,6 +1238,7 @@ Pikedata_model <- Pike_oto_lenses%>%
                                          phenotype == "Trans-habitat" ~ "Cross-habitat",
                                          TRUE ~ phenotype),
                    sex = sex,
+                   Year = Year,
                    lifeyear = lifeyear,
                    res_mean = res_mean,
                    Sr_mean = Sr_mean,
@@ -2020,6 +2022,76 @@ ggplot(baseline2, aes(Bodden, d34S, color = Group))+
 ggplot(baseline2, aes(as.factor(month(Date)), d15N, color = Group))+
   geom_point()+
   theme_minimal()
+```
+
+```{r eye lens year effects, include=FALSE, eval=FALSE}
+rm(list = ls())
+Lensdata <- fread("Data/Pike/Pikedata-eye-lens-years.csv")
+
+# Lensyear backcalculation
+Lensdata2 <- Lensdata %>%
+  group_by(ID) %>%
+  dplyr::mutate(
+    age_at_capture = max(lifeyear),
+    Lensyear = Year - (age_at_capture - lifeyear)
+  ) %>%
+  ungroup()
+
+fwrite(Lensdata2, "Data/Pike/Pikedata-eye-lens-years.csv")
+
+# test duplicates
+missing_year_ids <- Lensdata2 %>% filter(is.na(Year)) %>% distinct(ID) %>% pull(ID)
+cat(sum(is.na(Lensdata2$Lensyear)), "of", nrow(Lensdata2),
+    "rows have no Year on record (", length(missing_year_ids), "fish IDs) and are",
+    "excluded from the year-based plots:\n")
+cat(paste(missing_year_ids, collapse = ", "), "\n\n")
+
+# plot
+phenotype_levels <- c("FW-resident", "Cross-habitat", "BW-resident", "Anadromous")
+phenotype_colors <- c(
+  "FW-resident"   = "#C5D86D",  # blue
+  "Cross-habitat" = "#F1C40F",
+  "BW-resident"   = "#004643",
+  "Anadromous"    = "#00BFB2"
+)
+
+Lensdata2 <- Lensdata2 %>%
+  mutate(phenotype = factor(phenotype, levels = phenotype_levels))
+
+# Restrict to the lifeyear 1 (first year of life) layer only
+Lensdata_ly1 <- Lensdata2 %>% filter(lifeyear == 1)
+cat(nrow(Lensdata_ly1), "rows at lifeyear 1 (of", nrow(Lensdata2), "total rows)\n\n")
+
+plot_isotope <- function(data, yvar, ylab, title_txt) {
+  d <- data %>% filter(!is.na(Lensyear), !is.na(.data[[yvar]]))
+  ggplot(d, aes(x = factor(Lensyear), y = .data[[yvar]], fill = phenotype)) +
+    geom_boxplot(
+      position = position_dodge2(preserve = "single", padding = 0.15),
+      width = 0.7, outlier.shape = NA, alpha = 0.85, linewidth = 0.35
+    ) +
+    scale_fill_manual(values = phenotype_colors, name = "Phenotype", drop = FALSE) +
+    labs(
+      x = "Calendar year (lens layer formation)",
+      y = ylab,
+      title = title_txt,
+      subtitle = "Lifeyear 1 (first year of life) only"
+    ) +
+    theme_bw(base_size = 11) +
+    theme(
+      panel.grid.minor = element_blank(),
+      legend.position = "bottom",
+      plot.title = element_text(face = "bold")
+    )
+}
+
+p_d15n <- plot_isotope(Lensdata_ly1, "d15N_mean", expression(delta^15*N~"(permil)"), "d15N by calendar year, split by phenotype")
+p_d13c <- plot_isotope(Lensdata_ly1, "d13C_mean", expression(delta^13*C~"(permil)"), "d13C by calendar year, split by phenotype")
+p_d34s <- plot_isotope(Lensdata_ly1, "d34S_mean", expression(delta^34*S~"(permil)"), "d34S by calendar year, split by phenotype")
+
+Allplot <- ggarrange(p_d15n, p_d13c, p_d34s, nrow = 1, common.legend = TRUE)
+
+ggsave("Figures/supplement/Isotopes_by_lensyear_lifeyear1.png", Allplot, width = 16, height = 5, dpi = 300)
+
 ```
 
 # Mixing models
@@ -3586,6 +3658,7 @@ Data2 <- Data%>%
   group_by(ID)%>%
   reframe(ID = ID,
           lifeyear = lifeyear,
+          Lensyear = Lensyear,
           waterbody = as.factor(waterbody),
           phenotype = phenotype,
           genotype = genotype,
@@ -3607,6 +3680,7 @@ Datasceno2 <- Datasceno%>%
 
 Data3 <- Data2%>%
   inner_join(Datasceno2, by = c("ID", "lifeyear"))%>%
+  na.omit(Lensyear)%>%
   distinct()
 
 length(unique(Data3$ID))
@@ -3617,6 +3691,17 @@ pikemodel0 <- brm(length_back~I(lifeyear^2)+sex+phenotype+(1|ID),
                   data = Data3, family = Gamma(link = "log"), control = list(max_treedepth = 15, adapt_delta = 0.95), 
                   iter = 10000, warmup = 5000, chains = 4)
 saveRDS(pikemodel0, "Data/Pike/Growth models/NULLmodel.rds")
+
+pikemodel0.1 <- brm(length_back~I(lifeyear^2)+sex+phenotype+(1|ID), 
+                  data = Data3, family = Gamma(link = "log"), control = list(max_treedepth = 15, adapt_delta = 0.95), 
+                  iter = 10000, warmup = 5000, chains = 4)
+saveRDS(pikemodel0.1, "Data/Pike/Growth models/NULLmodel_years.rds")
+
+loo0 <- loo(pikemodel0)
+loo0.1 <- loo(pikemodel0.1)
+loo_compare(loo0, loo0.1)
+
+#year does not improve the model
 
 pikemodel1 <- brm(length_back~I(lifeyear^2)+phenotype*lifeyear+sex+d13C+d15N+d34S+res_mean+Sr_mean+(1|ID), 
                   data = Data3, family = Gamma(link = "log"), control = list(max_treedepth = 15, adapt_delta = 0.95), 
