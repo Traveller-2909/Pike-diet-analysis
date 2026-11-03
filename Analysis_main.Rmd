@@ -21,8 +21,6 @@ library(ggpubr)
 library(rjags)
 library(simmr)
 library(ggmap)
-library(assignR)
-library(tRophicPosition)
 library(MixSIAR)
 library(ellipse)
 library(ggforce)
@@ -55,128 +53,6 @@ rstan_options(auto_write = TRUE)
 ```
 
 # Stomach contents
-```{r stomach content cleanup, include=FALSE, eval=FALSE}
-rm(list = ls())
-
-### Magenzusammensetzung
-
-stomach <- fread("Data/Pike/SC_Database.csv")
-
-stomach$Date <- gsub("\\.", "-", stomach$Date)
-
-stomach2 <- stomach%>%
-  transmute(Date = lubridate::parse_date_time(Date, orders = c("dmy")),
-            Fish_ID = Fish_ID,
-            Species = case_when(Species == "S. lucioperca" ~ "Sander lucioperca",
-                                Species == "P.fluviatilis" ~ "Perca fluviatilis",
-                                Species == "S.erythrophthalmus" ~ "Scardinius erythrophthalmus",
-                                Species == "C.harengus" ~ "Clupea harengus",
-                                Species == "G.aculeatus" ~ "Gasteroseus aculeatus",
-                                Species == "P.pungitius" ~ "Pungitius pungitius",
-                                Species == "I.alpestris" ~ "I.alpestris",
-                                Species == "Gastropoda" ~ "Gastropoda",
-                                Species == "R.rutilus" ~ "Rutilus rutilus",
-                                Species == "N.melanostomus" ~ "Neogobius melanostomus",
-                                Species == "Isopoda" ~ "Isopoda",
-                                Species == "A.aquaticus" ~ "A.aquaticus",
-                                Species == "Gammarus" ~ "Gammarus",
-                                Species == "E.danica" ~ "Sander lucioperca",
-                                Species == "S.spinachia" ~ "Spinachia spinachia",
-                                Species == "P.flesus" ~ "Platichthys flesus",
-                                Species == "P.elegans" ~ "P.elegans",
-                                Species == "fish larva" ~ "fish larva",
-                                Species == "A.brama" ~ "Abramis brama",
-                                Species == "B.bjoerkna" ~ "Blicca bjoerkna",
-                                Species == "A.alburnus" ~ "Alburnus alburnus",
-                                Species == "G.cernua" ~ "Gymnocephalus cernua"),
-            sex = sex,
-            pike_weight_g = Weight_g,
-            pike_TL_mm = Total_Length_mm,
-            length = prey_length_mm,
-            weight = Prey_weight_g,
-            stomach_weight = Stomach_weight_g,
-            area = Area,
-            gear = Gear)
-
-Pike <- fread("D:/Nextcloud IGB/Boddenhecht/Data/Pike Data/1.pike_data_base_FOR_USERS/1Pike_Latest_Version.txt")
-SI <- fread("D:/Nextcloud IGB/Boddenhecht/Data/Pike Data/1.pike_data_base_FOR_USERS/1Sampling_Instance_Latest_Version.txt")
-
-nordic <- fread("Data/Prey/Nordic multimesh gillnets.csv")
-names(nordic)[7] <- c("length")
-names(nordic)[8] <- c("weight")
-
-# binding data frames
-nordic <- plyr::rbind.fill(stomach2,nordic)
-str(nordic)
-unique(nordic$Species)
-nordic$Species <- as.factor(as.character(nordic$Species))
-nordic$weight <- as.numeric(as.character(nordic$weight))
-nordic$length <- as.numeric(as.character(nordic$length))
-
-#####Rename Species because written wrong
-levels(nordic$Species)[levels(nordic$Species)=="Perca fluviatilis "] <- "Perca fluviatilis"
-levels(nordic$Species)[levels(nordic$Species)=="Rutilus rutilus "] <- "Rutilus rutilus"
-levels(nordic$Species)[levels(nordic$Species)=="Pungitius pungitius"] <- "Pungitis pungitis"
-levels(nordic$Species)[levels(nordic$Species)=="Neogobius melanostomus "] <- "Neogobius melanostomus"
-levels(nordic$Species)[levels(nordic$Species)=="Spinachia spinachia"] <- "Spinachio spinachio"
-
-#calculate missing lengths and weights
-for(i in 1:nrow(nordic)){
-  row.i <- nordic[i,]
-  if(is.na(row.i$length)){
-    mod <- mean(filter(nordic, Species == row.i$Species)$length,na.rm=TRUE)
-    # Now assign calculated value into cell of original dataframe
-    nordic[i,]$length <- mod
-    cat(i, "done ", row.i$Species,"\n")
-  }else{cat(".")}
-}
-
-nordic <- nordic%>%filter(length != "NaN")
-
-for(i in 1:nrow(nordic)){
-  row.i <- nordic[i,]
-  if(is.na(row.i$weight)){
-    mod <- lm(data = filter(nordic, Species == row.i$Species), log(weight) ~ log(length))
-    log.weight <- predict(mod, data.frame(length = row.i$length))
-    pred.weight <- 2.718281828459 ^ log.weight
-    # Now assign calculated value into cell of original dataframe
-    nordic[i,]$weight <- pred.weight
-    cat(i, "done ", row.i$Species,"\n")
-  }else{cat(".")}
-}
-
-Pike_SC <- nordic%>%filter(!is.na(Fish_ID))%>%
-  transmute(Date = Date,
-            fish_ID = Fish_ID,
-            species = Species,
-            sex = sex,
-            pike_weight_g = pike_weight_g,
-            pike_TL_mm = pike_TL_mm,
-            prey_length_mm = length,
-            prey_weight_g = weight,
-            area = area)
-
-fwrite(Pike_SC, "Data/Pike/Stomach-contents-Database-clean.csv")
-
-Marlon_SC <- fread("Data/Pike/SC_Marlon-MA.csv")
-
-Marlon_SC2 <- Marlon_SC%>%
-  transmute(Date = Date.x,
-            fish_ID = Fish_ID,
-            species = Species,
-            sex = NA,
-            pike_weight_g = Weight,
-            pike_TL_mm = Total_Length_mm,
-            prey_length_mm = length,
-            prey_weight_g = weight,
-            area = case_when(Comparison_Area_Name == "Werderbucht" ~ "BAT",
-                             Comparison_Area_Name == "Ummanz" ~ "SB",
-                             Comparison_Area_Name == "Neuensiener_Selliner_See" ~ "GB"))
-
-SC_all <- rbind(Pike_SC, Marlon_SC2)
-
-fwrite(SC_all, "Data/Pike/Stomach-contents-all-clean.csv")
-```
 
 ```{r stomach contents summary, include=FALSE, eval=FALSE}
 rm(list = ls())
@@ -555,985 +431,8 @@ Energ <- ggplot(Prey_energy, aes(x = Species, y = Caloric_value_mJ_per_kg, fill 
 ggsave("Figures/Prey-energy-density.png", Energ, width = 15, height = 15, units = "cm", dpi = 600, bg = "white")
 ```
 
-# SI Cleanup
-```{r pike muscle data cleanup, include=FALSE, eval=FALSE}
-rm(list = ls())
+# Descriptive stable isotope analysis
 
-#read in pike data from source
-Pike1 <- fread("C:/Users/timor/Nextcloud2/Boddenhecht/Data/Pike Data/1.pike_data_base_FOR_USERS/1Pike_Latest_Version.txt")
-
-Pike2 <- Pike1%>%
-  filter(MarkorRecap == "Mark"|is.na(MarkorRecap) == TRUE|Fish_ID == "BH-51614")%>%
-  transmute(ID=case_when(Fish_ID=="BH-91050.2"~"BH-91050",
-                         Fish_ID=="BH-51614"&Waterbody=="BAT"~"NA",
-                         TRUE~Fish_ID),
-            capt_date=Date,
-            TL_mm = Total_Length_mm,
-            gape = 
-            weight=Weight,
-            sex=Sex,
-            area=case_when(ID == "BH-00554" ~ "Peene",
-                           ID == "BH-00555" ~ "Peene",
-                           TRUE ~ Waterbody),
-            Long=case_when(is.na(Capture_Longitude)==T~Release_Longitude,
-                           TRUE~Capture_Longitude),
-            Lat=case_when(is.na(Capture_Latitude)==T~Release_Latitude,
-                          TRUE~Capture_Latitude))
-
-#Read pike SI data
-pike_NCS1 <- read.csv2("Data/Pike/2022-09-08_NCS_Pike.CSV", header = T, stringsAsFactors = F)
-
-pike_NCS2 <- pike_NCS1%>%
-  transmute(ID=substr(Identifier.1, 1,8),
-            ID2=substr(Identifier.1,9,10),
-            Sample="Muscle",
-            d15N=as.numeric(d.15N.14N.Calculated),
-            d13C=as.numeric(d.13C.12C.Calculated),
-            d34S=as.numeric(d.34S.32S.Calculated),
-            CN_ratio=as.numeric(C..)/as.numeric(N..),
-            comment=paste(Comment.1,"|",Comment.2))%>%
-  filter(!grepl("Measurement repeated", comment)|ID=="BH-00380"|ID=="BH-00829")
-
-Mixed <- read.delim("Data/Pike/2021-02 Boddenhecht Timo Rittweg TG.txt")
-
-Mixed2 <- Mixed%>%
-  transmute(ID=ID2,
-            ID2=NA,
-            Sample=ID1,
-            d15N=as.numeric(d15N..permil.N2.atm.),
-            d13C=as.numeric(d13C..permil.VPDB.),
-            d34S=as.numeric(d34S..permil.CDT.),
-            CN_ratio=as.numeric(weight.C)/as.numeric(weight.N),
-            comment=NA)%>%
-  filter(Sample!="Eyelens")
-
-pike_NCS2 <- rbind(pike_NCS2, Mixed2)
-
-pike_NCS3 <- fread("Data/Pike/2023-04-21_NCS_Pike.CSV")
-
-pike_NCS4 <- pike_NCS3%>%
-  transmute(ID=case_when(Identifier.1 == "BH-71000" ~ "BH-51614",
-                         TRUE ~ Identifier.1),
-            ID2=NA,
-            Sample=Identifier.2,
-            d15N=as.numeric(d15N),
-            d13C=as.numeric(d13C),
-            d34S=as.numeric(d34S),
-            CN_ratio=(Amount.ug*(Cperc/100))/(Amount.ug*(Nperc/100)),
-            comment=Comment)%>%
-  filter(Sample!="eye lens")
-
-pike_NCSall <- rbind(pike_NCS2, pike_NCS4)
-
-pike_NCSall2 <- pike_NCSall%>%filter(Sample == "Muscle"|Sample == "muscle")%>%
-  drop_na(d34S)%>%
-  distinct()
-
-#Join pike data
-length(unique(pike_NCSall2$ID))
-
-Pikedata <- Pike2%>%
-  inner_join(pike_NCSall2,by="ID")
-
-length(unique(Pikedata$ID))
-
-#check missing fish (remove from final file before submission)
-pikeSIall <- data.frame(ID = unique(pike_NCSall2$ID))
-pikeSIDall <- data.frame(ID = unique(Pikedata$ID), Database = "TRUE")
-
-Pikecheck <- pikeSIall%>%
-  left_join(pikeSIDall, by = "ID")
-
-i <- "BH-00554"
-Pike2[Pike2$ID == i,]
-Pike1[Pike1$Fish_ID == i,]
-pike_NCS2[pike_NCS2$ID == i,]
-pike_NCS4[pike_NCS4$ID == i,]
-pike_NCSall2[pike_NCSall2$ID == i,]
-
-#check whether "A" (biopsy with idoine as disinfectant) and "B" (no iodine) are different
-Iodinecheck <- subset(Pikedata, ID2 == "A"|ID2 == "B")
-
-#simple t.test
-with(Iodinecheck, t.test(d15N[ID2 == "A"], d15N[ID2 == "B"]))
-with(Iodinecheck, t.test(d13C[ID2 == "A"], d13C[ID2 == "B"]))
-with(Iodinecheck, t.test(d34S[ID2 == "A"], d34S[ID2 == "B"]))
-
-#average SI values
-pikedata2 <- Pikedata%>%
-  group_by(ID)%>%
-  dplyr::reframe(ID=ID,
-            capt_date=capt_date,
-            TL_mm=TL_mm,
-            weight_g=weight,
-            sex=sex,
-            area=area,
-            Long=Long,
-            Lat=Lat,
-            Sample_type=case_when(Sample == "Muscle" ~ "muscle",
-                                  TRUE ~ Sample),
-            d15N=mean(d15N, na.rm = T),
-            d13C=mean(d13C, na.rm = T),
-            d34S=mean(d34S, na.rm = T),
-            CN_ratio=mean(CN_ratio, na.rm = T))%>%
-  distinct()
-
-length(unique(pikedata2$ID))
-
-#Lipid correction
-
-ggplot(data=pikedata2, aes(x=CN_ratio, y=d13C))+
-  geom_smooth(method="lm")+geom_point()+
-  theme_bw()
-
-dep <-  pikedata2
-dep$rcn <- with(dep, CN_ratio)
-dep$L <- with(dep,-20.54+7.24*rcn)
- 
-mean(dep$d13C, na.rm = T);sd(dep$d13C, na.rm = T)
-mean(dep$rcn);sd(dep$rcn)
-
-# Fishes Kiljunen et al.(2006) # Carefull, this correction is not adequate for invertebrates!!!
-dep$d13Cc<-with(dep,ifelse(rcn>3.5, d13C+7.018*(0.048+3.9/(1+287/L)),d13C))
-
-pikedata3 <- dep%>%
-  transmute(ID=ID,
-            Species="E.lucius",
-            capt_date=capt_date,
-            TL_mm=TL_mm,
-            weight_g=weight_g,
-            sex=sex,
-            sample_type=Sample_type,
-            area=area,
-            Long=Long,
-            Lat=Lat,
-            d15N=d15N,
-            d13C=d13Cc,
-            d34S=d34S,
-            CN_ratio=CN_ratio)
-
-fwrite(pikedata3, "Data/Pike/Pike_SI_all_clean_average_lipid-corrected.csv")
-```
-
-```{r join phenotype data with CNS data, include=FALSE, eval=FALSE}
-rm(list = ls())
-
-#read pike SI values
-pikeSI <- fread("Data/Pike/Pike_SI_all_clean_average_lipid-corrected.csv")
-
-#Join otolith phenotypes with SI data
-#read otolith phenotype data
-Otopike <- read.delim("Data/Pike/Pikedata_ecotypes.txt", header = T, stringsAsFactors = F, sep = "\t", dec = ".")
-
-Otopike.SI <- Otopike%>%left_join(pikeSI, by="ID")%>%
-  transmute(ID=ID,
-            capt_date=capt_date,
-            TL_mm=TL_mm.x,
-            weight_g=weight_g,
-            sex=sex.x,
-            study_area=waterbody,
-            waterbody=area,
-            Long=Long,
-            Lat=Lat,
-            lifeyear=lifeyear,
-            inc_um=inc_um,
-            res_mean=res_mean,
-            Sr_mean=Sr_mean,
-            SI_sample=sample_type,
-            ecotype=ecotype,
-            d15N=d15N,
-            d13C=d13C,
-            d34S=d34S,
-            CN_ratio=CN_ratio)
-
-length(unique(Otopike.SI[is.na(Otopike.SI$d34S)==F,]$ID))
-length(unique(Otopike.SI$ID))
-
-#Reformat Otopike
-Otopike2 <- Otopike.SI%>%
-  transmute(ID = ID,
-            capt_date = capt_date,
-            TL_mm = TL_mm,
-            weight_g = weight_g,
-            sex = sex,
-            area = study_area,
-            Long = Long,
-            Lat = Lat,
-            ecotype = case_when(ecotype == "FW_resident" ~ "FW-resident",
-                                ecotype == "Trans-habitat" ~ "Cross-habitat",
-                                TRUE ~ ecotype),
-            d15N = d15N,
-            d13C = d13C,
-            d34S = d34S,
-            CN_ratio = CN_ratio)%>%
-  drop_na(d34S)%>%
-  distinct()
-
-#read telemetry phenotypes
-Telepike <- fread("Data/Pike/Pikedata_telemetry_types.txt")
-
-#Reformat telepike
-Telepike2 <- Telepike%>%
-  filter(diag != "nodata" & ID != "BH-90307")%>%
-  group_by(ID)%>%
-  transmute(ID = ID,
-            ecotype = last(diag),
-            area = Area)%>%
-  distinct()
-  
-#Join telemetry phenotypes with SI data
-TeleSI <- pikeSI%>%
-  inner_join(Telepike2, by = "ID")%>%
-  transmute(ID = ID,
-            capt_date = capt_date,
-            TL_mm = TL_mm,
-            weight_g = weight_g,
-            sex = sex,
-            area = case_when(area.x == "Peene" ~ "Tributary",
-                             area.x == "U" ~ "NA",
-                             area.x == "Sehrowbach" ~ "Tributary",
-                             area.x == "Barthe" ~ "Tributary",
-                             area.x == "Beek" ~ "Tributary",
-                             area.x == "Duwenbeek" ~ "Tributary",
-                             area.x == "NHG" ~ "Tributary",
-                             area.x == "Ziese" ~ "Tributary",
-                             TRUE ~ area.x),
-            Long = Long,
-            Lat = Lat,
-            ecotype = case_when(ecotype == "Brackish" ~ "BW-resident",
-                                ecotype == "Fresh" ~ "FW-resident",
-                                ecotype == "Ubergangs II" ~ "Cross-habitat",
-                                ecotype == "Ubergangs I" ~ "Cross-habitat",
-                                ecotype == "Anadrom" ~ "Anadromous"),
-            d15N = d15N,
-            d13C = d13C,
-            d34S = d34S,
-            CN_ratio = CN_ratio)%>%
-  distinct()
-
-#Ecotypes
-Ecotypes_SI <- rbind(Otopike2, TeleSI)
-
-duplicates <- Ecotypes_SI[duplicated(Ecotypes_SI$ID) | duplicated(Ecotypes_SI$ID, fromLast = TRUE), ]
-
-fwrite(Ecotypes_SI, "Data/Pike/Ecotypes-Oto-Tele_SI_clean.csv")
-```
-
-```{r pike eye lens data cleanup, include=FALSE, eval=FALSE}
-rm(list = ls())
-
-#read in pike data from source
-Pike1 <- read.delim("C:/Users/timor/Nextcloud2/Boddenhecht/Data/Pike Data/1.pike_data_base_FOR_USERS/1Pike_Latest_Version.txt", 
-                    sep = ";", dec = ".", header = T, stringsAsFactors = F)
-
-Pike2 <- Pike1%>%
-  transmute(ID=case_when(Fish_ID=="BH-91050.2"~"BH-91050",
-                         Fish_ID=="BH-51614"&Waterbody=="BAT"~"NA",
-                         Fish_ID=="BH-90307"&MarkorRecap=="Mark"~"NA",
-                         TRUE~Fish_ID),
-            capt_date=Date,
-            TL_mm = Total_Length_mm,
-            weight=Weight,
-            sex=Sex,
-            area=Waterbody,
-            Long=case_when(is.na(Capture_Longitude)==T~Release_Longitude,
-                           TRUE~Capture_Longitude),
-            Lat=case_when(is.na(Capture_Latitude)==T~Release_Latitude,
-                          TRUE~Capture_Latitude))
-
-#Read pike SI data
-
-Mixed <- fread("Data/Mixed/2021-02 Boddenhecht Timo Rittweg TG.csv")
-
-Pike_NCS1 <- Mixed%>%
-  transmute(ID=ID2,
-            ID2=NA,
-            Sample=ID1,
-            Layer=as.numeric(`Lens layer`),
-            Diameter=as.numeric(`Eye lens diameter (mm)`),
-            amount=NA,
-            d15N=as.numeric(`d15N (permil N2 atm)`),
-            d13C=as.numeric(`d13C (permil VPDB)`),
-            d34S=as.numeric(`d34S (permil CDT)`),
-            CN_ratio=as.numeric(`weight%C`)/as.numeric(`weight%N`),
-            comment=NA)%>%
-  filter(Sample=="Eyelens")
-
-pike_NCS2 <- fread("Data/Pike/2023-04-21_NCS_Pike.CSV")
-
-pike_NCS3 <- pike_NCS2%>%
-  transmute(ID=Identifier.1,
-            ID2=NA,
-            Sample=Identifier.2,
-            Layer=as.numeric(Lens.layer),
-            Diameter=NA,
-            amount=Amount.ug,
-            d15N=as.numeric(d15N),
-            d13C=as.numeric(d13C),
-            d34S=as.numeric(d34S),
-            CN_ratio=(Amount.ug*(Cperc/100))/(Amount.ug*(Nperc/100)),
-            comment=Comment)%>%
-  filter(Sample=="eye lens")
-
-pike_NCS4 <- fread("Data/Pike/2024-01-25_NCS_Pike.CSV")
-
-pike_NCS5 <- pike_NCS4%>%
-  transmute(ID=Identifier.1,
-            ID2=NA,
-            Sample=Identifier.2,
-            Layer=as.numeric(lens.layer),
-            Diameter=NA,
-            amount=`Amount .ug`,
-            d15N=as.numeric(d15N),
-            d13C=as.numeric(d13C),
-            d34S=as.numeric(d34S),
-            CN_ratio=(amount*(Cperc/100))/(amount*(Nperc/100)),
-            comment=Comment)
-
-Pike_NCS_eyelens_all <- rbind(Pike_NCS1, pike_NCS3, pike_NCS5)
-
-Pike_NCS_eyelens_mean <- Pike_NCS_eyelens_all%>%
-  group_by(ID, Layer)%>%
-  dplyr::reframe(ID=ID,
-            ID2=ID2,
-            Sample=Sample,
-            Layer=Layer,
-            Diameter=Diameter,
-            amount=mean(amount),
-            d15N=mean(d15N, na.rm = T),
-            d13C=mean(d13C, na.rm = T),
-            d34S=mean(d34S, na.rm = T),
-            CN_ratio=mean(CN_ratio, na.rm = T),
-            comment=comment)%>%
-  ungroup()%>%
-  distinct()
-
-length(unique(Pike_NCS_eyelens_mean$ID))
-
-#combine with diameters per layer
-#read in raw eye lens measurement data
-Eyecarlos <- fread("Data/pike/Results_Carlos-lenses.txt")
-Eyenico <- fread("Data/pike/Results_Nico-lenses.txt")
-Eyerep <- fread("Data/pike/Results_lens-repeat.txt")
-Eyeadd <- fread("Data/pike/Results_additonal-lenses.txt")
-
-substrRight <- function(x, n){
-  substr(x, nchar(x)-n+1, nchar(x))
-}
-
-#cleanup eye lens measurements
-Eyecarlos2 <- Eyecarlos%>%
-  transmute(fish_ID=substr(substrRight(ID, 21),1,8),
-            lens_layer=as.numeric(substr(substrRight(ID, 21),10,12)),
-            diameter_mm=Diameter)%>%
-  filter(fish_ID!="BH-01906"&fish_ID!="BH-91045")
-
-Eyenico2 <- Eyenico%>%
-  transmute(fish_ID=substr(substrRight(ID, 21),1,8),
-            lens_layer=as.numeric(substr(substrRight(ID, 21),10,12)),
-            diameter_mm=Lens_diameter)
-
-Eyerep2 <- Eyerep%>%
-  transmute(fish_ID=substr(substrRight(ID, 23),1,8),
-            lens_layer=as.numeric(substr(substrRight(ID, 21),10,12)),
-            diameter_mm=Lens_diameter)
-
-Eyeadd2 <- Eyeadd%>%
-  transmute(fish_ID=substr(substrRight(ID, 21),1,8),
-            lens_layer=as.numeric(substr(substrRight(ID, 21),10,12)),
-            diameter_mm=Lens_diameter)
-
-length(unique(Eyecarlos2$fish_ID))+length(unique(Eyenico2$fish_ID))
-#27 + 30 = 57 individual eye lenses
-length(unique(Eyerep2$fish_ID))
-# 6 repeated lenses
-length(unique(Eyeadd2$fish_ID))
-#33 additional fish
-
-Eyeliminate <- Eyerep2%>%
-  transmute(fish_ID=fish_ID,
-            double=1)
-
-Eyenico_clean <- Eyenico2%>%
-  left_join(Eyeliminate, by = "fish_ID")%>%
-  filter(is.na(double)==TRUE)%>%
-  transmute(fish_ID=fish_ID,
-            lens_layer=lens_layer,
-            diameter_mm=diameter_mm)
-#30 - 6 = 24?
-length(unique(Eyenico_clean$fish_ID))
-
-Lenses <- rbind(Eyecarlos2, Eyenico_clean, Eyerep2, Eyeadd2)
-  
-#Should be 90
-length(unique(Lenses$fish_ID))
-
-# Function to reverse eye lens layers within each ID group
-reverse_layers <- function(layer_vector) {
-  max_layer <- max(layer_vector)
-  return(max_layer - (layer_vector - min(layer_vector)))
-}
-
-# Create a new column "Layer_rev" by reversing the "Layer" values within each "ID" group
-Lenses2 <- Lenses%>%
-  group_by(fish_ID)%>%
-  dplyr::reframe(ID=fish_ID,
-                   lens_layer=reverse_layers(lens_layer),
-                   diameter_mm=diameter_mm)
-
-
-fwrite(Lenses2, file = "Data/Pike/Lens-data-clean-reversed.csv")
-```
-
-```{r backcalculation of body length from lens diameter, include=FALSE, eval=FALSE}
-rm(list = ls())
-
-#read in additional lenses
-Eyedition <- fread("Data/pike/Results_additonal-lenses.txt")
-
-Pike1 <- fread("C:/Users/timor/Nextcloud2/Boddenhecht/Data/Pike Data/1.pike_data_base_FOR_USERS/1Pike_Latest_Version.txt")
-
-#read in pike data (Floy 71000 is BH-51614)
-
-
-substrRight <- function(x, n){
-  substr(x, nchar(x)-n+1, nchar(x))
-}
-
-reverse_layers <- function(layer_vector) {
-  max_layer <- max(layer_vector)
-  return(max_layer - (layer_vector - min(layer_vector)))
-}
-
-Eyedition2 <- Eyedition%>%
-  transmute(Fish_ID=substr(substrRight(ID, 21),1,8),
-            lens_layer=as.numeric(substr(substrRight(ID, 21),10,12)),
-            diameter_mm=Lens_diameter)
-
-Pikeyes <- Pike1%>%
-  inner_join(Eyedition2, by = "Fish_ID")%>%
-  transmute(fish_ID=Fish_ID,
-            capt_date=Date,
-            TL_mm=Total_Length_mm,
-            gape_mm=Gape,
-            weight_g=Weight,
-            sex=Sex,
-            waterbody=Waterbody,
-            Lat=Capture_Latitude,
-            Long=Capture_Longitude,
-            lens_layer=lens_layer,
-            diameter_mm=diameter_mm)
-
-Lens_outer <- Pikeyes%>%
-  filter(lens_layer==1 &
-           fish_ID!="BH-93015" &
-           fish_ID!="BH-93002"&
-           fish_ID!="BH-93178"&
-           fish_ID!="BH-93005"&
-           fish_ID!="BH-93116"&
-           fish_ID!="BH-93109"&
-           fish_ID!="BH-01722")
-
-ggplot(Lens_outer, aes(TL_mm, diameter_mm))+
-  geom_point(aes(color=fish_ID))+
-  geom_smooth(method = "lm")+
-  theme_minimal()
-
-summary(lm(TL_mm~diameter_mm, data = Lens_outer))
-
-#read in main sample
-Lens_samples <- fread("Data/Pike/Lens-data-clean-reversed.csv")
-Lens_samples$Fish_ID <- Lens_samples$fish_ID
-
-#read in fish data
-Pike1 <- fread("C:/Users/timor/Nextcloud2/Boddenhecht/Data/Pike Data/1.pike_data_base_FOR_USERS/1Pike_Latest_Version.txt")
-
-Lensmodel <- lm(diameter_mm~TL_mm, data = Lens_outer)
-summary(Lensmodel)
-
-#Predict absolute lens diameter for main sample
-length(unique(Lens_samples$fish_ID))
-
-Pikeyes <- Pike1%>%
-  inner_join(Lens_samples, by = "Fish_ID")%>%
-  transmute(fish_ID=Fish_ID,
-            capt_date=Date,
-            TL_mm=Total_Length_mm,
-            gape_mm=Gape,
-            weight_g=Weight,
-            sex=Sex,
-            waterbody=Waterbody,
-            Lat=Capture_Latitude,
-            Long=Capture_Longitude,
-            lens_layer=lens_layer,
-            diameter_mm=diameter_mm)
-
-length(unique(Pikeyes$fish_ID))
-
-#Calculate missing total diameters
-Pikeyes$total.diameter.mm <- predict(Lensmodel, newdata = Pikeyes)
-
-#Perform Fraser-Lee backcalculation
-a <- coefficients(Lensmodel)[[1]]
-b <- coefficients(Lensmodel)[[2]]
-
-Pikeyes.back <- Pikeyes%>%
-  mutate(Length_back = (diameter_mm/total.diameter.mm)*(TL_mm-a)+a)%>%
-  mutate(Length_back = case_when(Length_back > TL_mm ~ TL_mm,
-                                 TRUE ~ Length_back))
-
-length(unique(Pikeyes.back$fish_ID))
-
-#Join isotope data
-Isolens <- fread("Data/pike/Eye-lens-all_clean.csv")
-
-length(unique(Isolens$ID))
-
-reverse_layers <- function(layer_vector) {
-  max_layer <- max(layer_vector)
-  return(max_layer - (layer_vector - min(layer_vector)))
-}
-
-Isolens2 <- Isolens%>%
-  group_by(ID)%>%
-  transmute(fish_ID=ID,
-            lens_layer=reverse_layers(Layer),
-            amount=amount,
-            d15N=d15N,
-            d13C=d13C,
-            d34S=d34S,
-            CN_ratio)
-
-Pikeyes.clean <- Pikeyes.back%>%
-  inner_join(Isolens2, by = c("fish_ID", "lens_layer"))
-
-length(unique(Pikeyes.clean$fish_ID))
-
-fwrite(Pikeyes.clean, file = "Data/Pike/Lens-SI-all-clean-TL-backcalculated.csv")
-```
-
-```{r marry lens data to otoliths, include=FALSE, eval=FALSE}
-rm(list = ls())
-
-#load lens data with length
-Lensdata <- fread("Data/Pike/Lens-SI-all-clean-TL-backcalculated.csv")
-
-#load otolith data
-Pikeoto <- fread("Data/Pike/Pikedata_model.csv")
-
-Pikeoto <- as.data.frame(Pikeoto)
-Pikeoto$ID <- as.factor(Pikeoto$ID)
-
-Pikeoto2 <- Pikeoto%>%
-  group_by(ID)%>%
-  dplyr::mutate(trad_um = max(rad_um))
-
-#Backcalculate lengths
-ggplot(Pikeoto2, aes(x = TL_mm, y = trad_um))+
-  geom_point()+
-  theme_bw()
-
-otomod <- lm(TL_mm~trad_um, data = Pikeoto2)
-summary(otomod)
-
-a <- coefficients(otomod)[[1]]
-
-Pikeoto3 <- Pikeoto2%>%
-  dplyr::mutate(length_back = (rad_um/trad_um)*(TL_mm-a)+a)
-
-ALK <- Pikeoto3%>%
-  transmute(fish_ID = ID,
-            lifeyear = lifeyear,
-            length_back = length_back)%>%
-  distinct()
-
-#Marry to eye lens layers
-Pikelenses <- as.data.frame(Lensdata)
-ALK <- as.data.frame(ALK)
-
-#Filter out non-Oto fish
-IDlist <- unique(ALK$ID)
-
-Pikelenses <- Pikelenses%>%
-  filter(fish_ID %in% IDlist)%>%
-  drop_na(Length_back)
-
-
-IDOto <- unique(Pikelenses$fish_ID)
-age <- NULL
-ages <- NULL
-
-for (i in 1:length(IDOto)) {
-  age <- ifelse(Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] <= 
-                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 1), "length_back"], 1,
-                 ifelse(Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] <= 
-                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 2), "length_back"] & 
-                     Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] > 
-                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 1), "length_back"], 2,
-                   ifelse(Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] <= 
-                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 3), "length_back"] & 
-                     Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] > 
-                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 2), "length_back"], 3,
-                   ifelse(Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] <= 
-                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 4), "length_back"] & 
-                     Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] > 
-                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 3), "length_back"], 4,
-                   ifelse(Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] <= 
-                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 5), "length_back"] & 
-                     Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] > 
-                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 4), "length_back"], 5,
-                   ifelse(Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] <= 
-                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 6), "length_back"] & 
-                     Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] > 
-                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 5), "length_back"], 6,
-                   ifelse(Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] <= 
-                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 7), "length_back"] & 
-                     Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] > 
-                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 6), "length_back"], 7,
-                   ifelse(Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] <= 
-                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 8), "length_back"] & 
-                     Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] > 
-                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 7), "length_back"], 8,
-                   ifelse(Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] <= 
-                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 9), "length_back"] & 
-                     Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] > 
-                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 8), "length_back"], 9,
-                   ifelse(Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] <= 
-                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 10), "length_back"] & 
-                     Pikelenses[which(Pikelenses$fish_ID == IDOto[i]), "Length_back"] > 
-                   ALK[which(ALK$ID == IDOto[i] & ALK$lifeyear == 9), "length_back"], 10, NA))))))))))
-  ages <- na.omit(c(ages, age))
-}
-
-Pikelenses$age <- ages
-
-#Reshape, correct one fish that was assigned "NA" for some reason (1 year old, so only one lifeyear to assign)
-Pikelenses_age <- Pikelenses%>%
-  transmute(ID = fish_ID,
-            Year = year(capt_date),
-            lifeyear = case_when(ID == "BH-01719" ~ 1,
-                                 TRUE ~ age),
-            amount = amount,
-            d15N = d15N,
-            d13C = d13C,
-            d34S = d34S,
-            CN_ratio = CN_ratio)%>%
-  distinct()
-
-length(unique(Pikelenses_age$ID))
-
-Pike_oto_lenses <- Pikeoto3%>%
-  inner_join(Pikelenses_age, by = c("ID", "lifeyear"))
-
-length(unique(Pike_oto_lenses$ID))
-
-#reformat, change the fish that were identified as anadromous using the decision framework in Rittweg et al., (2024)
-Pikedata_model <- Pike_oto_lenses%>%
-  group_by(ID, lifeyear)%>%
-  dplyr::reframe(ID = ID,
-                   waterbody = waterbody,
-                   TL_mm = TL_mm,
-                   phenotype = case_when(ID == "BH-01904"|ID == "BH-01903"|ID == "BH-00750" ~ "Anadromous",
-                                         phenotype == "FW_resident" ~ "FW-resident",
-                                         phenotype == "Trans-habitat" ~ "Cross-habitat",
-                                         TRUE ~ phenotype),
-                   sex = sex,
-                   Year = Year,
-                   lifeyear = lifeyear,
-                   res_mean = res_mean,
-                   Sr_mean = Sr_mean,
-                   genotype = genotype,
-                   length_back = length_back,
-                   d15N_mean = mean(d15N, na.rm = T),
-                   d13C_mean = mean(d13C, na.rm = T),
-                   d34S_mean = mean(d34S, na.rm = T),
-                   CN_mean = mean(CN_ratio, na.rm = T))%>%
-  distinct()
-
-length(unique(Pikedata_model$ID))
-
-fwrite(Pikedata_model, "Data/Pike/Pikedata-eye-lens-years.csv")
-```
-
-```{r prey fish data, include=FALSE, eval=FALSE}
-rm(list = ls())
-
-#read in preyfish data
-Prey1 <- read.csv2("Data/Prey/Preyfish_samples.CSV", header = T, stringsAsFactors = F)
-
-Prey2 <- Prey1%>%
-  transmute(ID=Number,
-            Species=Species,
-            capt_date=Date,
-            SL_mm=SL.exact..mm.,
-            SL_size_class=SL.size.class,
-            weight_g=Weight..g.,
-            height_mm=Heigth..mm.,
-            sample_type=Sample.type,
-            area=Waterbody,
-            Long=Long,
-            Lat=Lat,
-            comment=comment)
-
-#Read prey SI data
-prey_NCS1 <- read.csv2("Data/Prey/2022-09-08_NCS_Prey.CSV", header = T, stringsAsFactors = F)
-
-prey_NCS2 <- prey_NCS1%>%
-  transmute(ID=Identifier.1,
-            Sample=Identifier.2,
-            d15N=as.numeric(d.15N.14N.Calculated),
-            d13C=as.numeric(d.13C.12C.Calculated),
-            d34S=as.numeric(d.34S.32S.Calculated),
-            CN_ratio=as.numeric(C..)/as.numeric(N..),
-            comment=paste(Comment.1,"|",Comment.2))%>%
-  filter(!grepl("Measurement repeated", comment)|ID=="BF-160"|ID=="BF-165")
-
-Mixed <- read.delim("Data/Prey/2021-02 Boddenhecht Timo Rittweg TG.txt")
-
-Mixed2 <- Mixed%>%
-  transmute(ID=ID2,
-            Sample=ID1,
-            d15N=as.numeric(d15N..permil.N2.atm.),
-            d13C=as.numeric(d13C..permil.VPDB.),
-            d34S=as.numeric(d34S..permil.CDT.),
-            CN_ratio=as.numeric(weight.C)/as.numeric(weight.N),
-            comment=NA)
-
-prey_NCS2 <- rbind(prey_NCS2, Mixed2)
-
-prey_NCS3 <- fread("Data/Prey/2023-04-21_NCS_Prey.CSV")
-
-prey_NCS4 <- prey_NCS3%>%
-  transmute(ID=Identifier.1,
-            Sample=Identifier.2,
-            d15N=as.numeric(d15N),
-            d13C=as.numeric(d13C),
-            d34S=as.numeric(d34S),
-            CN_ratio=Cperc/Nperc,
-            comment=Comment)
-
-prey_NCS5 <- fread("Data/Prey/2023-08-22_NCS_Prey.CSV")
-
-prey_NCS6 <- prey_NCS5%>%
-  transmute(ID=Identifier.1,
-            Sample=Identifier.2,
-            d15N=as.numeric(d15N),
-            d13C=as.numeric(d13C),
-            d34S=as.numeric(d34S),
-            CN_ratio=Cperc/Nperc,
-            comment=Comment)
-
-prey_NCSall <- rbind(prey_NCS2, prey_NCS4, prey_NCS6)
-
-#check missing fish
-preySID <- data.frame(ID=prey_NCS2[grepl("Measurement repeated", prey_NCS2$comment),]$ID)
-
-preySID2 <- data.frame(ID=prey_NCS2[!grepl("Measurement repeated", prey_NCS2$comment),]$ID,
-                       ID2=prey_NCS2[!grepl("Measurement repeated", prey_NCS2$comment),]$ID)
-
-IDcheck <- preySID%>%left_join(preySID2, by="ID")
-
-#Average SI values
-prey_NCSall <- prey_NCSall%>%
-  group_by(ID)%>%
-  reframe(ID=ID,
-            Sample=Sample,
-            d15N=mean(d15N, na.rm = T),
-            d13C=mean(d13C, na.rm = T),
-            d34S=mean(d34S, na.rm = T),
-            CN_ratio=mean(CN_ratio, na.rm = T),
-            comment=comment)%>%
-  distinct()
-
-#join with preyfish data
-
-Prey <- Prey2%>%inner_join(prey_NCSall, by="ID")%>%
-  transmute(ID=ID,
-            Species=case_when(Species=="Herring"~"C.harengus",
-                              Species=="C. harengus"~"C.harengus",
-                              Species=="Roach"~"R.rutilus",
-                              Species=="R.rutilus"~"R.rutilus",
-                              Species=="R. rutilus"~"R.rutilus",
-                              Species=="Round goby"~"N.melanostomus",
-                              Species=="N. melanostomus"~"N.melanostomus",
-                              Species=="Tench"~"T.tinca",
-                              Species=="T. tinca"~"T.tinca",
-                              Species=="Bleak"~"A.alburnus",
-                              Species=="A. alburnus"~"A.alburnus",
-                              Species=="Perch"~"P.fluviatilis",
-                              Species=="P. fluviatilis"~"P.fluviatilis",
-                              Species=="Pikeperch"~"S.lucioperca",
-                              Species=="Silver bream"~"B.bjoerkna",
-                              Species=="B. bjoerkna"~"B.bjoerkna",
-                              Species=="White bream"~"B.bjoerkna",
-                              Species=="Vimba bream"~"V.vimba",
-                              Species=="P. spec"~"P.spec",
-                              Species=="P.microps"~"P.spec",
-                              Species=="G. aculeatus"~"G.aculeatus",
-                              Species=="Three-spined stickleback"~"G.aculeatus",
-                              Species=="S. erythrophthalmus"~"S.erythrophthalmus",
-                              Species=="Rudd"~"S.erythrophthalmus",
-                              Species=="G. cernua"~"G.cernua",
-                              Species=="Flounder"~"P.flesus",
-                              Species=="P. flesus"~"P.flesus",
-                              Species=="Plaice"~"P.platessa",
-                              Species=="Eel"~"A.anguilla",
-                              Species=="A. anguilla"~"A.anguilla",
-                              Species=="Pike"~"NA",
-                              Species=="Nine-spined stickleback"~"P.pungitius",
-                              Species=="Cod"~"G.morhua",
-                              Species=="A.tobianus"~"A.tobianus",
-                              Species=="S. spratus"~"S.sprattus",
-                              Species=="Salmo trutta  t."~"S.trutta",
-                              Species=="Z. viviparus"~"Z.viviparus"),
-            capt_date=capt_date,
-            SL_mm=SL_mm,
-            SL_size_class=SL_size_class,
-            weight_g=weight_g,
-            height_mm=height_mm,
-            sample_type=sample_type,
-            area=area,
-            Long=Long,
-            Lat=Lat,
-            d15N=d15N,
-            d13C=d13C,
-            d34S=d34S,
-            CN_ratio=CN_ratio,
-            comment1=comment.x,
-            comment2=comment.y)
-
-
-#check missing fish
-preySID <- data.frame(ID=unique(prey_NCSall$ID))
-
-preyID <- data.frame(ID=unique(Prey$ID),
-                     ID2=unique(Prey$ID))
-
-IDcheck <- preySID%>%left_join(preyID, by="ID")
-
-#lipid corrections
-ggplot(data=Prey[Prey$Species=="C.harengus"|Prey$Species=="P.fluviatilis"|Prey$Species=="R.rutilus"|
-                   Prey$Species=="P.flesus"|Prey$Species=="N.melanostomus",], aes(x=CN_ratio, y=d13C))+
-  geom_smooth(method="lm")+geom_point()+
-  facet_grid(Species~., scales="free_y")+
-  theme_bw()
-
-#Lipid correction for d13C depending on the C:N,  for values >3.5 (as recommended by Skinner et al 2016)
-dep = subset(Prey, Species%in%c("C.harengus", "P.flesus","P.fluviatilis","R.rutilus","N.melanostomus"))
-dep$rcn=with(dep, CN_ratio)
-dep$L<-with(dep,-20.54+7.24*rcn)
- 
-mean(dep$d13C);sd(dep$d13C)
-mean(dep$rcn);sd(dep$rcn)
-
-# Fishes Kiljunen et al.(2006) # Carefull, this correction is not adequate for invertebrates!!!
-dep$d13Cc<-with(dep,ifelse(rcn>3.5, d13C+7.018*(0.048+3.9/(1+287/L)),d13C))
-
-depdep2 <- dep%>%
-  transmute(ID=ID,
-            Species=Species,
-            capt_date=capt_date,
-            SL_mm=SL_mm,
-            SL_size_class=SL_size_class,
-            weight_g=weight_g,
-            height_mm=height_mm,
-            sample_type=sample_type,
-            area=area,
-            Long=Long,
-            Lat=Lat,
-            d15N=d15N,
-            d13C=d13Cc,
-            d34S=d34S,
-            CN_ratio=CN_ratio,
-            comment1=comment1,
-            comment2=comment2)
-
-C.corrected <- rbind(Prey[!Prey$Species%in%c("C.harengus", "P.flesus","P.fluviatilis","R.rutilus","N.melanostomus"),],depdep2)
-
-fwrite(C.corrected, "Data/Prey/Preyfish_SI_clean_average_lipid-corrected.csv")
-```
-
-```{r baseline data, include=FALSE, eval=FALSE}
-rm(list = ls())
-
-substrRight <- function(x, n){
-  substr(x, nchar(x)-n+1, nchar(x))
-}
-
-#read in baseline data
-base1 <- fread("Data/Baseline/baseline_samples.CSV")
-base2 <- fread("Data/Baseline/baseline_1.CSV")
-base3 <- fread("Data/Baseline/baseline_2.CSV")
-
-base1.1 <- base1 %>%
-  mutate(group = case_when(Species %in% c("Mystery Snail", "Mysis sp.", "Mystery Isopod", "C. lamarcki", "Idotea sp.",
-                                          "M. bathica", "L. obtusata") ~ "Littoral",
-                           Species %in% c("M. arenaria", "M. edulis", "M. mytilus") ~ "Pelagic",
-                           Genus %in% c("Neomysis", "Gastropoda", "Idotea + Gammarus", "Macoma", "Cerastoderma", 
-                                        "Littorina", "Mysidae", "Mystery Gastropoda", "Idotea", "Gammarus", 
-                                        "Bathyporeia", "Isopoda") ~ "Littoral",
-                           Genus %in% c("Mya", "Balanidae", "Mytilus") ~ "Pelagic",
-                           Genus %in% c("Trichoptera", "Coryxidae") ~ "Terrestrial",
-                           TRUE ~ NA)) %>%
-  transmute(ID = Number,
-            functional_group = `Functional group`,
-            sample_type = `Sample type (gill net/grab/dredge/opportunistic)`,
-            date = Date,
-            long = Long,
-            lat = Lat,
-            group, comment) %>%
-  drop_na(group)
-
-base2.1 <- base2 %>%
-  transmute(ID = `Identifier 1`,
-            d13C = `d 13C/12C Calculated`,
-            d15N = `d 15N/14N Calculated`,
-            d34S = `d 34S/32S Calculated`)
-
-base3.1 <- base3 %>%
-  transmute(ID = `Identifier 1`,
-            d13C = `d 13C/12C Calculated`,
-            d15N = `d 15N/14N Calculated`,
-            d34S = `d 34S/32S Calculated`)
-
-Isovalues <- rbind(base2.1, base3.1)
-
-baseline <- base1.1 %>%
-  left_join(Isovalues, by = "ID") %>%
-  transmute(ID,
-            Fun_group = functional_group,
-            Receiver = substrRight(sample_type, 3),
-            Date = parse_date_time(sub(".", "-", date), "dmy"),
-            Group = group,
-            N = comment,
-            d13C, d15N, d34S) %>%
-  drop_na(d13C)
-
-
-# Add receiver positions
-Receivers <- fread("Data/Baseline/Receiver_positions.csv")
-
-Receivers1 <- Receivers %>%
-  transmute(Long = Longitude,
-            Lat = Latitude,
-            Receiver = substr(Station.na, 1, 3),
-            Section,
-            Bodden = case_when(Bodden == "S" ~ "WRBC",
-                               Bodden == "KbSb" ~ "WRBC",
-                               Bodden == "VbGjb" ~ "NRBC",
-                               Bodden == "BAT" ~ "DZBC",
-                               Bodden == "KJB" ~ "NRBC",
-                               Bodden == "P" ~ "P",
-                               Bodden == "GB" ~ "GB",
-                               TRUE ~ "Tributary"))
-
-baseline2 <- baseline %>%
-  left_join(Receivers1, by = "Receiver")
-
-fwrite(baseline2, "Data/Baseline/Baseline_bodden.csv")
-```
-
-# SI basic visuals
 ```{r biplots whole sample, include=FALSE, eval=FALSE}
 rm(list = ls())
 descriptive <- fread("Data/Pike/Descriptive-whole-sample.csv")
@@ -1599,95 +498,7 @@ BiCS <- ggplot()+ geom_errorbar(data=descriptive2, aes(x=d13C, y=d34S, ymin = d3
 
 Allpike <- ggarrange(Binorm, BiNS, BiCS, ncol = 3, nrow = 1, common.legend = T, labels = c("A", "B", "C"))
 
-ggsave("Figures/Biplots-muscle-whole-sample.png", width = 16, height = 6, units = "cm", dpi = 600, bg = "white")
-```
-
-```{r biplots main prey Bodden areas, include=FALSE, eval=FALSE}
-rm(list = ls())
-
-Prey <- fread("Data/Prey/Preyfish_SI_clean_average_lipid-corrected.csv")
-
-Prey2 <- Prey%>%
-  filter(Species %in% c("C.harengus", "R.rutilus", "N.melanostomus", "P.fluviatilis", "P.flesus"))%>%
-  mutate(Species = case_when(area == "Barthe" ~ "freshwater",
-                           area == "Ziese" ~ "freshwater",
-                           area == "Peene" ~ "freshwater",
-                           area == "Duwenbeek" ~ "freshwater",
-                           area == "Beck" ~ "freshwater",
-                           area == "KBW" ~ "freshwater",
-                           TRUE ~ Species),
-         area = area,
-         sex="NA")
-
-Prey$Species <- as.factor(Prey$Species)
-
-str(Prey)
-
-descriptive2 <- descriptive%>%
-  filter(Sp!="T.tinca"&Sp!="S.lucioperca"&Sp!="S.erythrophthalmus")%>%
-  drop_na()
-
-#Biplot by species
-brewer.pal(n = 14, name = "Dark2")
-colorBlindBlack8  <- c("#1B9E77", "#D95F02", "#7570B3", "#E7298A", "#66A61E", "#E6AB02", "#A6761D", "#666666","darkblue","darkred","cyan","red","darkgreen", "orange","blue")
-
-ggplot(Prey2, aes(Species, d15N, color = area))+
-  geom_boxplot()+
-  theme_minimal()
-
-ggplot(Prey2, aes(Species, d13C, color = area))+
-  geom_boxplot()+
-  theme_minimal()
-
-ggplot(Prey2, aes(Species, d34S, color = area))+
-  geom_boxplot()+
-  theme_minimal()
-
-Binorm <- ggplot()+ 
-  geom_errorbar(data=descriptive2, aes(x = d13C, ymin = d15N-sdd15N,ymax = d15N+sdd15N, col=Sp), width=.5, size=.5) +
-  geom_errorbarh(data=descriptive2, aes(y = d15N, xmin = d13C+sdd13C,xmax = d13C-sdd13C, col=Sp), height=.5, size=.5)+
-  scale_colour_manual("", values=colorBlindBlack8)+ #1:nlevels(sources$prey))+
-  scale_fill_manual("", values=colorBlindBlack8)+
-  xlim(-27,-12)+ylim(8,18)+
-  theme_bw()+xlab(delta^"13"~"C(\u2030)")+ylab(delta^"15"~"N(\u2030)")+
-  theme(text = element_text(size = 10, color = "black"),
-        legend.position="bottom",
-        legend.text = element_text(color = "black", size=5, face="italic"),
-        legend.key.size = unit(.5, 'cm'),
-        strip.background = element_rect(colour="black", fill="white"))
-
-BiNS <- ggplot()+ geom_errorbar(data=descriptive2, aes(x=d34S, y=d15N, ymin = d15N-sdd15N,ymax = d15N+sdd15N, col=Sp),
-                        width=.5, size=.5) + 
-  geom_errorbarh(data=descriptive2, aes(x=d34S, y=d15N, xmin = d34S+sdd34S,xmax = d34S-sdd34S, col=Sp),
-                 height=.5, size=.5)+
-  scale_colour_manual("", values=colorBlindBlack8)+ #1:nlevels(sources$prey))+
-  scale_fill_manual("", values=1:nlevels(descriptive2$sp))+
-  xlim(5,22)+ylim(8,18)+
-  theme_bw()+xlab(delta^"34"~"S(\u2030)")+ylab(delta^"15"~"N(\u2030)")+
-  theme(text = element_text(size = 10, color = "black"),
-        legend.position="none",
-        legend.text = element_text(color = "black", size=5, face="italic"),
-        legend.key.size = unit(.5, 'cm'),
-        strip.background = element_rect(colour="black", fill="white"))
-
-BiCS <- ggplot()+ geom_errorbar(data=descriptive2, aes(x=d13C, y=d34S, ymin = d34S+sdd34S,ymax = d34S-sdd34S, col=Sp),
-                        width=.5, size=.5) + 
-  geom_errorbarh(data=descriptive2, aes(x=d13C, y=d34S, xmin = d13C+sdd13C,xmax = d13C-sdd13C, col=Sp),
-                 height=.5, size=.5)+
-  scale_colour_manual("", values=colorBlindBlack8)+ #1:nlevels(sources$prey))+
-  scale_fill_manual("", values=1:nlevels(descriptive2$sp))+
-  xlim(-27,-12)+ylim(5,22)+
-  theme_bw()+xlab(delta^"13"~"C(\u2030)")+ylab(delta^"34"~"S(\u2030)")+
-  theme(text = element_text(size = 10, color = "black"),
-        legend.position="none",
-        legend.text = element_text(color = "black", size=5, face="italic"),
-        legend.key.size = unit(.5, 'cm'),
-        strip.background = element_rect(colour="black", fill="white"))
-
-
-Allpike <- ggarrange(Binorm, BiNS, BiCS, ncol = 3, nrow = 1, common.legend = T, labels = c("A", "B", "C"))
-
-ggsave("Figures/Biplots-muscle-whole-sample.png", width = 16, height = 6, units = "cm", dpi = 600, bg = "white")
+ggsave("Figures/supplement/Biplots-muscle-whole-sample.png", width = 16, height = 6, units = "cm", dpi = 600, bg = "white")
 ```
 
 ```{r biplots for ecotypes, include=FALSE, eval=FALSE}
@@ -2026,44 +837,105 @@ ggplot(baseline2, aes(as.factor(month(Date)), d15N, color = Group))+
 
 ```{r eye lens year effects, include=FALSE, eval=FALSE}
 rm(list = ls())
+# Pike eye lens: Lensyear back-calculation, lifeyear 1 only
 Lensdata <- fread("Data/Pike/Pikedata-eye-lens-years.csv")
 
-# Lensyear backcalculation
 Lensdata2 <- Lensdata %>%
-  group_by(ID) %>%
+  dplyr::group_by(ID) %>%
   dplyr::mutate(
     age_at_capture = max(lifeyear),
     Lensyear = Year - (age_at_capture - lifeyear)
   ) %>%
-  ungroup()
+  dplyr::ungroup()
 
-fwrite(Lensdata2, "Data/Pike/Pikedata-eye-lens-years.csv")
-
-# test duplicates
-missing_year_ids <- Lensdata2 %>% filter(is.na(Year)) %>% distinct(ID) %>% pull(ID)
-cat(sum(is.na(Lensdata2$Lensyear)), "of", nrow(Lensdata2),
-    "rows have no Year on record (", length(missing_year_ids), "fish IDs) and are",
-    "excluded from the year-based plots:\n")
-cat(paste(missing_year_ids, collapse = ", "), "\n\n")
-
-# plot
 phenotype_levels <- c("FW-resident", "Cross-habitat", "BW-resident", "Anadromous")
 phenotype_colors <- c(
-  "FW-resident"   = "#C5D86D",  # blue
+  "FW-resident"   = "#C5D86D",
   "Cross-habitat" = "#F1C40F",
   "BW-resident"   = "#004643",
   "Anadromous"    = "#00BFB2"
 )
 
 Lensdata2 <- Lensdata2 %>%
-  mutate(phenotype = factor(phenotype, levels = phenotype_levels))
+  dplyr::mutate(phenotype = factor(phenotype, levels = phenotype_levels))
 
-# Restrict to the lifeyear 1 (first year of life) layer only
-Lensdata_ly1 <- Lensdata2 %>% filter(lifeyear == 1)
-cat(nrow(Lensdata_ly1), "rows at lifeyear 1 (of", nrow(Lensdata2), "total rows)\n\n")
+Lensdata_ly1 <- Lensdata2 %>% dplyr::filter(lifeyear == 1)
 
-plot_isotope <- function(data, yvar, ylab, title_txt) {
-  d <- data %>% filter(!is.na(Lensyear), !is.na(.data[[yvar]]))
+# Environmental baseline (Umweltprobenbank): eelpout, mussel, fucus, gull egg
+# File is Latin-1 encoded with German umlauts, semicolon-delimited, comma decimals -
+# that combination is what threw "invalid multibyte string" when read as UTF-8.
+# header is forced to TRUE: every column in this file is string-typed all the way
+# down (numbers and text share the same column across different Kenngroesse rows),
+# so fread's automatic header detection has no type contrast to work with and can
+# guess header = FALSE on some data.table versions, silently naming columns V1..V40.
+Env_raw <- fread(
+  "Data/Prey/Probendatenbank_Bund_baseline-values.csv",
+  sep = ";", dec = ",", encoding = "Latin-1", na.strings = "", header = TRUE
+)
+stopifnot(
+  "Env_raw wasn't read with the expected header - check the file wasn't re-saved/re-exported" =
+    all(c("Probenahmegebiet", "Probenart", "Parameter", "Extraktionsmethode", "Messeinheit") %in% names(Env_raw))
+)
+names(Env_raw)[7] <- "Kenngroesse"
+
+env_chr_cols <- c("Probenahmegebiet", "Probenart", "Parameter", "Extraktionsmethode", "Messeinheit", "Kenngroesse")
+Env_raw <- Env_raw %>% dplyr::mutate(dplyr::across(dplyr::all_of(env_chr_cols), enc2utf8))
+
+# Each Probenart is monitored at essentially one site, except the gull eggs, which
+# have two extraction methods (ENTF-DCM / ENTF-PE) for the same samples - ENTF-DCM
+# is kept here since it's the only method used for the other three taxa and has the
+# longer, more complete time series (25 years vs. 17 for ENTF-PE).
+# Matched on ASCII substrings rather than the full (umlaut-containing) Probenart
+# string - a string built from ö escapes here doesn't reliably compare equal
+# to the same characters after enc2utf8() on the Latin-1 source, even though the
+# underlying bytes match, because R can tag otherwise-identical strings with
+# different internal encodings; grepl() on the ASCII part sidesteps that entirely.
+Env_raw <- Env_raw %>%
+  dplyr::mutate(Species = dplyr::case_when(
+    grepl("Blasentang", Probenart)  ~ "Fucus (bladderwrack)",
+    grepl("Miesmuschel", Probenart) ~ "Blue mussel",
+    grepl("Aalmutter", Probenart)   ~ "Eelpout",
+    grepl("Silberm", Probenart)     ~ "Herring gull (egg)",
+    TRUE ~ NA_character_
+  ))
+species_colors <- c(
+  "Fucus (bladderwrack)" = "#2E8B57",
+  "Blue mussel"          = "#377EB8",
+  "Eelpout"              = "#7570B3",  # same hex as Z.viviparus in the prey biplot script
+  "Herring gull (egg)"   = "#4D4D4D"
+)
+
+year_cols <- as.character(1993:2025)
+
+Env_long <- Env_raw %>%
+  dplyr::filter(
+    Kenngroesse %in% c("Arithmetischer Mittelwert", "Standardabweichung"),
+    Extraktionsmethode == "ENTF-DCM",
+    !is.na(Species)
+  ) %>%
+  tidyr::pivot_longer(cols = dplyr::all_of(year_cols), names_to = "Year", values_to = "value") %>%
+  dplyr::filter(!is.na(value)) %>%
+  dplyr::mutate(
+    Year = as.integer(Year),
+    value = as.numeric(gsub(",", ".", value)),
+    stat = dplyr::if_else(Kenngroesse == "Arithmetischer Mittelwert", "mean", "sd")
+  ) %>%
+  dplyr::select(Species, Parameter, Year, stat, value) %>%
+  tidyr::pivot_wider(names_from = stat, values_from = value) %>%
+  dplyr::mutate(Species = factor(Species, levels = names(species_colors)))
+
+dir.create("Data/Environmental", showWarnings = FALSE)
+fwrite(Env_long, "Data/Environmental/Baseline_isotopes_tidy.csv")
+
+# Pike and baseline are plotted as two separate figures rather than overlaid -
+# easier to read than combining boxplots and reference lines on the same axes.
+# d34S isn't measured in the baseline dataset (only d15N and d13C), so the pike
+# figure below has a d34S panel that the baseline figure doesn't. The baseline
+# "Standardabweichung" (SD) row is present as a category in the source file but
+# is blank for every species/year in this export, so there's no SD to plot -
+# baseline series are the mean only.
+plot_pike_isotope <- function(yvar, ylab, title_txt) {
+  d <- Lensdata_ly1 %>% dplyr::filter(!is.na(Lensyear), !is.na(.data[[yvar]]))
   ggplot(d, aes(x = factor(Lensyear), y = .data[[yvar]], fill = phenotype)) +
     geom_boxplot(
       position = position_dodge2(preserve = "single", padding = 0.15),
@@ -2071,30 +943,43 @@ plot_isotope <- function(data, yvar, ylab, title_txt) {
     ) +
     scale_fill_manual(values = phenotype_colors, name = "Phenotype", drop = FALSE) +
     labs(
-      x = "Calendar year (lens layer formation)",
-      y = ylab,
-      title = title_txt,
+      x = "Calendar year (lens layer formation)", y = ylab, title = title_txt,
       subtitle = "Lifeyear 1 (first year of life) only"
     ) +
     theme_bw(base_size = 11) +
-    theme(
-      panel.grid.minor = element_blank(),
-      legend.position = "bottom",
-      plot.title = element_text(face = "bold")
-    )
+    theme(panel.grid.minor = element_blank(), legend.position = "bottom", plot.title = element_text(face = "bold"))
 }
 
-p_d15n <- plot_isotope(Lensdata_ly1, "d15N_mean", expression(delta^15*N~"(permil)"), "d15N by calendar year, split by phenotype")
-p_d13c <- plot_isotope(Lensdata_ly1, "d13C_mean", expression(delta^13*C~"(permil)"), "d13C by calendar year, split by phenotype")
-p_d34s <- plot_isotope(Lensdata_ly1, "d34S_mean", expression(delta^34*S~"(permil)"), "d34S by calendar year, split by phenotype")
+plot_baseline_isotope <- function(parameter, ylab, title_txt) {
+  d <- Env_long %>% dplyr::filter(Parameter == parameter)
+  ggplot(d, aes(x = Year, y = mean, color = Species)) +
+    geom_line(linewidth = 0.6) +
+    geom_point(size = 1.4) +
+    scale_color_manual(values = species_colors, name = "Species") +
+    labs(
+      x = "Calendar year", y = ylab, title = title_txt,
+      subtitle = "Umweltprobenbank long-term monitoring (mean only, no SD reported)"
+    ) +
+    theme_bw(base_size = 11) +
+    theme(panel.grid.minor = element_blank(), legend.position = "bottom", plot.title = element_text(face = "bold"))
+}
 
-Allplot <- ggarrange(p_d15n, p_d13c, p_d34s, nrow = 1, common.legend = TRUE)
+p_pike_d15n <- plot_pike_isotope("d15N_mean", expression(delta^15*N~"(permil)"), "d15N by calendar year, split by phenotype")
+p_pike_d13c <- plot_pike_isotope("d13C_mean", expression(delta^13*C~"(permil)"), "d13C by calendar year, split by phenotype")
+p_pike_d34s <- plot_pike_isotope("d34S_mean", expression(delta^34*S~"(permil)"), "d34S by calendar year, split by phenotype")
 
-ggsave("Figures/supplement/Isotopes_by_lensyear_lifeyear1.png", Allplot, width = 16, height = 5, dpi = 300)
+p_env_d15n <- plot_baseline_isotope("d15N", expression(delta^15*N~"(permil)"), "d15N: environmental baseline")
+p_env_d13c <- plot_baseline_isotope("d13C", expression(delta^13*C~"(permil)"), "d13C: environmental baseline")
 
+Pikeplot <- ggpubr::ggarrange(p_pike_d15n, p_pike_d13c, p_pike_d34s, labels = c("A", "B", "C"), nrow = 1, common.legend = TRUE)
+Baselineplot <- ggpubr::ggarrange(p_env_d15n, p_env_d13c, labels = c("A", "B"), nrow = 1, common.legend = TRUE)
+
+ggsave("Figures/supplement/Isotopes_by_lensyear_lifeyear1.png", Pikeplot, width = 16, height = 5, dpi = 300)
+ggsave("Figures/supplement/Environmental_baseline_isotopes.png", Baselineplot, width = 11, height = 5, dpi = 300)
 ```
 
-# Mixing models
+# Stable isotope mixing models
+
 ```{r grouping of sources comparisons, include=FALSE, eval=FALSE}
 rm(list = ls())
 Prey <- fread("Data/Prey/Preyfish_SI_clean_average_lipid-corrected.csv")
@@ -2533,7 +1418,7 @@ names(mcomp) <- c("NULL", "ecotype|body length", "body length", "ecotype", "capt
 compare_models(mcomp, loo = TRUE)
 ```
 
-```{r baseline-correction, include=FALSE, eval=FALSE}
+```{r baseline correction, include=FALSE, eval=FALSE}
 rm(list = ls())
 Prey <- fread("Data/Prey/Preyfish_SI_clean_average_lipid-corrected2.csv")
 Pike <- fread("Data/Mixing models/Pikemix-ecotypes_all.csv")
@@ -2662,7 +1547,7 @@ Pike1 <- Pike1[,1:14]
 fwrite(Pike1, "Data/Mixing models/Pikemix-baseline-corrected.csv")
 ```
 
-```{r mixing model sensitivity analysis models, include=FALSE, eval=FALSE}
+```{r mixing model sensitivity analysis modelling, include=FALSE, eval=FALSE}
 rm(list = ls())
 
 # All pike in one mix
@@ -3174,148 +2059,6 @@ length(Probabilities[Probabilities<0.05])/length(Probabilities[Probabilities>0.0
 
 ```
 
-```{r plot results, include=FALSE, eval=FALSE}
-rm(list = ls())
-pike <- fread("Data/Mixing models/Pikemix-ecotypes.csv")
-jags.pike <- readRDS("Data/Mixing models/Output/Mixing.model-normal-run-ecotype_TL.rds")
-
-source.filename <- "Data/Mixing models/Sources.csv"
-mix.filename <- "Data/Mixing models/Pikemix-ecotypes_all.csv"
-
-# Load mixture data
-mix <- load_mix_data(filename=mix.filename, 
-                     iso_names=c("d15N", "d13C", "d34S"),
-                     factors=c("ecotype"),
-                     fac_random=c(FALSE),
-                     fac_nested=c(FALSE),
-                     cont_effects=c("Length"))
-
-# Load source data
-source<- load_source_data(filename=source.filename, source_factors=NULL,
-                          conc_dep=FALSE, data_type="means", mix)
-
-
-
-output_options <- list(summary_save = TRUE,                 
-                       summary_name = "summary_statistics", 
-                       sup_post = TRUE,                    
-                       plot_post_save_pdf = FALSE,           
-                       plot_post_name = "posterior_density",
-                       sup_pairs = TRUE,             
-                       plot_pairs_save_pdf = TRUE,    
-                       plot_pairs_name = "pairs_plot",
-                       sup_xy = TRUE,           
-                       plot_xy_save_pdf = TRUE,
-                       plot_xy_name = "xy_plot",
-                       gelman = TRUE,
-                       heidel = FALSE,  
-                       geweke = TRUE,   
-                       diag_save = TRUE,
-                       diag_name = "diagnostics",
-                       indiv_effect = FALSE,       
-                       plot_post_save_png = FALSE, 
-                       plot_pairs_save_png = FALSE,
-                       plot_xy_save_png = FALSE,
-                       diag_save_ggmcmc = FALSE,
-                       return_obj = TRUE)
-
-g.post2 <- output_JAGS(jags.pike, mix, source, output_options)
-
-jags.pike$BUGSoutput$sims.list$ilr.cont1
-
-g.post2 <- output_stats(jags.pike, mix, source, output_options)
-rownames(df.stats)
-g.post2 <- output_posteriors(jags.pike, mix, source, output_options)
-
-names(g.post2)
-
-saveRDS(g.post2, "Data/Mixing models/Output/graphics.rds")
-```
-
-```{r mixing model graphics ecotype level, include=FALSE, eval=FALSE}
-rm(list = ls())
-
-g.post2 <- readRDS("Data/Mixing models/Output/graphics.rds")
-
-Anadrom <- g.post2$fac1[[1]]
-Brackish <- g.post2$fac1[[2]]
-Cross <- g.post2$fac1[[3]]
-Fresh <- g.post2$fac1[[4]]
-
-pl.theme <- theme(panel.grid.major = element_line(color = "grey", linetype = "solid", size = 0.5),
-                  panel.grid.minor = element_line(color = "lightgrey", linetype = "dashed", size = 0.5),
-                  legend.background = element_blank(),
-                  legend.box.background = element_blank(),
-                  axis.line = element_line(linewidth = .5, colour = "black", linetype = 1),
-                  axis.ticks = element_line(linewidth = .5, colour = "black"),
-                  axis.text = element_text(size = 12, colour = "black"),
-                  axis.text.y = element_text(size = 12, colour = "black"),
-                  axis.title.x = element_blank(),
-                  axis.title.y = element_blank(),
-                  legend.position = "bottom",
-                  legend.text = element_text(size = 12),
-                  legend.title = element_text(size = 12),
-                  legend.key.size = unit(.8,"line"),
-                  plot.title = element_text(size = 12, colour = "black"))
-
-pl.color <- scale_color_manual(breaks = c("marine", "lagoon", "freshwater"),
-                              values = c("#29B6F6", "#00796B","#B71C1C"),
-                              labels = c("marine resources", "lagoon resources", "freshwater resources"))
-pl.fill <- scale_fill_manual(breaks = c("marine", "lagoon", "freshwater"),
-                              values = c("#29B6F6", "#00796B","#B71C1C"),
-                              labels = c("marine resources", "lagoon resources", "freshwater resources"))
-
-scalex <- scale_x_continuous(breaks = c(0, 0.25, 0.50, 0.75, 1.00),
-                   labels = c("0", "25", "50", "75", "100"),
-                   limits = c(0,1))
-
-scaley <- scale_y_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1),
-                             labels = c("0.00", "0.25", "0.50", "0.75", "1.00"))
-
-FW_plot <- Fresh+
-  labs(title = "freshwater resident (N = 23)", fill = "", color = "")+
-  pl.theme+
-  pl.color+
-  pl.fill+
-  scalex+
-  scaley+
-  guides(color = guide_legend(ncol = 3, nrow = 1))
-
-Ana_plot <- Anadrom+
-  labs(title = "anadromous (N = 50)", fill = "", color = "")+
-  pl.theme+
-  pl.color+
-  pl.fill+
-  scalex+
-  scaley+
-  guides(color = guide_legend(ncol = 3, nrow = 1))
-
-Cross_plot <- Cross+
-  labs(title = "cross-habitat (N = 89)", fill = "", color = "")+
-  pl.theme+
-  pl.color+
-  pl.fill+
-  scalex+
-  scaley+
-  guides(color = guide_legend(ncol = 3, nrow = 1))
-
-BW_plot <- Brackish+
-  labs(title = "brackish resident (N = 140)", fill = "", color = "")+
-  pl.theme+
-  pl.color+
-  pl.fill+
-  scalex+
-  scaley+
-  guides(color = guide_legend(ncol = 3, nrow = 1))
-
-Allplot <- ggarrange(FW_plot, Ana_plot, Cross_plot, BW_plot, nrow = 2, ncol = 2, 
-                     common.legend = TRUE, legend = "top")
-Allplot2 <- annotate_figure(Allplot, left = text_grob("posterior density", rot = 90, size = 12), 
-                            bottom = text_grob("diet proportion (%)", size = 12))
-
-ggsave("Figures/pike-diet-ecotypes.png", Allplot2, width = 15, height = 15, units = "cm", dpi = 300, bg = "white")
-```
-
 ```{r graphics mixing models length, include=FALSE, eval=FALSE}
 rm(list = ls())
 
@@ -3409,231 +2152,7 @@ Allplot2 <- annotate_figure(Allplot, left = text_grob("diet proportion (%)", rot
 ggsave("Figures/length-diet-ecotypes.png", Allplot2, width = 15, height = 15, units = "cm", dpi = 300, bg = "white")
 ```
 
-```{r graphics mixing models individual, include=FALSE, eval=FALSE}
-FW_long <- FW_cont_all[[4]]
-BW_long <- BW_cont_all[[4]]
-Cross_long <- Cross_cont_all[[4]]
-Ana_long <- Ana_cont_all[[4]]
-
-NRB.plot <- NRB_long+
-  labs(title = "NRBC", fill = "diet", color = "diet")+
-  pl.theme+
-  pl.color+
-  pl.fill+
-  scalex+
-  scaley+
-  annotation_custom(text_grob("ID: BH-01556, total length: 110 cm", size = 12), xmin = 0, ymin = 1)
-
-S.plot <- S_long+
-  labs(title = "Strelasund", fill = "diet", color = "diet")+
-  pl.theme+
-  pl.color+
-  pl.fill+
-  scalex+
-  scaley+
-  annotation_custom(text_grob("ID: BH-90085, total length: 117 cm", size = 12), xmin = 0, ymin = 1)
-
-
-WRB.plot <- WRB_long+
-  labs(title = "WRBC", fill = "diet", color = "diet")+
-  pl.theme+
-  pl.color+
-  pl.fill+
-  scalex+
-  scaley+
-  annotation_custom(text_grob("ID: BH-01922, total length: 126 cm", size = 12), xmin = 0, ymin = 1)
-
-GB.plot <- GB_long+
-  labs(title = "Greifswalder Bodden", fill = "diet", color = "diet")+ 
-  pl.theme+
-  pl.color+
-  pl.fill+
-  scalex+
-  scaley+
-  annotation_custom(text_grob("ID: BH-90752, total length: 107 cm", size = 12), xmin = 0, ymin = 1)
-
-Allplot <- ggarrange(NRB.plot, S.plot, WRB.plot,GB.plot, nrow = 2, ncol = 2, 
-                     common.legend = T, legend = "top")
-Allplot2 <- annotate_figure(Allplot, left = text_grob("posterior density", rot = 90, size = 12), 
-                            bottom = text_grob("diet proportion (%)", size = 12))
-
-ggsave("Figures/diet-max-length.png", Allplot2, width = 10, height = 10, bg = "white")
-
-saveRDS(g.post2, "Data/Mixing models/outputs_no-priors_locations.rds")
-```
-
-```{r graphic mixing models overview simple, eval=FALSE}
-rm(list = ls())
-
-# Create diagnostics, summary statistics, and posterior plots
-jags.pike <- readRDS("Data/Mixing models/Output/Mixing.model-normal-run-ecotype_area_TL.rds")
-
-Pike2 <- fread("Data/Mixing models/Pikemix-ecotypes.csv")
-
-source.filename <- "Data/Mixing models/Sources.csv"
-mix.filename <- "Data/Mixing models/Pikemix-ecotypes_all.csv"
-
-# Load mixture data
-mix <- load_mix_data(filename=mix.filename, 
-                     iso_names=c("d15N", "d13C", "d34S"),
-                     factors="ecotype",
-                     fac_random=FALSE,
-                     fac_nested=FALSE,
-                     cont_effects="Length")
-
-# Load source data
-source<- load_source_data(filename=source.filename, source_factors=NULL,
-                          conc_dep=FALSE, data_type="means", mix)
-
-global.contrib.p <- data.frame(median = jags.pike$BUGSoutput$median$p.fac1, ecotype=c("anadromous",
-                                                                                      "brackish resident",
-                                                                                      "cross-habitat",
-                                                                                      "freshwater resident"))
-global.contrib.sd <- data.frame(sd = jags.pike$BUGSoutput$sd$p.fac1,
-                                ecotype=c("anadromous",
-                                          "brackish resident",
-                                          "cross-habitat",
-                                          "freshwater resident"))
-
-names(global.contrib.p) <- c(paste0("p.", source[["source_names"]]),"ecotype")
-names(global.contrib.sd) <- c(paste0("sd.", source[["source_names"]]),"ecotype")
-
-sum <- rowSums(global.contrib.p[,1:3])
-
-global.contrib.p2 <- global.contrib.p%>%
-  pivot_longer(cols = p.freshwater:p.marine,names_to = "species", values_to = "median")%>%
-  transmute(ecotype=fct_relevel(ecotype,
-                                "freshwater resident",
-                                "anadromous",
-                                "cross-habitat",
-                                "brackish resident"),
-            species=sub("p.","",species),
-            median=median)
-global.contrib.sd2 <- global.contrib.sd%>%
-  pivot_longer(cols = sd.freshwater:sd.marine,names_to = "species", values_to = "sd")%>%
-  transmute(ecotype=fct_relevel(ecotype,
-                                "freshwater resident",
-                                "anadromous",
-                                "cross-habitat",
-                                "brackish resident"),
-            species=sub("sd.","",species),
-            sd=sd)
-
-global.contrib2 <- global.contrib.p2%>%inner_join(global.contrib.sd2, by = c("species", "ecotype"))
-
-
-indiv.contrib <- data.frame(contr=jags.pike$BUGSoutput$mean$p.ind)
-indiv.sd <- data.frame(sd=jags.pike$BUGSoutput$sd$p.ind)
-names(indiv.contrib) <- paste0("p.",source[["source_names"]])
-names(indiv.sd) <- paste0("sd.",source[["source_names"]])
-indiv.contrib$ID <- Pike2$ID
-indiv.sd$ID <- Pike2$ID
-
-contrib.pike <- indiv.contrib%>%
-  inner_join(indiv.sd, by = "ID")
-
-Pike.contrib <- Pike2 %>%
-  inner_join(contrib.pike, by = "ID")%>%
-  transmute(ID=ID,
-            capt_date,
-            TL_mm = Length,
-            weight_g=weight_g,
-            area=area,
-            Long=Long,
-            Lat=Lat,
-            d15N=d15N,
-            d13C=d13C,
-            d34S=d34S,
-            CN_ratio=CN_ratio,
-            halflife=halflife,
-            p.marine=p.marine,
-            sd.marine=sd.marine,
-            p.lagoon=p.lagoon,
-            sd.lagoon=sd.lagoon,
-            p.freshwater=p.freshwater,
-            sd.freshwater=sd.freshwater)
-
-fwrite(Pike.contrib, "Data/Mixing models/Pike_individual_diet.csv")
-
-pl.theme <- theme(panel.grid.major = element_line(),
-                  legend.background = element_blank(),
-                  legend.box.background = element_blank(),
-                  axis.line = element_line(linewidth = .5, colour = "black", linetype = 1),
-                  axis.ticks = element_line(linewidth = .5, colour = "black"),
-                  axis.text = element_text(size = 12, colour = "black"),
-                  axis.text.y = element_text(size = 12, colour = "black"),
-                  axis.title.x = element_text(size = 12, colour = "black"),
-                  axis.title.y = element_text(size = 12, colour = "black"),
-                  legend.text = element_text(size = 12),
-                  legend.title = element_text(size = 12),
-                  legend.key.size = unit(.8,"line"),
-                  plot.title = element_text(size = 12, colour = "black"))
-
-Pike.length <- ggplot(Pike.contrib)+
-  geom_smooth(aes(TL_mm, p.marine, color="marine", fill="marine"))+
-  geom_smooth(aes(TL_mm, p.freshwater, color="freshwater", fill="freshwater"))+
-  geom_smooth(aes(TL_mm, p.lagoon, color="lagoon", fill="lagoon"))+
-  scale_color_manual(name = "energy source",
-                     breaks = c("marine", "lagoon", "freshwater"),
-                     values = c("#29B6F6", "#00796B","#B71C1C"),
-                     labels = c("marine food web", "lagoon food web", "freshwater food web"))+
-  scale_fill_manual(name = "energy source",
-                     breaks = c("marine", "lagoon", "freshwater"),
-                     values = c("#29B6F6", "#00796B","#B71C1C"),
-                     labels = c("marine food web", "lagoon food web", "freshwater food web"))+
-  scale_y_continuous(expand = c(0,0),
-                     breaks = c(0,0.25,0.5,0.75,1), labels = c("0", "25", "50", "75", "100"))+
-  scale_x_continuous(expand = c(0,0),
-                     limits = c(min(Pike.contrib$TL_mm),max(Pike.contrib$TL_mm)),
-                     breaks = c(200,300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300), 
-                     labels = c("20","30","40","50","60","70","80","90","100","110","120","130"))+
-  labs(x="total length (cm)", y="pike diet proportion (%)")+
-  coord_cartesian(ylim = c(0,1))+
-  theme_classic()+
-  pl.theme
-
-ggsave("Figures/diet-per-length_global.png", Pike.length, width = 15, height = 9, units = "cm", dpi = 600)
-
-global <- ggplot(global.contrib2)+
-  geom_bar(aes(ecotype, median+sd, fill=species), stat="identity")+
-  labs(x = "area", y = "pike diet proportion")+
-  scale_x_discrete(breaks = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"),
-                   labels = c("freshwater resident", "anadromous", "cross-habitat", "brackish resident"))+
-  scale_fill_manual(name = "source",
-                     breaks = c("marine", "lagoon", "freshwater"),
-                     values = c("#29B6F6", "#00796B","#B71C1C"),
-                     labels = c("marine food web", "lagoon food web", "freshwater food web"))+
-  theme_classic()+
-  pl.theme+
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
-
-ggsave("Figures/diet_proportion_ecotypes.png", global, width = 15, height = 15, units = "cm", dpi = 600)
-```
-
-```{r effects individual contributions, include=FALSE, eval=FALSE}
-rm(list = ls())
-
-Pikediet <- fread("Data/Mixing models/Pike_individual_diet.csv")
-
-ggplot(Pikediet, aes(p.C.harengus, CN_ratio))+
-  geom_point()+
-  geom_smooth(method = "lm")+
-  theme_bw()
-
-ggplot(Pikediet, aes(as.factor(month(capt_date)), p.C.harengus))+
-  geom_point()+
-  theme_bw()
-
-Pikediet <- Pikediet%>%
-  mutate(condition = ((weight_g/TL_mm^3)*100000))
-
-ggplot(Pikediet, aes(p.C.harengus, condition))+
-  geom_point()+
-  geom_smooth(method = "lm")+
-  theme_bw()
-```
-
-# Eye lens analysis
+# Mixed modelling of individual growth with eye lense stable isotope data
 
 ```{r explore model data, include=FALSE, eval=FALSE}
 rm(list = ls())
@@ -4567,7 +3086,7 @@ Ecopike_spec <- Ecopike2%>%
 fwrite(Ecopike_spec, "Data/Pike/Pike_eco-clean-cbackcalculated_s-metric_WRBC.csv")
 ```
 
-```{r plot s- metrics, include=FALSE, eval=FALSE}
+```{r plot specialisation metrics for all, include=FALSE, eval=FALSE}
 rm(list = ls())
 Ecopike_spec_pop <- fread("Data/Pike/Pike_eco-clean-cbackcalculated_s-metric.csv")
 Ecopike_spec_pop <- Ecopike_spec_pop%>%
@@ -4631,7 +3150,7 @@ ggsave("Figures/S-index-individual-pop.png", Specplot_pop, height = 15, width = 
 ggsave("Figures/S-index-individual-pheno.png", Specplot_pheno, height = 15, width = 15, units = "cm", dpi = 600, bg = "white")
 ```
 
-```{r plot s- metrics for WRBC, include=FALSE, eval=FALSE}
+```{r plot specialisation metrics for WRBC, include=FALSE, eval=FALSE}
 rm(list = ls())
 Ecopike_spec_pop <- fread("Data/Pike/Pike_eco-clean-cbackcalculated_s-metric_WRBC.csv")
 Ecopike_spec_pop <- Ecopike_spec_pop%>%
@@ -5029,7 +3548,7 @@ combined <- ggarrange(CN, CS, NS, legend, nrow = 2, ncol = 2, common.legend = F,
 ggsave("Figures/Overlap_individuals.png", combined, width = 15, height = 15, units = "cm", dpi = 600, bg = "white")
 ```
 
-```{r plot individual overlap population-level, include=FALSE, eval=FALSE}
+```{r plot individual overlap population-level for WRBC, include=FALSE, eval=FALSE}
 rm(list = ls())
 Ecopike2 <- fread("Data/Pike/Pike_eco-clean-cbackcalculated_s-metric_WRBC.csv")
 TNWmat <- as.matrix(read.table("Data/Pike/Total-niche-width_matrix-WRBC.txt"))
@@ -5347,7 +3866,7 @@ overlap.40 <-  read.table("Data/Pike/Niche-overlap40-phenotypes.txt")
 overlap.975 <- read.table("Data/Pike/Niche-overlap97.5-phenotypes.txt")
 ```
 
-```{r phenotype overlap WRBC, include=FALSE, eval=FALSE}
+```{r phenotype overlap for WRBC, include=FALSE, eval=FALSE}
 rm(list = ls())
 
 Ecopike <- fread("Data/Pike/Lens-muscle-SI-eco-clean-cbackcalculated.csv")
